@@ -307,6 +307,7 @@
                     </button>
                     <button type="button" onclick="deleteNode()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
                         <span>🗑️</span> Delete Node
+                    </button>
                     <button type="button" onclick="openShareModal()" class="text-left px-3 py-2 hover:bg-purple-50 text-purple-700 font-bold rounded-xl flex items-center gap-2">
                         <span>👥</span> Share with Team
                     </button>
@@ -530,6 +531,7 @@
 
                 <button onclick="generateAI()" id="btn_ai" class="bg-purple-600 hover:bg-purple-700 text-white w-full py-2.5 rounded-full font-bold text-sm shadow-sm mt-auto">✨ Generate Mind Map</button>
                 <div id="ai_loading" class="text-xs text-center text-purple-600 mt-3 hidden animate-pulse font-medium">Drafting mapping coordinates...</div>
+            </div>
         </aside>
 
         <!-- Mobile Sidebar Backdrop Overlay -->
@@ -1085,6 +1087,8 @@
                 </div>
             </div>
         </div>
+    </div>
+
     <!-- SHARE & TEAM COLLABORATION MODAL -->
     <div id="share-team-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm hidden" onclick="if(event.target===this) closeShareModal()">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg flex flex-col overflow-hidden mx-4" onclick="event.stopPropagation()">
@@ -1598,9 +1602,15 @@
             for (const k in rawNodes) {
                 if (!rawNodes.hasOwnProperty(k)) continue;
                 const n = rawNodes[k];
-                const copy = Object.assign({}, n);
-                delete copy.el;
-                delete copy.edgeEl;
+                if (!n || typeof n !== 'object') continue;
+                const copy = {};
+                for (const prop in n) {
+                    if (!n.hasOwnProperty(prop)) continue;
+                    if (prop === 'el' || prop === 'edgeEl') continue;
+                    if (n[prop] !== undefined) {
+                        copy[prop] = n[prop];
+                    }
+                }
                 clean[k] = copy;
             }
             return clean;
@@ -1611,7 +1621,14 @@
             for (const k in rawDecs) {
                 if (!rawDecs.hasOwnProperty(k)) continue;
                 const d = rawDecs[k];
-                const copy = Object.assign({}, d);
+                if (!d || typeof d !== 'object') continue;
+                const copy = {};
+                for (const prop in d) {
+                    if (!d.hasOwnProperty(prop)) continue;
+                    if (d[prop] !== undefined) {
+                        copy[prop] = d[prop];
+                    }
+                }
                 if (omitHeavyDataUrls && copy.type === 'image' && typeof copy.src === 'string' && copy.src.startsWith('data:') && copy.src.length > 50000) {
                     copy.src = copy.fileName || copy.url || 'cached_asset';
                 }
