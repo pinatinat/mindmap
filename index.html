@@ -11,6 +11,10 @@
     <title>OmniMind - Free Floating Bubbles</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <!-- Firebase Cloud SDKs (v10 compat CDN for serverless cloud storage & auth) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
     <style>
         /* Hide scrollbars for the main canvas */
         body { overflow: hidden; }
@@ -250,6 +254,11 @@
                 </button>
                 <button type="button" onclick="quickPromptNewMap()" class="ml-1 p-1.5 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-600 hover:text-purple-600 border border-slate-200 transition-colors shadow-sm" title="Create New Mind Map">
                     <span class="text-xs font-bold leading-none">➕</span>
+                </button>
+                <!-- CLOUD SYNC STATUS PILL -->
+                <button type="button" onclick="handleCloudButtonClick()" id="btn-cloud-status" class="ml-1.5 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-all shadow-sm" title="Cloud Storage & Online Sync">
+                    <span id="cloud-status-icon" class="text-xs sm:text-sm">☁️</span>
+                    <span id="cloud-status-text" class="hidden sm:inline font-medium">Cloud Sync</span>
                 </button>
             </div>
         </div>
@@ -602,59 +611,187 @@
     <div id="project-manager-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm hidden" onclick="if(event.target===this) toggleProjectManagerModal(false)">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden mx-4" onclick="event.stopPropagation()">
             <!-- Modal Header -->
-            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
                 <div class="flex items-center gap-2.5">
                     <span class="text-2xl">🗺️</span>
                     <div>
                         <h2 class="text-base font-bold text-slate-800">Mind Map Library</h2>
-                        <p class="text-xs text-slate-500">Manage, create, and switch between your saved mind maps</p>
+                        <p class="text-xs text-slate-500">Manage local and cloud-synced mind maps</p>
                     </div>
                 </div>
                 <button type="button" onclick="toggleProjectManagerModal(false)" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200 text-sm transition-colors leading-none">✕</button>
             </div>
 
-            <!-- Active Map Quick Rename Bar -->
-            <div class="p-4 bg-blue-50/70 border-b border-blue-100 flex items-center gap-3">
-                <div class="flex-1">
-                    <label class="block text-[0.7rem] font-bold uppercase tracking-wider text-blue-800 mb-1">Active Map Name</label>
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="modal-active-map-name" class="flex-1 border border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Mind map name..." onkeydown="if(event.key==='Enter'){event.preventDefault();saveActiveProjectRenameFromModal();}">
-                        <button type="button" onclick="saveActiveProjectRenameFromModal()" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors">Rename</button>
+            <!-- LIBRARY TABS: LOCAL VS CLOUD -->
+            <div class="flex border-b border-slate-200 bg-slate-100/70 text-xs px-5 pt-1.5 gap-2">
+                <button type="button" onclick="switchLibraryTab('local')" id="tab-library-local" class="py-2 px-3.5 font-bold border-b-2 border-blue-600 text-blue-700 transition-colors flex items-center gap-1.5">
+                    <span>💻</span> Local Maps
+                </button>
+                <button type="button" onclick="switchLibraryTab('cloud')" id="tab-library-cloud" class="py-2 px-3.5 font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1.5">
+                    <span>☁️</span> Cloud Maps
+                    <span id="cloud-tab-badge" class="hidden text-[0.65rem] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded-full font-mono">0</span>
+                </button>
+            </div>
+
+            <!-- TAB CONTENT 1: LOCAL BROWSER MAPS -->
+            <div id="library-local-section" class="flex flex-col flex-1 overflow-hidden">
+                <!-- Active Map Quick Rename Bar -->
+                <div class="p-4 bg-blue-50/70 border-b border-blue-100 flex items-center gap-3">
+                    <div class="flex-1">
+                        <label class="block text-[0.7rem] font-bold uppercase tracking-wider text-blue-800 mb-1">Active Map Name</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="modal-active-map-name" class="flex-1 border border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Mind map name..." onkeydown="if(event.key==='Enter'){event.preventDefault();saveActiveProjectRenameFromModal();}">
+                            <button type="button" onclick="saveActiveProjectRenameFromModal()" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors">Rename</button>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Action Buttons Toolbar -->
+                <div class="px-5 py-2.5 border-b border-slate-100 flex items-center justify-between gap-2 bg-white flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="promptNewProjectModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm transition-transform active:scale-95">
+                            <span>➕</span> New Map
+                        </button>
+                        <button type="button" onclick="duplicateCurrentProject()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors">
+                            <span>📑</span> Duplicate Active
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="saveActiveMapToCloud()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 transition-colors" title="Save current map into Firebase Cloud">
+                            <span>☁️</span> Push to Cloud
+                        </button>
+                        <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors cursor-pointer" title="Import JSON file as a new separate map in library">
+                            <span>📂</span> Import as New <input type="file" accept=".json" onchange="importJSONAsNewProject(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Saved Maps List -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-2 max-h-[350px]" id="project-list-container">
+                    <!-- Dynamically populated project cards -->
+                </div>
             </div>
 
-            <!-- Action Buttons Toolbar -->
-            <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-2 bg-white flex-wrap">
-                <div class="flex items-center gap-2">
-                    <button type="button" onclick="promptNewProjectModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm transition-transform active:scale-95">
-                        <span>➕</span> New Map
-                    </button>
-                    <button type="button" onclick="duplicateCurrentProject()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors">
-                        <span>📑</span> Duplicate Active
+            <!-- TAB CONTENT 2: CLOUD MAPS -->
+            <div id="library-cloud-section" class="flex flex-col flex-1 overflow-hidden hidden">
+                <!-- Cloud Not Configured State -->
+                <div id="cloud-not-configured-card" class="p-6 text-center flex flex-col items-center justify-center flex-1 hidden">
+                    <div class="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-3xl mb-3 shadow-inner">
+                        ☁️
+                    </div>
+                    <h3 class="font-bold text-base text-slate-800 mb-1">Connect Free Cloud Storage</h3>
+                    <p class="text-xs text-slate-500 max-w-sm mb-4 leading-relaxed">Sync, open, and manage your mind maps from any device for free using Google Firebase Firestore.</p>
+                    <button type="button" onclick="toggleCloudConfigModal(true)" class="px-5 py-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-sm transition-transform active:scale-95 flex items-center gap-2">
+                        <span>⚙️</span> Setup Free Firebase in 1 Minute
                     </button>
                 </div>
-                <div class="flex items-center gap-2">
-                    <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors cursor-pointer" title="Import JSON file as a new separate map in library">
-                        <span>📂</span> Import as New <input type="file" accept=".json" onchange="importJSONAsNewProject(event)" class="hidden">
-                    </label>
-                </div>
-            </div>
 
-            <!-- Saved Maps List -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-2 max-h-[360px]" id="project-list-container">
-                <!-- Dynamically populated project cards -->
+                <!-- Cloud Not Logged In State -->
+                <div id="cloud-auth-card" class="p-6 text-center flex flex-col items-center justify-center flex-1 hidden">
+                    <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mb-3 shadow-inner">
+                        🔐
+                    </div>
+                    <h3 class="font-bold text-base text-slate-800 mb-1">Sign In to Cloud Library</h3>
+                    <p class="text-xs text-slate-500 max-w-sm mb-4 leading-relaxed">Sign in with your Google account or continue as guest to access your online mind maps.</p>
+                    <div class="flex flex-col sm:flex-row items-center gap-2.5">
+                        <button type="button" onclick="signInWithGoogle()" class="w-full sm:w-auto px-5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                            Sign in with Google
+                        </button>
+                        <button type="button" onclick="signInAsGuest()" class="w-full sm:w-auto px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                            Continue as Guest
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cloud Logged In State -->
+                <div id="cloud-logged-in-container" class="flex flex-col flex-1 overflow-hidden hidden">
+                    <!-- User Header Banner -->
+                    <div class="px-5 py-2.5 bg-purple-50/70 border-b border-purple-100 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span id="cloud-user-avatar" class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-xs">👤</span>
+                            <div class="min-w-0">
+                                <span id="cloud-user-name" class="font-bold text-slate-800 truncate block">User</span>
+                                <span id="cloud-user-email" class="text-[0.65rem] text-slate-500 truncate block">user@example.com</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="saveActiveMapToCloud()" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold text-[0.7rem] shadow-sm transition-transform active:scale-95 flex items-center gap-1">
+                                <span>☁️</span> Push Active Map
+                            </button>
+                            <button type="button" onclick="fetchCloudMaps()" class="p-1 rounded-full text-slate-500 hover:bg-purple-100 transition-colors text-xs" title="Refresh cloud maps">
+                                🔄
+                            </button>
+                            <button type="button" onclick="signOutCloud()" class="text-slate-400 hover:text-red-500 text-xs transition-colors ml-1" title="Sign Out">
+                                🚪
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cloud Maps List -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-2 max-h-[350px]" id="cloud-list-container">
+                        <!-- Dynamically populated cloud cards -->
+                    </div>
+                </div>
             </div>
 
             <!-- Modal Footer -->
             <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
                 <span id="modal-project-count">0 maps saved</span>
                 <div class="flex items-center gap-3">
+                    <button type="button" onclick="toggleCloudConfigModal(true)" class="text-slate-500 hover:text-purple-700 hover:underline flex items-center gap-1">
+                        <span>⚙️</span> Cloud Setup
+                    </button>
+                    <span class="text-slate-300">|</span>
                     <button type="button" onclick="exportAllProjectsBackup()" class="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
-                        <span>💾</span> Backup All Maps
+                        <span>💾</span> Backup All
                     </button>
                     <span class="text-slate-300">|</span>
                     <button type="button" onclick="toggleProjectManagerModal(false)" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full font-medium transition-colors">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLOUD CONFIG MODAL -->
+    <div id="cloud-config-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm hidden" onclick="if(event.target===this) toggleCloudConfigModal(false)">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden mx-4 flex flex-col" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">⚙️</span>
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800">Firebase Cloud Setup</h2>
+                        <p class="text-xs text-slate-500">Connect your free Firebase Firestore database</p>
+                    </div>
+                </div>
+                <button type="button" onclick="toggleCloudConfigModal(false)" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200 text-sm leading-none">✕</button>
+            </div>
+            <div class="p-5 text-xs flex flex-col gap-3">
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-3 text-purple-900 leading-relaxed">
+                    <p class="font-bold mb-1">How to get your free Firebase config (3 steps):</p>
+                    <ol class="list-decimal list-inside space-y-1 text-[0.72rem]">
+                        <li>Go to <a href="https://console.firebase.google.com" target="_blank" class="underline font-bold text-purple-700">console.firebase.google.com</a> (100% Free, no card needed).</li>
+                        <li>Create a project, click <b>Add app &lt;/&gt; (Web)</b>, and copy the <code class="bg-purple-100 px-1 py-0.5 rounded font-mono">firebaseConfig</code> code snippet.</li>
+                        <li>In the Firebase Console sidebar, turn on <b>Authentication</b> (Google &amp; Anonymous) and <b>Firestore Database</b>.</li>
+                    </ol>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Paste your Firebase Config snippet or JSON:</label>
+                    <textarea id="firebase-config-input" class="w-full h-36 font-mono text-[0.72rem] border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none bg-slate-50" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-app.firebaseapp.com",
+  "projectId": "your-project",
+  "storageBucket": "your-app.appspot.com",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <button type="button" onclick="resetFirebaseConfig()" class="text-red-500 hover:text-red-700 font-medium">Reset Config</button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="toggleCloudConfigModal(false)" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-semibold">Cancel</button>
+                        <button type="button" onclick="saveFirebaseConfigFromInput()" class="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold shadow-sm">Save &amp; Connect</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1455,6 +1592,569 @@
             }
         }
 
+
+        // --- 5B. FIREBASE CLOUD STORAGE & AUTH ENGINE ---
+        const DEFAULT_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyAGNxZ_liiXXvqG8sHKcz4zwLt_ofL3X_0",
+            authDomain: "omnimindmap.firebaseapp.com",
+            projectId: "omnimindmap",
+            storageBucket: "omnimindmap.firebasestorage.app",
+            messagingSenderId: "870599373633",
+            appId: "1:870599373633:web:bd555380fad96cc7a027c0"
+        };
+        const FIREBASE_CONFIG_KEY = 'omnimind_firebase_config_v1';
+        let fbApp = null;
+        let fbAuth = null;
+        let fbDb = null;
+        let currentCloudUser = null;
+        let cloudMapsCache = [];
+        let activeLibraryTab = 'local'; // 'local' | 'cloud'
+
+        function initFirebaseCloud() {
+            try {
+                let config = null;
+                const saved = localStorage.getItem(FIREBASE_CONFIG_KEY);
+                if (saved) {
+                    try { config = JSON.parse(saved); } catch(e) {}
+                }
+                if (!config && typeof DEFAULT_FIREBASE_CONFIG !== 'undefined' && DEFAULT_FIREBASE_CONFIG && DEFAULT_FIREBASE_CONFIG.apiKey) {
+                    config = DEFAULT_FIREBASE_CONFIG;
+                }
+
+                if (config && config.apiKey && config.projectId && typeof firebase !== 'undefined') {
+                    if (!firebase.apps.length) {
+                        fbApp = firebase.initializeApp(config);
+                    } else {
+                        fbApp = firebase.app();
+                    }
+                    fbAuth = firebase.auth();
+                    fbDb = firebase.firestore();
+
+                    fbAuth.onAuthStateChanged(user => {
+                        currentCloudUser = user;
+                        updateCloudAuthUI();
+                        if (user) {
+                            fetchCloudMaps();
+                        } else {
+                            cloudMapsCache = [];
+                            renderCloudMapsList();
+                        }
+                    });
+                    updateCloudAuthUI();
+                    return true;
+                }
+            } catch (err) {
+                console.warn('Firebase initialization note:', err);
+            }
+            updateCloudAuthUI();
+            return false;
+        }
+
+        function updateCloudAuthUI() {
+            const btnIcon = document.getElementById('cloud-status-icon');
+            const btnText = document.getElementById('cloud-status-text');
+            const badgeEl = document.getElementById('cloud-tab-badge');
+            const notConfigCard = document.getElementById('cloud-not-configured-card');
+            const authCard = document.getElementById('cloud-auth-card');
+            const loggedInContainer = document.getElementById('cloud-logged-in-container');
+
+            const isConfigured = !!fbAuth;
+
+            if (badgeEl) {
+                if (cloudMapsCache.length > 0) {
+                    badgeEl.textContent = cloudMapsCache.length;
+                    badgeEl.classList.remove('hidden');
+                } else {
+                    badgeEl.classList.add('hidden');
+                }
+            }
+
+            if (!isConfigured) {
+                if (btnIcon) btnIcon.textContent = '☁️';
+                if (btnText) btnText.textContent = 'Setup Cloud';
+                if (notConfigCard) notConfigCard.classList.remove('hidden');
+                if (authCard) authCard.classList.add('hidden');
+                if (loggedInContainer) loggedInContainer.classList.add('hidden');
+                return;
+            }
+
+            if (notConfigCard) notConfigCard.classList.add('hidden');
+
+            if (currentCloudUser) {
+                const displayName = currentCloudUser.displayName || (currentCloudUser.isAnonymous ? 'Guest User' : 'Cloud User');
+                const email = currentCloudUser.email || (currentCloudUser.isAnonymous ? 'Anonymous session' : '');
+                
+                if (btnIcon) btnIcon.textContent = currentCloudUser.isAnonymous ? '👤' : '☁️';
+                if (btnText) btnText.textContent = displayName.split(' ')[0];
+
+                if (authCard) authCard.classList.add('hidden');
+                if (loggedInContainer) loggedInContainer.classList.remove('hidden');
+
+                const userNameEl = document.getElementById('cloud-user-name');
+                const userEmailEl = document.getElementById('cloud-user-email');
+                const avatarEl = document.getElementById('cloud-user-avatar');
+
+                if (userNameEl) userNameEl.textContent = displayName;
+                if (userEmailEl) userEmailEl.textContent = email;
+                if (avatarEl) {
+                    if (currentCloudUser.photoURL) {
+                        avatarEl.innerHTML = `<img src="${currentCloudUser.photoURL}" class="w-full h-full rounded-full object-cover" alt="avatar">`;
+                    } else {
+                        avatarEl.textContent = displayName.charAt(0).toUpperCase();
+                    }
+                }
+            } else {
+                if (btnIcon) btnIcon.textContent = '☁️';
+                if (btnText) btnText.textContent = 'Sign In';
+                if (authCard) authCard.classList.remove('hidden');
+                if (loggedInContainer) loggedInContainer.classList.add('hidden');
+            }
+        }
+
+        function switchLibraryTab(tab) {
+            activeLibraryTab = tab;
+            const localBtn = document.getElementById('tab-library-local');
+            const cloudBtn = document.getElementById('tab-library-cloud');
+            const localSec = document.getElementById('library-local-section');
+            const cloudSec = document.getElementById('library-cloud-section');
+            const countEl = document.getElementById('modal-project-count');
+
+            if (tab === 'cloud') {
+                if (localBtn) localBtn.className = "py-2 px-3.5 font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1.5";
+                if (cloudBtn) cloudBtn.className = "py-2 px-3.5 font-bold border-b-2 border-purple-600 text-purple-700 transition-colors flex items-center gap-1.5";
+                if (localSec) localSec.classList.add('hidden');
+                if (cloudSec) cloudSec.classList.remove('hidden');
+
+                if (countEl) {
+                    countEl.textContent = `${cloudMapsCache.length} cloud map${cloudMapsCache.length === 1 ? '' : 's'}`;
+                }
+                if (currentCloudUser && fbDb) {
+                    fetchCloudMaps();
+                }
+            } else {
+                if (localBtn) localBtn.className = "py-2 px-3.5 font-bold border-b-2 border-blue-600 text-blue-700 transition-colors flex items-center gap-1.5";
+                if (cloudBtn) cloudBtn.className = "py-2 px-3.5 font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1.5";
+                if (localSec) localSec.classList.remove('hidden');
+                if (cloudSec) cloudSec.classList.add('hidden');
+
+                if (countEl) {
+                    countEl.textContent = `${projectRegistry.projects.length} map${projectRegistry.projects.length === 1 ? '' : 's'} saved`;
+                }
+            }
+        }
+
+        function handleCloudButtonClick() {
+            toggleProjectManagerModal(true);
+            switchLibraryTab('cloud');
+        }
+
+        function toggleCloudConfigModal(show) {
+            const modal = document.getElementById('cloud-config-modal');
+            if (!modal) return;
+            const isHidden = modal.classList.contains('hidden');
+            const shouldShow = (typeof show === 'boolean') ? show : isHidden;
+
+            if (shouldShow) {
+                modal.classList.remove('hidden');
+                const input = document.getElementById('firebase-config-input');
+                if (input) {
+                    const saved = localStorage.getItem(FIREBASE_CONFIG_KEY) || (typeof DEFAULT_FIREBASE_CONFIG !== 'undefined' ? JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2) : '');
+                    if (saved) input.value = saved;
+                    input.focus();
+                }
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function saveFirebaseConfigFromInput() {
+            const input = document.getElementById('firebase-config-input');
+            if (!input) return;
+            let raw = input.value.trim();
+            if (!raw) return alert('Please paste your Firebase configuration.');
+
+            // Extract JSON or JS object
+            try {
+                let parsed = null;
+                if (raw.includes('{') && raw.includes('}')) {
+                    const match = raw.match(/\{[\s\S]*\}/);
+                    if (match) {
+                        try {
+                            parsed = JSON.parse(match[0]);
+                        } catch (jsonErr) {
+                            // If user pasted raw JS object with unquoted keys
+                            const normalized = match[0]
+                                .replace(/(\w+)\s*:/g, '"$1":')
+                                .replace(/'/g, '"')
+                                .replace(/,\s*}/g, '}');
+                            parsed = JSON.parse(normalized);
+                        }
+                    }
+                }
+                if (!parsed || !parsed.apiKey || !parsed.projectId) {
+                    throw new Error('Config missing apiKey or projectId');
+                }
+
+                localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(parsed, null, 2));
+                toggleCloudConfigModal(false);
+
+                // Reload or re-init
+                initFirebaseCloud();
+                setSaveStatus('saved', `✓ Firebase connected: ${parsed.projectId}`);
+                switchLibraryTab('cloud');
+            } catch (err) {
+                alert('Invalid Firebase configuration snippet: ' + err.message + '\n\nPlease make sure you paste the complete firebaseConfig object.');
+            }
+        }
+
+        function resetFirebaseConfig() {
+            if (!confirm('Are you sure you want to reset your Firebase configuration?')) return;
+            localStorage.removeItem(FIREBASE_CONFIG_KEY);
+            toggleCloudConfigModal(false);
+            if (fbAuth) fbAuth.signOut().catch(() => {});
+            fbApp = null;
+            fbAuth = null;
+            fbDb = null;
+            currentCloudUser = null;
+            cloudMapsCache = [];
+            updateCloudAuthUI();
+            setSaveStatus('saved', '✓ Cloud config reset');
+        }
+
+        function signInWithGoogle() {
+            if (!fbAuth) {
+                toggleCloudConfigModal(true);
+                return;
+            }
+            const provider = new firebase.auth.GoogleAuthProvider();
+            fbAuth.signInWithPopup(provider)
+                .then(result => {
+                    setSaveStatus('saved', `✓ Signed in as ${result.user.displayName}`);
+                    fetchCloudMaps();
+                })
+                .catch(err => {
+                    alert('Google Sign-In notice: ' + err.message + '\n\nTip: In the Firebase console, make sure Google is enabled in Authentication -> Sign-in method.');
+                });
+        }
+
+        function signInAsGuest() {
+            if (!fbAuth) {
+                toggleCloudConfigModal(true);
+                return;
+            }
+            fbAuth.signInAnonymously()
+                .then(result => {
+                    setSaveStatus('saved', '✓ Signed in as Guest');
+                    fetchCloudMaps();
+                })
+                .catch(err => {
+                    alert('Guest Sign-In notice: ' + err.message + '\n\nTip: In the Firebase console, enable Anonymous in Authentication -> Sign-in method.');
+                });
+        }
+
+        function signOutCloud() {
+            if (!fbAuth) return;
+            fbAuth.signOut().then(() => {
+                currentCloudUser = null;
+                cloudMapsCache = [];
+                updateCloudAuthUI();
+                renderCloudMapsList();
+                setSaveStatus('saved', '✓ Signed out from Cloud');
+            });
+        }
+
+        async function fetchCloudMaps() {
+            if (!fbDb || !currentCloudUser) return;
+            const container = document.getElementById('cloud-list-container');
+            if (container && cloudMapsCache.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs animate-pulse">Loading cloud maps...</div>`;
+            }
+
+            try {
+                const snap = await fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').orderBy('updatedAt', 'desc').get();
+                cloudMapsCache = [];
+                snap.forEach(doc => {
+                    cloudMapsCache.push(Object.assign({ id: doc.id }, doc.data()));
+                });
+                renderCloudMapsList();
+                updateCloudAuthUI();
+            } catch (err) {
+                console.warn('Could not fetch cloud maps:', err);
+                if (container) {
+                    container.innerHTML = `<div class="p-6 text-center text-red-500 text-xs">Could not load cloud maps: ${escapeHtml(err.message)}<br><span class="text-slate-400 mt-1 block">Check your Firestore Security Rules in Firebase console.</span></div>`;
+                }
+            }
+        }
+
+        function renderCloudMapsList() {
+            const container = document.getElementById('cloud-list-container');
+            const countEl = document.getElementById('modal-project-count');
+            if (!container) return;
+
+            if (activeLibraryTab === 'cloud' && countEl) {
+                countEl.textContent = `${cloudMapsCache.length} cloud map${cloudMapsCache.length === 1 ? '' : 's'}`;
+            }
+
+            if (!currentCloudUser) {
+                container.innerHTML = '';
+                return;
+            }
+
+            if (cloudMapsCache.length === 0) {
+                container.innerHTML = `
+                <div class="p-8 text-center text-slate-400 text-xs">
+                    <p class="text-base mb-1">☁️</p>
+                    <p class="font-semibold text-slate-600 mb-1">No cloud maps found yet</p>
+                    <p class="text-slate-400 mb-3">Save your active mind map to the cloud to access it from any device.</p>
+                    <button type="button" onclick="saveActiveMapToCloud()" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95">
+                        ☁️ Push Active Map to Cloud
+                    </button>
+                </div>`;
+                return;
+            }
+
+            let html = '';
+            cloudMapsCache.forEach(map => {
+                let updatedStr = 'Just now';
+                if (map.updatedAt) {
+                    const d = map.updatedAt.toDate ? map.updatedAt.toDate() : new Date(map.updatedAt);
+                    updatedStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                }
+                const count = map.nodeCount || (map.data && map.data.nodes ? Object.keys(map.data.nodes).length : 0);
+
+                html += `
+                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-all">
+                    <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onclick="loadCloudMap('${map.id}')">
+                        <div class="w-9 h-9 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-lg font-bold shadow-2xs">
+                            ☁️
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-bold text-sm text-slate-800 truncate">${escapeHtml(map.name || 'Untitled Mind Map')}</h4>
+                            <div class="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                                <span>${count} bubble${count === 1 ? '' : 's'}</span>
+                                <span>•</span>
+                                <span>Updated ${updatedStr}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 ml-2">
+                        <button type="button" onclick="loadCloudMap('${map.id}')" class="px-2.5 py-1 text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg shadow-2xs transition-colors" title="Open this mind map">
+                            Open
+                        </button>
+                        <button type="button" onclick="downloadCloudMapToLocal('${map.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save copy to Local Browser Maps">
+                            ⬇️
+                        </button>
+                        <button type="button" onclick="saveActiveMapToCloud('${map.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Overwrite cloud copy with active map">
+                            🔄
+                        </button>
+                        <button type="button" onclick="deleteCloudMap('${map.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete from Cloud">
+                            🗑️
+                        </button>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function saveActiveMapToCloud(targetMapId = null) {
+            if (!fbDb || !currentCloudUser) {
+                toggleProjectManagerModal(true);
+                switchLibraryTab('cloud');
+                return;
+            }
+
+            setSaveStatus('saving', '☁️ Uploading map to cloud...');
+
+            try {
+                const cleanedNodes = cleanNodesForStorage(nodes);
+                const cleanedDecs = cleanDecorationsForStorage(canvasDecorations, false);
+                const meta = getCurrentProjectMeta();
+                const mapName = (meta ? meta.name : 'Master Idea') || 'Untitled Mind Map';
+                const mapId = targetMapId || (meta ? meta.id : ('map_' + Date.now()));
+
+                const payload = {
+                    id: mapId,
+                    name: mapName,
+                    userId: currentCloudUser.uid,
+                    userEmail: currentCloudUser.email || 'guest',
+                    nodeCount: Object.keys(nodes).length,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    data: {
+                        nodes: cleanedNodes,
+                        canvasDecorations: cleanedDecs,
+                        canvasImageAssets,
+                        isDesignSelectable,
+                        panX,
+                        panY,
+                        zoom,
+                        version: 'MM_V4'
+                    }
+                };
+
+                await fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').doc(mapId).set(payload, { merge: true });
+                setSaveStatus('saved', `✓ Saved "${mapName}" to Cloud`);
+                fetchCloudMaps();
+            } catch (err) {
+                console.error('Cloud save error:', err);
+                alert('Failed to save to cloud: ' + err.message);
+                setSaveStatus('error', '⚠️ Cloud save failed');
+            }
+        }
+
+        async function loadCloudMap(mapId) {
+            if (!fbDb || !currentCloudUser) return;
+            setSaveStatus('saving', '☁️ Fetching map from cloud...');
+
+            try {
+                const docSnap = await fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').doc(mapId).get();
+                if (!docSnap.exists) {
+                    alert('Cloud map not found.');
+                    return;
+                }
+                const map = docSnap.data();
+                if (!map || !map.data) {
+                    alert('Corrupted cloud map data.');
+                    return;
+                }
+
+                // Save active local project first
+                saveCurrentProjectImmediate();
+
+                // Check if already in local project registry
+                let existingLocal = projectRegistry.projects.find(p => p.id === mapId);
+                if (!existingLocal) {
+                    const newMeta = {
+                        id: mapId,
+                        name: map.name || 'Cloud Map',
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        nodeCount: (map.data.nodes ? Object.keys(map.data.nodes).length : 1),
+                        cloudSynced: true
+                    };
+                    projectRegistry.projects.unshift(newMeta);
+                } else {
+                    existingLocal.name = map.name || existingLocal.name;
+                    existingLocal.updatedAt = Date.now();
+                }
+                currentProjectId = mapId;
+                projectRegistry.activeId = mapId;
+                saveProjectRegistry(false);
+
+                // Populate canvas state
+                nodes = map.data.nodes || {};
+                canvasDecorations = map.data.canvasDecorations || {};
+                if (map.data.canvasImageAssets) {
+                    Object.assign(canvasImageAssets, map.data.canvasImageAssets);
+                    saveAssetsToStorage();
+                }
+                if (typeof map.data.panX === 'number') panX = map.data.panX;
+                if (typeof map.data.panY === 'number') panY = map.data.panY;
+                if (typeof map.data.zoom === 'number') zoom = map.data.zoom;
+                if (typeof map.data.isDesignSelectable === 'boolean') isDesignSelectable = map.data.isDesignSelectable;
+
+                selectedNodeId = Object.keys(nodes).find(k => !nodes[k].parentId) || Object.keys(nodes)[0];
+                selectedDecorationId = null;
+
+                renderTree();
+                renderDecorations();
+                applyDesignLayerSettings();
+                syncFromMap();
+                updatePropertiesPanel();
+                updateProjectHeaderUI();
+                fitView();
+
+                // Save locally too
+                saveCurrentProjectImmediate();
+
+                toggleProjectManagerModal(false);
+                setSaveStatus('saved', `✓ Loaded "${map.name}" from Cloud`);
+            } catch (err) {
+                console.error('Cloud load error:', err);
+                alert('Could not load cloud map: ' + err.message);
+                setSaveStatus('error', '⚠️ Cloud load failed');
+            }
+        }
+
+        async function downloadCloudMapToLocal(mapId) {
+            const map = cloudMapsCache.find(m => m.id === mapId);
+            if (!map || !map.data) return;
+            const newName = `${map.name || 'Cloud Map'} (Local Copy)`;
+            createNewProject(newName, map.data.nodes, map.data.canvasDecorations, map.data.panX, map.data.panY, map.data.zoom);
+            switchLibraryTab('local');
+            setSaveStatus('saved', `✓ Downloaded "${newName}" to Local Library`);
+        }
+
+        async function exportLocalMapToCloud(projId) {
+            if (!fbDb || !currentCloudUser) {
+                toggleProjectManagerModal(true);
+                switchLibraryTab('cloud');
+                return;
+            }
+
+            const meta = projectRegistry.projects.find(p => p.id === projId);
+            if (!meta) return;
+
+            let data = null;
+            try {
+                const idbKey = getProjectIDBKey(projId);
+                data = await idbLoad(idbKey);
+                if (!data) {
+                    const raw = localStorage.getItem(getProjectStorageKey(projId));
+                    if (raw) data = JSON.parse(raw);
+                }
+            } catch (e) {}
+
+            if (!data) {
+                alert('Could not load project data for upload.');
+                return;
+            }
+
+            setSaveStatus('saving', `☁️ Uploading "${meta.name}" to Cloud...`);
+            try {
+                const payload = {
+                    id: projId,
+                    name: meta.name,
+                    userId: currentCloudUser.uid,
+                    userEmail: currentCloudUser.email || 'guest',
+                    nodeCount: meta.nodeCount || 1,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    data: {
+                        nodes: data.nodes || {},
+                        canvasDecorations: data.canvasDecorations || {},
+                        canvasImageAssets: data.canvasImageAssets || {},
+                        panX: data.panX ?? 100,
+                        panY: data.panY ?? 100,
+                        zoom: data.zoom ?? 1,
+                        version: 'MM_V4'
+                    }
+                };
+                await fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').doc(projId).set(payload, { merge: true });
+                setSaveStatus('saved', `✓ Uploaded "${meta.name}" to Cloud`);
+                fetchCloudMaps();
+            } catch (err) {
+                alert('Failed to upload to cloud: ' + err.message);
+            }
+        }
+
+        async function deleteCloudMap(mapId) {
+            const map = cloudMapsCache.find(m => m.id === mapId);
+            const mapName = map ? map.name : 'this cloud map';
+            if (!confirm(`Are you sure you want to delete "${mapName}" from your Cloud library?\n\nThis cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                await fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').doc(mapId).delete();
+                cloudMapsCache = cloudMapsCache.filter(m => m.id !== mapId);
+                renderCloudMapsList();
+                updateCloudAuthUI();
+                setSaveStatus('saved', `✓ Deleted "${mapName}" from Cloud`);
+            } catch (err) {
+                alert('Could not delete cloud map: ' + err.message);
+            }
+        }
+
         // --- PROJECT MANAGER ACTIONS & MODAL ---
         function toggleProjectManagerModal(show) {
             const modal = document.getElementById('project-manager-modal');
@@ -1521,6 +2221,9 @@
                                 Open
                             </button>
                         ` : ''}
+                        <button type="button" onclick="exportLocalMapToCloud('${proj.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Upload this map to Cloud">
+                            ☁️
+                        </button>
                         <button type="button" onclick="promptRenameProject('${proj.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename map">
                             ✏️
                         </button>
@@ -2404,6 +3107,8 @@ This will permanently remove this mind map.`)) {
             syncFromMap();
             updatePropertiesPanel();
             updateProjectHeaderUI();
+            // Initialize Firebase Cloud if configured
+            initFirebaseCloud();
             if (loaded) {
                 const curMeta = getCurrentProjectMeta();
                 setSaveStatus('saved', `✓ Loaded "${curMeta ? curMeta.name : 'map'}"`);
