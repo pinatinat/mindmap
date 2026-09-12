@@ -540,7 +540,7 @@
         <!-- INFINITE CANVAS -->
         <main id="canvas-bg" class="flex-1 relative overflow-hidden z-10">
             <!-- Floating Canvas Design Toolbar -->
-            <div class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium max-w-[calc(100vw-24px)] overflow-x-auto">
+            <div class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium max-w-[calc(100vw-24px)] overflow-visible">
                 <span class="text-slate-400 font-bold uppercase tracking-wider text-[0.62rem] mr-1 hidden sm:inline">Design</span>
                 
                 <!-- Selection Lock Toggle -->
@@ -556,50 +556,50 @@
                 <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
 
                 <!-- Shape Dropdown -->
-                <div class="relative group">
-                    <button type="button" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors">
+                <div class="relative">
+                    <button type="button" onclick="toggleDesignDropdown('shape', event)" id="btn-dropdown-shape" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none">
                         🔲 Shape <span class="text-[0.6rem] text-slate-400">▼</span>
                     </button>
-                    <div class="absolute right-0 top-full mt-1.5 hidden group-hover:flex flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[145px] z-30">
-                        <button type="button" onclick="addDecoration('zone')" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                    <div id="dropdown-menu-shape" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[155px] z-50">
+                        <button type="button" onclick="addDecoration('zone'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                             <span>🔲</span> Grouping Zone
                         </button>
-                        <button type="button" onclick="addDecoration('card')" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                        <button type="button" onclick="addDecoration('card'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                             <span>📄</span> Solid Card
                         </button>
-                        <button type="button" onclick="addDecoration('circle')" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                        <button type="button" onclick="addDecoration('circle'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                             <span>⭕</span> Circle Frame
                         </button>
                     </div>
                 </div>
 
                 <!-- Text Dropdown -->
-                <div class="relative group">
-                    <button type="button" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors">
+                <div class="relative">
+                    <button type="button" onclick="toggleDesignDropdown('text', event)" id="btn-dropdown-text" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none">
                         🏷️ Text <span class="text-[0.6rem] text-slate-400">▼</span>
                     </button>
-                    <div class="absolute right-0 top-full mt-1.5 hidden group-hover:flex flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[145px] z-30">
-                        <button type="button" onclick="addDecoration('textbox')" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                    <div id="dropdown-menu-text" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[155px] z-50">
+                        <button type="button" onclick="addDecoration('textbox'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                             <span>✏️</span> Free Heading
                         </button>
-                        <button type="button" onclick="addDecoration('sticky')" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                        <button type="button" onclick="addDecoration('sticky'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                             <span>📌</span> Sticky Guide Note
                         </button>
                     </div>
                 </div>
 
                 <!-- Image Guide Dropdown -->
-                <div class="relative group">
-                    <button type="button" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Add Image Guide (URL link or file upload)">
+                <div class="relative">
+                    <button type="button" onclick="toggleDesignDropdown('image', event)" id="btn-dropdown-image" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none" title="Add Image Guide (URL link or file upload)">
                         🖼️ Image Guide <span class="text-[0.6rem] text-slate-400">▼</span>
                     </button>
-                    <div class="absolute right-0 top-full mt-1.5 hidden group-hover:flex flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[180px] z-30">
-                        <button type="button" onclick="promptImageGuideUrl()" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                    <div id="dropdown-menu-image" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[185px] z-50">
+                        <button type="button" onclick="promptImageGuideUrl(); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                             <span>🔗</span> Enter Image URL / Link
                         </button>
                         <label class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs cursor-pointer">
                             <span>📁</span> Upload Image File
-                            <input type="file" accept="image/*" onchange="handleImageGuideUpload(event)" class="hidden">
+                            <input type="file" accept="image/*" onchange="handleImageGuideUpload(event); closeDesignDropdowns();" class="hidden">
                         </label>
                     </div>
                 </div>
@@ -5023,6 +5023,54 @@ This will permanently remove this mind map.`)) {
                 }
             }
         }
+
+        // --- DESIGN TOOLBAR DROPDOWNS (Shape, Text, Image Guide) ---
+        function toggleDesignDropdown(type, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const types = ['shape', 'text', 'image'];
+            types.forEach(t => {
+                const menu = document.getElementById(`dropdown-menu-${t}`);
+                if (!menu) return;
+                if (t === type) {
+                    const isHidden = menu.classList.contains('hidden');
+                    if (isHidden) {
+                        menu.classList.remove('hidden');
+                        menu.classList.add('flex');
+                    } else {
+                        menu.classList.add('hidden');
+                        menu.classList.remove('flex');
+                    }
+                } else {
+                    menu.classList.add('hidden');
+                    menu.classList.remove('flex');
+                }
+            });
+        }
+
+        function closeDesignDropdowns() {
+            ['shape', 'text', 'image'].forEach(t => {
+                const menu = document.getElementById(`dropdown-menu-${t}`);
+                if (menu) {
+                    menu.classList.add('hidden');
+                    menu.classList.remove('flex');
+                }
+            });
+        }
+
+        // Close design dropdowns on click outside or Escape
+        window.addEventListener('click', e => {
+            const dropdownIds = ['shape', 'text', 'image'];
+            const clickedInside = dropdownIds.some(t => {
+                const btn = document.getElementById(`btn-dropdown-${t}`);
+                const menu = document.getElementById(`dropdown-menu-${t}`);
+                return (btn && btn.contains(e.target)) || (menu && menu.contains(e.target));
+            });
+            if (!clickedInside) {
+                closeDesignDropdowns();
+            }
+        });
 
         function addDecoration(kind) {
             const canvasRect = canvasBg.getBoundingClientRect();
