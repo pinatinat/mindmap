@@ -684,7 +684,7 @@
             <div id="canvas-instructions-card" class="absolute bottom-4 left-4 bg-white/90 backdrop-blur border px-4 py-3 rounded-xl shadow-sm text-xs text-slate-500 pointer-events-none transition-colors">
                 <p>🌟 <b>+ New Root:</b> Create independent tree</p>
                 <p>🖱️ <b>Drag Background:</b> Pan Map</p>
-                <p>📜 <b>Scroll Wheel:</b> Zoom In/Out</p>
+                <p>📜 <b>Scroll Wheel:</b> Zoom In/Out (Tilt to Pan)</p>
                 <p>🤏 <b>Drag Bubble:</b> Move branch freely</p>
                 <p>✏️ <b>Double-Click:</b> Edit text inline</p>
             </div>
@@ -5667,13 +5667,44 @@ This will permanently remove this mind map.`)) {
 
         canvasBg.addEventListener('wheel', e => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            zoom = Math.min(Math.max(zoom * delta, 0.2), 3);
-            applyTransform();
-            triggerAutoSave();
-        });
+
+            // 1. Wheel tilt left/right (deltaX) or Shift + scroll: Pan horizontally
+            if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                const step = (e.deltaMode === 1) ? e.deltaX * 25 : e.deltaX;
+                panX -= step;
+                applyTransform();
+                triggerAutoSave();
+            } else if (e.shiftKey && e.deltaY !== 0) {
+                const step = (e.deltaMode === 1) ? e.deltaY * 25 : e.deltaY;
+                panX -= step;
+                applyTransform();
+                triggerAutoSave();
+            } else if (e.deltaY !== 0) {
+                // 2. Vertical scroll: Zoom in/out
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                zoom = Math.min(Math.max(zoom * delta, 0.2), 3);
+                applyTransform();
+                triggerAutoSave();
+            }
+        }, { passive: false });
 
         canvasBg.addEventListener('mousedown', e => {
+            // Support mice whose drivers map wheel tilt as button 3 (tilt left) or 4 (tilt right)
+            if (e.button === 3) {
+                e.preventDefault();
+                panX += 80;
+                applyTransform();
+                triggerAutoSave();
+                return;
+            }
+            if (e.button === 4) {
+                e.preventDefault();
+                panX -= 80;
+                applyTransform();
+                triggerAutoSave();
+                return;
+            }
+
             if (isInlineEditing) return; // Don't start drag while editing
 
             // 1. Check if clicking on decoration resize handle
@@ -5796,7 +5827,10 @@ This will permanently remove this mind map.`)) {
             }
         });
 
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('mouseup', e => {
+            if (e && (e.button === 3 || e.button === 4)) {
+                e.preventDefault();
+            }
             if (decDragInfo || resizeInfo) {
                 triggerAutoSave();
                 decDragInfo = null;
