@@ -482,6 +482,35 @@
                         <div id="attachment-preview-content" class="rounded-lg bg-slate-50 border p-2 flex items-center justify-center"></div>
                     </div>
                 </div>
+
+                <!-- Divider -->
+                <hr class="border-slate-200">
+
+                <!-- Canvas & Grid Settings Card -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold text-slate-700 uppercase">🎨 Canvas Background</label>
+                        <span id="sidebar-label-canvas-hex" class="text-[0.68rem] font-mono text-slate-500 font-semibold">#f8fafc</span>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2.5">
+                        <div class="grid grid-cols-6 gap-1 flex-1" id="sidebar-canvas-presets">
+                            <button type="button" onclick="setCanvasBg('#f8fafc')" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f8fafc] hover:scale-110 transition-transform shadow-xs" title="Slate Default (#f8fafc)"></button>
+                            <button type="button" onclick="setCanvasBg('#ffffff')" class="w-6 h-6 rounded-full border border-slate-300 bg-white hover:scale-110 transition-transform shadow-xs" title="Pure White (#ffffff)"></button>
+                            <button type="button" onclick="setCanvasBg('#faf8f5')" class="w-6 h-6 rounded-full border border-slate-300 bg-[#faf8f5] hover:scale-110 transition-transform shadow-xs" title="Warm Paper (#faf8f5)"></button>
+                            <button type="button" onclick="setCanvasBg('#f0fdf4')" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f0fdf4] hover:scale-110 transition-transform shadow-xs" title="Soft Mint (#f0fdf4)"></button>
+                            <button type="button" onclick="setCanvasBg('#0f172a')" class="w-6 h-6 rounded-full border border-slate-700 bg-[#0f172a] hover:scale-110 transition-transform shadow-xs" title="Midnight Dark (#0f172a)"></button>
+                            <button type="button" onclick="setCanvasBg('#000000')" class="w-6 h-6 rounded-full border border-slate-800 bg-[#000000] hover:scale-110 transition-transform shadow-xs" title="OLED Black (#000000)"></button>
+                        </div>
+                        <input type="color" id="sidebar-canvas-bg-picker" oninput="setCanvasBg(this.value)" class="w-7 h-7 cursor-pointer" value="#f8fafc" title="Custom Canvas Color">
+                    </div>
+                    <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200">
+                        <span class="text-[0.68rem] font-bold text-slate-600 uppercase">Grid Pattern</span>
+                        <div class="flex gap-1 bg-white border border-slate-200 p-0.5 rounded-lg">
+                            <button type="button" id="sidebar-btn-grid-dots" onclick="setCanvasGridStyle('dots')" class="px-2 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-800 transition-all">Dots</button>
+                            <button type="button" id="sidebar-btn-grid-plain" onclick="setCanvasGridStyle('plain')" class="px-2 py-0.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-800 transition-all">Plain</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB 2: Code Editor -->
@@ -604,6 +633,36 @@
                     </div>
                 </div>
 
+                <!-- Canvas Background & Theme Dropdown -->
+                <div class="relative">
+                    <button type="button" onclick="toggleDesignDropdown('canvas', event)" id="btn-dropdown-canvas" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none" title="Change Canvas Background Color & Grid">
+                        🎨 Canvas <span class="text-[0.6rem] text-slate-400">▼</span>
+                    </button>
+                    <div id="dropdown-menu-canvas" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-3 min-w-[220px] z-50">
+                        <div class="text-[0.68rem] font-bold text-slate-500 uppercase tracking-wider mb-2">Canvas Color</div>
+                        <div class="grid grid-cols-6 gap-1.5 mb-3" id="toolbar-canvas-presets">
+                            <button type="button" onclick="setCanvasBg('#f8fafc'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f8fafc] hover:scale-110 transition-transform shadow-xs" title="Slate Default (#f8fafc)"></button>
+                            <button type="button" onclick="setCanvasBg('#ffffff'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-white hover:scale-110 transition-transform shadow-xs" title="Pure White (#ffffff)"></button>
+                            <button type="button" onclick="setCanvasBg('#faf8f5'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#faf8f5] hover:scale-110 transition-transform shadow-xs" title="Warm Paper (#faf8f5)"></button>
+                            <button type="button" onclick="setCanvasBg('#f0fdf4'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f0fdf4] hover:scale-110 transition-transform shadow-xs" title="Soft Mint (#f0fdf4)"></button>
+                            <button type="button" onclick="setCanvasBg('#0f172a'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-700 bg-[#0f172a] hover:scale-110 transition-transform shadow-xs" title="Midnight Dark (#0f172a)"></button>
+                            <button type="button" onclick="setCanvasBg('#000000'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-800 bg-[#000000] hover:scale-110 transition-transform shadow-xs" title="OLED Black (#000000)"></button>
+                        </div>
+                        <div class="flex items-center justify-between gap-2 p-1.5 bg-slate-50 rounded-lg border border-slate-200 mb-3">
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="canvas-bg-picker" oninput="setCanvasBg(this.value)" class="w-7 h-7 cursor-pointer" value="#f8fafc" title="Custom Canvas Color">
+                                <span class="text-xs font-semibold text-slate-700">Custom</span>
+                            </div>
+                            <span id="label-canvas-hex" class="text-[0.68rem] font-mono text-slate-500 font-medium">#f8fafc</span>
+                        </div>
+                        <div class="text-[0.68rem] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Grid Style</div>
+                        <div class="flex gap-1.5 bg-slate-100 p-1 rounded-lg">
+                            <button type="button" id="btn-grid-dots" onclick="setCanvasGridStyle('dots')" class="flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-xs text-slate-800 transition-all">Dots</button>
+                            <button type="button" id="btn-grid-plain" onclick="setCanvasGridStyle('plain')" class="flex-1 py-1 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900 transition-all">Plain</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
                 <button type="button" onclick="openExportImageModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100" title="Export as PNG, JPEG, or SVG image">
                     <span>🖼️</span> Export
@@ -622,7 +681,7 @@
                 <div id="canvas-decorations-front" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 25;"></div>
             </div>
             
-            <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur border px-4 py-3 rounded-xl shadow-sm text-xs text-slate-500 pointer-events-none">
+            <div id="canvas-instructions-card" class="absolute bottom-4 left-4 bg-white/90 backdrop-blur border px-4 py-3 rounded-xl shadow-sm text-xs text-slate-500 pointer-events-none transition-colors">
                 <p>🌟 <b>+ New Root:</b> Create independent tree</p>
                 <p>🖱️ <b>Drag Background:</b> Pan Map</p>
                 <p>📜 <b>Scroll Wheel:</b> Zoom In/Out</p>
@@ -1372,6 +1431,10 @@
         let isDraggingCanvas = false;
         let dragInfo = null;
 
+        // Canvas Background & Theme State
+        let canvasBgColor = '#f8fafc';
+        let canvasGridStyle = 'dots'; // 'dots' | 'plain'
+
         // --- HELPER: Get all root nodes ---
         function getRoots() {
             return Object.values(nodes).filter(n => n.parentId === null);
@@ -1802,6 +1865,8 @@
                 nodes: cleanedNodes,
                 canvasDecorations: cleanedDecs,
                 canvasImageAssets,
+                canvasBgColor,
+                canvasGridStyle,
                 isDesignSelectable,
                 selectedNodeId,
                 panX,
@@ -1829,6 +1894,8 @@
                         id: currentProjectId,
                         nodes: cleanedNodes,
                         canvasDecorations: cleanDecorationsForStorage(canvasDecorations, true),
+                        canvasBgColor,
+                        canvasGridStyle,
                         isDesignSelectable,
                         selectedNodeId,
                         panX,
@@ -1862,6 +1929,8 @@
                     nodes: cleanedNodes,
                     canvasDecorations: cleanedDecs,
                     canvasImageAssets,
+                    canvasBgColor,
+                    canvasGridStyle,
                     isDesignSelectable,
                     selectedNodeId,
                     panX,
@@ -1910,6 +1979,8 @@
                             id: currentProjectId,
                             nodes: cleanedNodes,
                             canvasDecorations: cleanDecorationsForStorage(canvasDecorations, true),
+                            canvasBgColor,
+                            canvasGridStyle,
                             isDesignSelectable,
                             selectedNodeId,
                             panX,
@@ -1981,6 +2052,10 @@
                         if (typeof data.panY === 'number') panY = data.panY;
                         if (typeof data.zoom === 'number') zoom = data.zoom;
 
+                        canvasBgColor = data.canvasBgColor || '#f8fafc';
+                        canvasGridStyle = data.canvasGridStyle || 'dots';
+                        setCanvasBg(canvasBgColor, canvasGridStyle, true);
+
                         // Asynchronously check IndexedDB for full high-res image assets
                         hydrateFromIndexedDB(projId);
                         return true;
@@ -2008,6 +2083,11 @@
                 if (idbData && idbData.canvasImageAssets && typeof idbData.canvasImageAssets === 'object') {
                     Object.assign(canvasImageAssets, idbData.canvasImageAssets);
                     updated = true;
+                }
+                if (idbData && (idbData.canvasBgColor || idbData.canvasGridStyle)) {
+                    if (idbData.canvasBgColor) canvasBgColor = idbData.canvasBgColor;
+                    if (idbData.canvasGridStyle) canvasGridStyle = idbData.canvasGridStyle;
+                    setCanvasBg(canvasBgColor, canvasGridStyle, true);
                 }
                 // Re-hydrate decorations that needed image data URLs
                 Object.values(canvasDecorations).forEach(dec => {
@@ -3830,6 +3910,9 @@
                 panX = sourceData.panX ?? 100;
                 panY = sourceData.panY ?? 100;
                 zoom = sourceData.zoom ?? 1;
+                canvasBgColor = sourceData.canvasBgColor || '#f8fafc';
+                canvasGridStyle = sourceData.canvasGridStyle || 'dots';
+                setCanvasBg(canvasBgColor, canvasGridStyle, true);
             }
 
             saveProjectRegistry(false);
@@ -3900,7 +3983,7 @@ This will permanently remove this mind map.`)) {
             setSaveStatus('saved', `✓ Deleted "${meta.name}"`);
         }
 
-        function createNewProject(name, initialNodes = null, initialDecorations = null, pX = null, pY = null, zVal = null) {
+        function createNewProject(name, initialNodes = null, initialDecorations = null, pX = null, pY = null, zVal = null, bgCol = '#f8fafc', gridSt = 'dots') {
             saveCurrentProjectImmediate();
 
             const newId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
@@ -3912,6 +3995,8 @@ This will permanently remove this mind map.`)) {
                 panX = (typeof pX === 'number') ? pX : 100;
                 panY = (typeof pY === 'number') ? pY : 100;
                 zoom = (typeof zVal === 'number') ? zVal : 1;
+                canvasBgColor = bgCol || '#f8fafc';
+                canvasGridStyle = gridSt || 'dots';
             } else {
                 nodes = {
                     'root': {
@@ -3930,7 +4015,10 @@ This will permanently remove this mind map.`)) {
                 panX = 150;
                 panY = 150;
                 zoom = 1;
+                canvasBgColor = '#f8fafc';
+                canvasGridStyle = 'dots';
             }
+            setCanvasBg(canvasBgColor, canvasGridStyle, true);
 
             selectedNodeId = Object.keys(nodes).find(k => !nodes[k].parentId) || Object.keys(nodes)[0];
             selectedDecorationId = null;
@@ -3979,6 +4067,9 @@ This will permanently remove this mind map.`)) {
                 };
                 canvasDecorations = {};
                 panX = 100; panY = 100; zoom = 1;
+                canvasBgColor = '#f8fafc';
+                canvasGridStyle = 'dots';
+                setCanvasBg(canvasBgColor, canvasGridStyle, true);
             }
 
             renderTree();
@@ -4190,7 +4281,7 @@ This will permanently remove this mind map.`)) {
 
             let bgColor = null;
             if (bgOpt === 'white') bgColor = '#ffffff';
-            else if (bgOpt === 'canvas') bgColor = '#f8fafc';
+            else if (bgOpt === 'canvas') bgColor = canvasBgColor || '#f8fafc';
             else if (bgOpt === 'transparent') {
                 bgColor = (format === 'jpeg') ? '#ffffff' : null;
             }
@@ -4258,7 +4349,7 @@ This will permanently remove this mind map.`)) {
 
             let bgColor = null;
             if (bgOpt === 'white') bgColor = '#ffffff';
-            else if (bgOpt === 'canvas') bgColor = '#f8fafc';
+            else if (bgOpt === 'canvas') bgColor = canvasBgColor || '#f8fafc';
 
             const prevNodeId = selectedNodeId;
             const prevDecId = selectedDecorationId;
@@ -4296,7 +4387,7 @@ This will permanently remove this mind map.`)) {
                 .bubble-node.has-attachment { flex-direction: column; border-radius: 1rem !important; white-space: normal !important; padding: 8px 12px; }
                 .bubble-img { max-width: 180px; max-height: 120px; border-radius: 0.5rem; object-fit: cover; margin-bottom: 6px; }
                 .canvas-decoration { position: absolute; box-sizing: border-box; font-family: ui-sans-serif, system-ui, sans-serif; }
-                path.edge { fill: none; stroke: #cbd5e1; stroke-width: 3px; }
+                path.edge { fill: none; stroke: ${getEdgeStrokeColor()}; stroke-width: 3px; }
             </style>\n`;
 
             svgStr += `  <g id="edges-layer">\n    ${edgesContent}\n  </g>\n`;
@@ -4415,6 +4506,8 @@ This will permanently remove this mind map.`)) {
                 nodes: cleanNodesForStorage(nodes),
                 canvasDecorations: cleanDecorationsForStorage(canvasDecorations, false),
                 canvasImageAssets,
+                canvasBgColor,
+                canvasGridStyle,
                 isDesignSelectable,
                 panX,
                 panY,
@@ -4455,7 +4548,7 @@ This will permanently remove this mind map.`)) {
                                 Object.assign(canvasImageAssets, parsed.canvasImageAssets);
                                 saveAssetsToStorage();
                             }
-                            createNewProject(detectedName, newNodes, newDecs, parsed.panX, parsed.panY, parsed.zoom);
+                            createNewProject(detectedName, newNodes, newDecs, parsed.panX, parsed.panY, parsed.zoom, parsed.canvasBgColor, parsed.canvasGridStyle);
                             setSaveStatus('saved', `✓ Imported as new map: "${detectedName}"`);
                         } else {
                             nodes = parsed.nodes || parsed;
@@ -4480,6 +4573,9 @@ This will permanently remove this mind map.`)) {
                             if (typeof parsed.panX === 'number') panX = parsed.panX;
                             if (typeof parsed.panY === 'number') panY = parsed.panY;
                             if (typeof parsed.zoom === 'number') zoom = parsed.zoom;
+                            if (parsed.canvasBgColor) canvasBgColor = parsed.canvasBgColor;
+                            if (parsed.canvasGridStyle) canvasGridStyle = parsed.canvasGridStyle;
+                            setCanvasBg(canvasBgColor, canvasGridStyle, true);
                             renderTree();
                             renderDecorations();
                             applyDesignLayerSettings();
@@ -4513,7 +4609,7 @@ This will permanently remove this mind map.`)) {
                             Object.assign(canvasImageAssets, parsed.canvasImageAssets);
                             saveAssetsToStorage();
                         }
-                        createNewProject(mapName, newNodes, newDecs, parsed.panX, parsed.panY, parsed.zoom);
+                        createNewProject(mapName, newNodes, newDecs, parsed.panX, parsed.panY, parsed.zoom, parsed.canvasBgColor, parsed.canvasGridStyle);
                         toggleProjectManagerModal(false);
                         setSaveStatus('saved', `✓ Imported "${mapName}" into Library`);
                     }
@@ -4576,6 +4672,9 @@ This will permanently remove this mind map.`)) {
             localStorage.removeItem(STORAGE_KEY);
             canvasDecorations = {};
             isDesignSelectable = true;
+            canvasBgColor = '#f8fafc';
+            canvasGridStyle = 'dots';
+            setCanvasBg(canvasBgColor, canvasGridStyle, true);
             init(true);
             setSaveStatus('saved', '✓ Reset to Default');
         }
@@ -4609,7 +4708,10 @@ This will permanently remove this mind map.`)) {
                 panX = 100;
                 panY = 100;
                 zoom = 1;
+                canvasBgColor = '#f8fafc';
+                canvasGridStyle = 'dots';
             }
+            setCanvasBg(canvasBgColor, canvasGridStyle, true);
             applyTransform();
             renderTree();
             renderDecorations();
@@ -4681,7 +4783,7 @@ This will permanently remove this mind map.`)) {
                 if (node.parentId && nodes[node.parentId]) {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     path.setAttribute('class', 'edge');
-                    path.setAttribute('stroke', '#cbd5e1');
+                    path.setAttribute('stroke', getEdgeStrokeColor());
                     path.setAttribute('stroke-width', '3');
                     path.setAttribute('fill', 'none');
                     svg.appendChild(path);
@@ -5024,12 +5126,123 @@ This will permanently remove this mind map.`)) {
             }
         }
 
-        // --- DESIGN TOOLBAR DROPDOWNS (Shape, Text, Image Guide) ---
+        // --- CANVAS BACKGROUND THEME & CONTRAST ENGINE ---
+        function getCanvasLuminance(hex) {
+            if (!hex || typeof hex !== 'string' || !hex.startsWith('#') || hex.length < 7) return 1.0;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        }
+
+        function getEdgeStrokeColor() {
+            return getCanvasLuminance(canvasBgColor) < 0.45 ? '#94a3b8' : '#cbd5e1';
+        }
+
+        function setCanvasBg(color, gridStyle = canvasGridStyle, skipSave = false) {
+            if (color) canvasBgColor = color;
+            if (gridStyle) canvasGridStyle = gridStyle;
+
+            const bgEl = document.getElementById('canvas-bg');
+            const luminance = getCanvasLuminance(canvasBgColor);
+            const isDark = luminance < 0.45;
+
+            if (bgEl) {
+                bgEl.style.backgroundColor = canvasBgColor;
+                if (canvasGridStyle === 'dots') {
+                    const dotColor = isDark ? 'rgba(255, 255, 255, 0.22)' : '#cbd5e1';
+                    bgEl.style.backgroundImage = `radial-gradient(${dotColor} 1px, transparent 1px)`;
+                    bgEl.style.backgroundSize = '40px 40px';
+                } else {
+                    bgEl.style.backgroundImage = 'none';
+                }
+            }
+
+            // Sync inputs & labels
+            const picker1 = document.getElementById('canvas-bg-picker');
+            if (picker1 && canvasBgColor.startsWith('#') && canvasBgColor.length === 7) {
+                picker1.value = canvasBgColor;
+            }
+            const picker2 = document.getElementById('sidebar-canvas-bg-picker');
+            if (picker2 && canvasBgColor.startsWith('#') && canvasBgColor.length === 7) {
+                picker2.value = canvasBgColor;
+            }
+            const label1 = document.getElementById('label-canvas-hex');
+            if (label1) label1.textContent = canvasBgColor;
+            const label2 = document.getElementById('sidebar-label-canvas-hex');
+            if (label2) label2.textContent = canvasBgColor;
+
+            // Highlight preset buttons
+            ['toolbar-canvas-presets', 'sidebar-canvas-presets'].forEach(containerId => {
+                const c = document.getElementById(containerId);
+                if (c) {
+                    c.querySelectorAll('button').forEach(btn => {
+                        const btnColor = btn.getAttribute('onclick')?.match(/#[0-9a-fA-F]{6}/)?.[0]?.toLowerCase();
+                        if (btnColor && btnColor === canvasBgColor.toLowerCase()) {
+                            btn.classList.add('ring-2', 'ring-blue-500', 'ring-offset-1', 'scale-110');
+                        } else {
+                            btn.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-1', 'scale-110');
+                        }
+                    });
+                }
+            });
+
+            // Update grid buttons active states
+            const isDots = canvasGridStyle === 'dots';
+            const btnDots1 = document.getElementById('btn-grid-dots');
+            const btnPlain1 = document.getElementById('btn-grid-plain');
+            if (btnDots1 && btnPlain1) {
+                if (isDots) {
+                    btnDots1.className = "flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-xs text-slate-800 transition-all";
+                    btnPlain1.className = "flex-1 py-1 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900 transition-all";
+                } else {
+                    btnDots1.className = "flex-1 py-1 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900 transition-all";
+                    btnPlain1.className = "flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-xs text-slate-800 transition-all";
+                }
+            }
+            const btnDots2 = document.getElementById('sidebar-btn-grid-dots');
+            const btnPlain2 = document.getElementById('sidebar-btn-grid-plain');
+            if (btnDots2 && btnPlain2) {
+                if (isDots) {
+                    btnDots2.className = "px-2 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-800 transition-all";
+                    btnPlain2.className = "px-2 py-0.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-800 transition-all";
+                } else {
+                    btnDots2.className = "px-2 py-0.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-800 transition-all";
+                    btnPlain2.className = "px-2 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-800 transition-all";
+                }
+            }
+
+            // Update edge strokes dynamically for contrast
+            const edgeStroke = getEdgeStrokeColor();
+            document.querySelectorAll('#edges-svg path.edge').forEach(p => {
+                p.setAttribute('stroke', edgeStroke);
+            });
+
+            // Adapt bottom-left instruction card
+            const instrCard = document.getElementById('canvas-instructions-card');
+            if (instrCard) {
+                if (isDark) {
+                    instrCard.className = "absolute bottom-4 left-4 bg-slate-900/90 text-slate-300 border border-slate-700 backdrop-blur px-4 py-3 rounded-xl shadow-lg text-xs pointer-events-none transition-colors";
+                } else {
+                    instrCard.className = "absolute bottom-4 left-4 bg-white/90 text-slate-500 border border-slate-200 backdrop-blur px-4 py-3 rounded-xl shadow-sm text-xs pointer-events-none transition-colors";
+                }
+            }
+
+            if (!skipSave) {
+                triggerAutoSave();
+            }
+        }
+
+        function setCanvasGridStyle(style) {
+            setCanvasBg(canvasBgColor, style);
+        }
+
+        // --- DESIGN TOOLBAR DROPDOWNS (Shape, Text, Image Guide, Canvas) ---
         function toggleDesignDropdown(type, event) {
             if (event) {
                 event.stopPropagation();
             }
-            const types = ['shape', 'text', 'image'];
+            const types = ['shape', 'text', 'image', 'canvas'];
             types.forEach(t => {
                 const menu = document.getElementById(`dropdown-menu-${t}`);
                 if (!menu) return;
@@ -5050,7 +5263,7 @@ This will permanently remove this mind map.`)) {
         }
 
         function closeDesignDropdowns() {
-            ['shape', 'text', 'image'].forEach(t => {
+            ['shape', 'text', 'image', 'canvas'].forEach(t => {
                 const menu = document.getElementById(`dropdown-menu-${t}`);
                 if (menu) {
                     menu.classList.add('hidden');
@@ -5061,7 +5274,7 @@ This will permanently remove this mind map.`)) {
 
         // Close design dropdowns on click outside or Escape
         window.addEventListener('click', e => {
-            const dropdownIds = ['shape', 'text', 'image'];
+            const dropdownIds = ['shape', 'text', 'image', 'canvas'];
             const clickedInside = dropdownIds.some(t => {
                 const btn = document.getElementById(`btn-dropdown-${t}`);
                 const menu = document.getElementById(`dropdown-menu-${t}`);
