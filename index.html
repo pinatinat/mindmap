@@ -569,7 +569,7 @@
         <!-- INFINITE CANVAS -->
         <main id="canvas-bg" class="flex-1 relative overflow-hidden z-10">
             <!-- Floating Canvas Design Toolbar -->
-            <div class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium max-w-[calc(100vw-24px)] overflow-visible">
+            <div id="floating-canvas-design-toolbar" class="floating-canvas-toolbar absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium max-w-[calc(100%-24px)] overflow-visible select-none" style="touch-action: manipulation; -webkit-user-select: none;">
                 <span class="text-slate-400 font-bold uppercase tracking-wider text-[0.62rem] mr-1 hidden sm:inline">Design</span>
                 
                 <!-- Selection Lock Toggle -->
@@ -5035,7 +5035,7 @@ This will permanently remove this mind map.`)) {
                     if (isSelected && isDesignSelectable) {
                         const isFront = dec.layer === 'front';
                         contentHtml += `
-                        <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()">
+                        <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
                             <input type="color" value="${(dec.bg && dec.bg.startsWith('#')) ? dec.bg : '#ffffff'}" onchange="setDecorationBg('${dec.id}', this.value)" class="w-5 h-5 rounded-full cursor-pointer" title="Background Color">
                             <button type="button" onclick="cycleDecorationBorder('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-600 border" title="Toggle border style">Border</button>
                             
@@ -5239,8 +5239,9 @@ This will permanently remove this mind map.`)) {
 
         // --- DESIGN TOOLBAR DROPDOWNS (Shape, Text, Image Guide, Canvas) ---
         function toggleDesignDropdown(type, event) {
-            if (event) {
-                event.stopPropagation();
+            const ev = event || window.event;
+            if (ev && ev.stopPropagation) {
+                ev.stopPropagation();
             }
             const types = ['shape', 'text', 'image', 'canvas'];
             types.forEach(t => {
@@ -5707,6 +5708,11 @@ This will permanently remove this mind map.`)) {
 
             if (isInlineEditing) return; // Don't start drag while editing
 
+            // 0. Check if clicking inside floating design toolbar or its dropdowns
+            if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar')) {
+                return;
+            }
+
             // 1. Check if clicking on decoration resize handle
             if (isDesignSelectable) {
                 const handleEl = e.target.closest('.decoration-resize-handle');
@@ -5848,6 +5854,9 @@ This will permanently remove this mind map.`)) {
 
         // Double-click: start inline editing instead of prompt()
         canvasBg.addEventListener('dblclick', e => {
+            if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar')) {
+                return;
+            }
             const nodeEl = e.target.closest('.bubble-node');
             if (nodeEl) {
                 const id = nodeEl.dataset.id;
@@ -5870,6 +5879,14 @@ This will permanently remove this mind map.`)) {
         let touchHasMoved = false;
 
         canvasBg.addEventListener('touchstart', e => {
+            // 0. Check if touching inside floating design toolbar or any of its dropdown menus
+            if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar')) {
+                return; // Do NOT preventDefault! Allow click events to fire naturally on iPad/mobile
+            }
+
+            // Touching outside floating design toolbar closes any open design dropdowns
+            closeDesignDropdowns();
+
             if (isInlineEditing) return;
 
             // 1. Two-Finger Pinch-to-Zoom Gesture
@@ -6118,6 +6135,18 @@ This will permanently remove this mind map.`)) {
             resizeInfo = null;
             isDraggingCanvas = false;
         });
+
+        // --- FLOATING CANVAS DESIGN TOOLBAR TOUCH & CLICK ENGINE ---
+        // Prevents iPad / tablet touch gestures from being swallowed by infinite canvas pan
+        const floatingDesignToolbarEl = document.getElementById('floating-canvas-design-toolbar');
+        if (floatingDesignToolbarEl) {
+            floatingDesignToolbarEl.addEventListener('touchstart', e => {
+                e.stopPropagation();
+            }, { passive: true });
+            floatingDesignToolbarEl.addEventListener('mousedown', e => {
+                e.stopPropagation();
+            });
+        }
 
         function applyTransform() {
             document.getElementById('pan-zoom-container').style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
