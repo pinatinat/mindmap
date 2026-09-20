@@ -1702,15 +1702,32 @@
             if (!statusEl || !iconEl || !textEl) return;
 
             if (state === 'saving') {
+                statusEl.onclick = null;
+                statusEl.style.cursor = 'default';
+                statusEl.title = "";
                 statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 transition-all duration-200";
                 iconEl.className = "w-2 h-2 rounded-full bg-amber-500 animate-ping";
                 textEl.textContent = message || "💾 Saving changes...";
             } else if (state === 'saved') {
                 const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                if (message && message.includes('Cloud limit reached')) {
+                    statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all duration-300 cursor-pointer shadow-xs active:scale-95";
+                    iconEl.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+                    textEl.innerHTML = `${escapeHtml(message)} <span class="underline ml-1 font-extrabold text-amber-900 bg-amber-200/80 px-1.5 py-0.5 rounded shadow-2xs">Upgrade ⭐</span>`;
+                    statusEl.onclick = () => openLifetimeProModal('save_status_limit');
+                    statusEl.title = "Cloud Storage Limit Reached! Click to Upgrade to Lifetime Pro";
+                    return;
+                }
+                statusEl.onclick = null;
+                statusEl.style.cursor = 'default';
+                statusEl.title = "";
                 statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all duration-300";
                 iconEl.className = "w-2 h-2 rounded-full bg-emerald-500";
                 textEl.textContent = message || `✓ Saved (${timeStr})`;
             } else if (state === 'error') {
+                statusEl.onclick = null;
+                statusEl.style.cursor = 'default';
+                statusEl.title = "";
                 statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200 transition-all duration-200";
                 iconEl.className = "w-2 h-2 rounded-full bg-red-500";
                 textEl.textContent = message || "⚠️ Storage full";
