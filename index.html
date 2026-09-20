@@ -748,12 +748,17 @@
                     <!-- Cloud Quota Indicator -->
                     <div class="mt-5 p-4 bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 shadow-xs max-w-lg">
                         <div class="flex items-center justify-between text-xs mb-1.5">
-                            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                            <span class="font-bold text-slate-700 flex items-center gap-1.5" id="home-quota-title">
                                 <span>☁️</span> Cloud Storage Quota (Free Tier)
                             </span>
-                            <span id="home-quota-badge" class="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[0.7rem]">
-                                0 / 3 Maps
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="home-quota-upgrade-btn" onclick="openLifetimeProModal('home_card')" class="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-bold text-[0.65rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                                    <span>⭐</span> Upgrade
+                                </button>
+                                <span id="home-quota-badge" class="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[0.7rem]">
+                                    0 / 3 Maps
+                                </span>
+                            </div>
                         </div>
                         <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
                             <div id="home-quota-progress" class="bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
@@ -761,6 +766,11 @@
                         <div class="flex items-center justify-between text-[0.7rem] text-slate-500 mt-2">
                             <span id="home-quota-desc">0 of 3 cloud slots used</span>
                             <span class="text-emerald-600 font-semibold">✓ Unlimited Local Maps</span>
+                        </div>
+                        <!-- Soft-Cap Over-Quota Notice for Homepage (hidden by default) -->
+                        <div id="home-overquota-notice" class="hidden mt-2.5 pt-2 border-t border-amber-200 text-[0.7rem] text-amber-800 flex items-start gap-1.5">
+                            <span>🛡️</span>
+                            <span><b>Soft-Cap Protection:</b> Your existing maps are safe and fully editable. Overwrite existing maps or upgrade to Pro to save new ones.</span>
                         </div>
                     </div>
                 </div>
@@ -1043,11 +1053,17 @@
                         <div class="flex items-center gap-2 min-w-0">
                             <span id="cloud-user-avatar" class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-xs">👤</span>
                             <div class="min-w-0">
-                                <span id="cloud-user-name" class="font-bold text-slate-800 truncate block">User</span>
+                                <div class="flex items-center gap-1.5">
+                                    <span id="cloud-user-name" class="font-bold text-slate-800 truncate block">User</span>
+                                    <span id="cloud-user-plan-badge" class="hidden text-[0.6rem] font-bold px-1.5 py-0.2 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">⭐ PRO</span>
+                                </div>
                                 <span id="cloud-user-email" class="text-[0.65rem] text-slate-500 truncate block">user@example.com</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
+                            <button type="button" id="cloud-header-upgrade-btn" onclick="openLifetimeProModal('cloud_header')" class="hidden px-2.5 py-1 bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white rounded-full font-bold text-[0.68rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                                <span>⭐</span> Upgrade
+                            </button>
                             <button type="button" onclick="saveActiveMapToCloud()" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold text-[0.7rem] shadow-sm transition-transform active:scale-95 flex items-center gap-1">
                                 <span>☁️</span> Push Active Map
                             </button>
@@ -1148,7 +1164,144 @@
         </div>
     </div>
 
-    <!-- SHARE & TEAM COLLABORATION MODAL -->
+    <!-- LIFETIME PRO UPGRADE MODAL -->
+    <div id="lifetime-pro-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeLifetimeProModal()">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden mx-4 flex flex-col" onclick="event.stopPropagation()">
+            <!-- Banner Header -->
+            <div class="relative px-6 pt-6 pb-5 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+                <div class="absolute -right-8 -top-8 w-36 h-36 bg-purple-500/20 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between relative z-10">
+                    <span class="inline-flex items-center gap-1.5 text-[0.65rem] font-black uppercase tracking-widest bg-amber-400/20 text-amber-300 border border-amber-400/40 px-3 py-1 rounded-full">
+                        ⭐ Early Adopter Special
+                    </span>
+                    <button type="button" onclick="closeLifetimeProModal()" class="text-white/60 hover:text-white p-1.5 rounded-full hover:bg-white/10 text-sm transition-colors leading-none">✕</button>
+                </div>
+                <h2 class="text-2xl font-black mt-3 tracking-tight">OmniMind Lifetime Pro</h2>
+                <p class="text-xs text-purple-200 mt-1 max-w-sm">Never worry about cloud limits again. One-time payment, yours forever.</p>
+                
+                <!-- Price Tag -->
+                <div class="mt-4 flex items-baseline gap-2">
+                    <span class="text-3xl sm:text-4xl font-black text-white">₱299</span>
+                    <span class="text-xs text-purple-300 line-through">₱599</span>
+                    <span class="text-[0.7rem] bg-emerald-500/30 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">Save 50%</span>
+                    <span class="text-xs text-purple-200 ml-auto font-medium">One-Time Only</span>
+                </div>
+            </div>
+
+            <!-- Modal Content / Features List -->
+            <div class="p-6 text-xs flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0">☁️</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">50 Cloud Mind Map Slots</p>
+                            <p class="text-[0.72rem] text-slate-500">Expand from 3 free maps to 50 cloud save slots with full instant access.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">🔄</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">Seamless Cross-Device Sync</p>
+                            <p class="text-[0.72rem] text-slate-500">Work seamlessly across desktop, laptop, tablet, and mobile browsers.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">🛡️</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">Soft-Cap Data Safety Guarantee</p>
+                            <p class="text-[0.72rem] text-slate-500">Your maps are never deleted, frozen, or locked out. Always viewable and downloadable.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">👥</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">Unlimited Real-Time Collaboration</p>
+                            <p class="text-[0.72rem] text-slate-500">Host multi-user live brainstorming rooms without restrictions.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">⚡</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">Zero Recurring Subscriptions</p>
+                            <p class="text-[0.72rem] text-slate-500">Pay once with GCash, Maya, or Card. No hidden monthly charges or auto-renewals.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods Badges -->
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
+                    <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Supported Payment Methods (via PayMongo)</span>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
+                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💙 GCash</span>
+                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💚 Maya</span>
+                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">🧡 ShopeePay</span>
+                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💳 Visa / Mastercard</span>
+                    </div>
+                </div>
+
+                <!-- Current User Info & Reference -->
+                <div class="p-2.5 bg-purple-50/60 rounded-xl border border-purple-100 text-[0.72rem] text-purple-900 flex items-center justify-between">
+                    <div>
+                        <span class="text-slate-500">Upgrading Account:</span>
+                        <b id="pro-modal-user-display" class="font-mono text-purple-800 ml-1">user@example.com</b>
+                    </div>
+                    <span class="text-[0.68rem] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md font-mono" id="pro-modal-uid-display">UID</span>
+                </div>
+
+                <!-- CTA Button -->
+                <button type="button" onclick="handlePayMongoUpgradeClick()" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>⚡ Pay ₱299 with PayMongo</span>
+                    <span>➔</span>
+                </button>
+
+                <!-- Activation Code / Manual Whitelist Trigger -->
+                <div class="text-center pt-1 border-t border-slate-100">
+                    <button type="button" onclick="promptActivationCode()" class="text-[0.7rem] text-slate-400 hover:text-purple-600 underline transition-colors">
+                        Have an activation code or paid manually? Click to activate Pro
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOFT-CAP QUOTA EXCEEDED MODAL -->
+    <div id="quota-exceeded-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeQuotaExceededModal()">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden mx-4 flex flex-col p-6 text-center" onclick="event.stopPropagation()">
+            <div class="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">
+                ☁️
+            </div>
+            <h3 class="font-black text-lg text-slate-900 mb-1" id="quota-modal-title">Cloud Storage Limit Reached</h3>
+            <p class="text-xs text-slate-500 mb-3" id="quota-modal-subtitle">
+                You have reached your cloud map limit.
+            </p>
+
+            <!-- Soft-Cap Guarantee Box -->
+            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-left mb-4 text-emerald-950">
+                <div class="flex items-start gap-2">
+                    <span class="text-base">🛡️</span>
+                    <div>
+                        <p class="font-bold text-xs">Soft-Cap Protection Guarantee</p>
+                        <p class="text-[0.72rem] text-emerald-800 mt-0.5 leading-relaxed">
+                            Your existing maps are <b>never deleted or locked</b>. You can continue to view, edit, overwrite, and download them locally anytime.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Options -->
+            <div class="flex flex-col gap-2">
+                <button type="button" onclick="closeQuotaExceededModal(); openLifetimeProModal('quota_limit');" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>⭐ Upgrade to Lifetime Pro (₱299 • 50 Slots)</span>
+                </button>
+                <button type="button" onclick="closeQuotaExceededModal(); toggleProjectManagerModal(true); switchLibraryTab('cloud');" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors">
+                    📁 Overwrite or Delete an Older Cloud Map
+                </button>
+                <button type="button" onclick="closeQuotaExceededModal()" class="text-slate-400 hover:text-slate-600 text-xs py-1 transition-colors">
+                    Keep Map in Local Browser Storage
+                </button>
+            </div>
+        </div>
+    </div>
     <div id="share-team-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm hidden" onclick="if(event.target===this) closeShareModal()">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg flex flex-col overflow-hidden mx-4" onclick="event.stopPropagation()">
             <!-- Header -->
@@ -2125,7 +2278,22 @@
             appId: "1:870599373633:web:bd555380fad96cc7a027c0"
         };
         const FIREBASE_CONFIG_KEY = 'omnimind_firebase_config_v1';
-        const MAX_CLOUD_MAPS = 3;
+        const DEFAULT_MAX_CLOUD_MAPS = 3;
+        const PRO_CLOUD_MAPS = 50;
+        let currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
+        let isUserLifetimePro = false;
+
+        // PayMongo Payment Link for Lifetime Pro (Update this link once your PayMongo merchant account is approved)
+        const PAYMONGO_PRO_PAYMENT_LINK = 'https://paymongo.page/l/omnimind-lifetime-pro';
+
+        // Master activation codes for manual fulfillment / testing
+        const PRO_ACTIVATION_CODES = ['OMNIPRO50', 'LIFETIMEPRO2026', 'VIPMINDMAP'];
+
+        // In-code VIP / Admin accounts whitelist (by UID or Email, optional)
+        const UPGRADED_ACCOUNTS = {
+            // Add any custom VIP UIDs or emails here if needed:
+            // 'example_uid': 50,
+        };
         let homeMapFilter = 'all'; // 'all' | 'local' | 'cloud'
         let fbApp = null;
         let fbAuth = null;
@@ -2133,6 +2301,158 @@
         let currentCloudUser = null;
         let cloudMapsCache = [];
         let activeLibraryTab = 'local'; // 'local' | 'cloud'
+
+        async function fetchUserQuota(user) {
+            isUserLifetimePro = false;
+            currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
+
+            // 1. Check local activation code storage
+            const localCode = localStorage.getItem('omnimind_pro_code');
+            if (localCode && (PRO_ACTIVATION_CODES.includes(localCode) || localCode.startsWith('PRO_'))) {
+                currentCloudUserQuota = PRO_CLOUD_MAPS;
+                isUserLifetimePro = true;
+            }
+
+            if (!user) {
+                return;
+            }
+
+            // 2. Check in-code whitelist (by UID or Email)
+            if (UPGRADED_ACCOUNTS[user.uid]) {
+                currentCloudUserQuota = Math.max(currentCloudUserQuota, UPGRADED_ACCOUNTS[user.uid]);
+                isUserLifetimePro = currentCloudUserQuota >= PRO_CLOUD_MAPS;
+            } else if (user.email && UPGRADED_ACCOUNTS[user.email.toLowerCase()]) {
+                currentCloudUserQuota = Math.max(currentCloudUserQuota, UPGRADED_ACCOUNTS[user.email.toLowerCase()]);
+                isUserLifetimePro = currentCloudUserQuota >= PRO_CLOUD_MAPS;
+            }
+
+            // 3. Check Firestore profile document: users/{userId} for dynamic console or webhook upgrades
+            if (fbDb) {
+                try {
+                    const userDoc = await fbDb.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        const data = userDoc.data();
+                        if (data && typeof data.maxMaps === 'number' && data.maxMaps > 0) {
+                            currentCloudUserQuota = Math.max(currentCloudUserQuota, data.maxMaps);
+                            if (data.plan === 'lifetime_pro' || data.maxMaps >= PRO_CLOUD_MAPS) {
+                                isUserLifetimePro = true;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Note: Could not check custom quota in Firestore:', err);
+                }
+            }
+        }
+
+        function openLifetimeProModal(source = 'general') {
+            const modal = document.getElementById('lifetime-pro-modal');
+            if (!modal) return;
+            const userDisplay = document.getElementById('pro-modal-user-display');
+            const uidDisplay = document.getElementById('pro-modal-uid-display');
+
+            if (userDisplay && uidDisplay) {
+                if (currentCloudUser) {
+                    userDisplay.textContent = currentCloudUser.email || currentCloudUser.displayName || 'Signed In';
+                    uidDisplay.textContent = currentCloudUser.uid.substring(0, 10) + '...';
+                } else {
+                    userDisplay.textContent = 'Guest / Unauthenticated';
+                    uidDisplay.textContent = 'Sign in recommended';
+                }
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeLifetimeProModal() {
+            const modal = document.getElementById('lifetime-pro-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function openQuotaExceededModal(quota, currentCount) {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (!modal) {
+                openLifetimeProModal('quota_exceeded');
+                return;
+            }
+            const titleEl = document.getElementById('quota-modal-title');
+            const subEl = document.getElementById('quota-modal-subtitle');
+            if (titleEl) titleEl.textContent = `Cloud Storage Limit Reached (${currentCount}/${quota} maps)`;
+            if (subEl) subEl.textContent = `You have reached your ${quota}-map cloud limit on the free tier.`;
+            modal.classList.remove('hidden');
+        }
+
+        function closeQuotaExceededModal() {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function handlePayMongoUpgradeClick() {
+            // Check if user is signed in first
+            if (!currentCloudUser) {
+                const proceed = confirm("Tip: Signing in with Google before upgrading ensures your Lifetime Pro pass is permanently linked to your account.\n\nClick OK to sign in now, or Cancel to continue directly to payment.");
+                if (proceed) {
+                    closeLifetimeProModal();
+                    signInWithGoogle();
+                    return;
+                }
+            }
+
+            // Check if link is still placeholder
+            const isPlaceholder = PAYMONGO_PRO_PAYMENT_LINK.includes('your-custom-link') || PAYMONGO_PRO_PAYMENT_LINK.includes('omnimind-lifetime-pro');
+            if (isPlaceholder) {
+                const choice = confirm("PayMongo Merchant Verification Notice:\n\nYour PayMongo account is currently undergoing approval. Once approved, your live payment link will open directly.\n\nIn the meantime, you can activate Lifetime Pro immediately for testing using the activation code 'OMNIPRO50'.\n\nWould you like to enter the activation code now?");
+                if (choice) {
+                    promptActivationCode();
+                }
+                return;
+            }
+
+            // Build dynamic checkout URL with user reference
+            const userId = currentCloudUser ? currentCloudUser.uid : 'guest';
+            const userEmail = (currentCloudUser && currentCloudUser.email) ? currentCloudUser.email : '';
+            const separator = PAYMONGO_PRO_PAYMENT_LINK.includes('?') ? '&' : '?';
+            const checkoutUrl = `${PAYMONGO_PRO_PAYMENT_LINK}${separator}client_reference_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(userEmail)}`;
+
+            window.open(checkoutUrl, '_blank');
+        }
+
+        function promptActivationCode() {
+            const code = prompt("Enter Lifetime Pro Activation Code:\n(For testing, you can use: OMNIPRO50)");
+            if (!code || !code.trim()) return;
+            applyProActivationCode(code.trim());
+        }
+
+        async function applyProActivationCode(code) {
+            const cleanCode = code.toUpperCase().trim();
+            if (!PRO_ACTIVATION_CODES.includes(cleanCode) && !cleanCode.startsWith('PRO_')) {
+                alert('Invalid activation code. Please check and try again.');
+                return;
+            }
+
+            localStorage.setItem('omnimind_pro_code', cleanCode);
+            currentCloudUserQuota = PRO_CLOUD_MAPS;
+            isUserLifetimePro = true;
+
+            if (currentCloudUser && fbDb) {
+                try {
+                    await fbDb.collection('users').doc(currentCloudUser.uid).set({
+                        maxMaps: PRO_CLOUD_MAPS,
+                        plan: 'lifetime_pro',
+                        codeUsed: cleanCode,
+                        upgradedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                } catch (e) {
+                    console.warn('Note: Could not sync activation to Firestore:', e);
+                }
+            }
+
+            closeLifetimeProModal();
+            closeQuotaExceededModal();
+            renderCloudMapsList();
+            renderHomepage();
+            updateCloudAuthUI();
+            alert(`🎉 Lifetime Pro Activated!\n\nYour cloud storage has been expanded to ${PRO_CLOUD_MAPS} maps with Soft-Cap Protection.`);
+        }
 
         function initFirebaseCloud() {
             try {
@@ -2154,15 +2474,18 @@
                     fbAuth = firebase.auth();
                     fbDb = firebase.firestore();
 
-                    fbAuth.onAuthStateChanged(user => {
+                    fbAuth.onAuthStateChanged(async user => {
                         currentCloudUser = user;
-                        updateCloudAuthUI();
                         if (user) {
+                            await fetchUserQuota(user);
                             fetchCloudMaps();
                         } else {
+                            currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
                             cloudMapsCache = [];
                             renderCloudMapsList();
                         }
+                        updateCloudAuthUI();
+                        renderHomepage();
                     });
                     updateCloudAuthUI();
                     return true;
@@ -2217,9 +2540,15 @@
                 const userNameEl = document.getElementById('cloud-user-name');
                 const userEmailEl = document.getElementById('cloud-user-email');
                 const avatarEl = document.getElementById('cloud-user-avatar');
+                const planBadgeEl = document.getElementById('cloud-user-plan-badge');
+                const headerUpgradeBtn = document.getElementById('cloud-header-upgrade-btn');
+                const isPro = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
 
                 if (userNameEl) userNameEl.textContent = displayName;
                 if (userEmailEl) userEmailEl.textContent = email;
+                if (planBadgeEl) planBadgeEl.classList.toggle('hidden', !isPro);
+                if (headerUpgradeBtn) headerUpgradeBtn.classList.toggle('hidden', isPro);
+
                 if (avatarEl) {
                     if (currentCloudUser.photoURL) {
                         avatarEl.innerHTML = `<img src="${currentCloudUser.photoURL}" class="w-full h-full rounded-full object-cover" alt="avatar">`;
@@ -2434,7 +2763,7 @@
             if (!container) return;
 
             if (activeLibraryTab === 'cloud' && countEl) {
-                countEl.textContent = `${cloudMapsCache.length} / ${MAX_CLOUD_MAPS} cloud maps`;
+                countEl.textContent = `${cloudMapsCache.length} / ${currentCloudUserQuota} cloud maps`;
             }
 
             if (!currentCloudUser) {
@@ -2447,7 +2776,7 @@
                 <div class="p-8 text-center text-slate-400 text-xs">
                     <p class="text-base mb-1">☁️</p>
                     <p class="font-semibold text-slate-600 mb-1">No cloud maps found yet</p>
-                    <p class="text-slate-400 mb-3">Save your active mind map to the cloud to access it from any device (up to 3 free slots).</p>
+                    <p class="text-slate-400 mb-3">Save your active mind map to the cloud to access it from any device (up to ${currentCloudUserQuota} slots).</p>
                     <button type="button" onclick="saveActiveMapToCloud()" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95">
                         ☁️ Push Active Map to Cloud
                     </button>
@@ -2455,16 +2784,61 @@
                 return;
             }
 
-            const isQuotaFull = cloudMapsCache.length >= MAX_CLOUD_MAPS;
-            let html = `
-            <div class="mb-3 p-2.5 rounded-xl border ${isQuotaFull ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-purple-50/70 border-purple-200/70 text-purple-700'} text-xs flex items-center justify-between">
-                <span class="font-semibold flex items-center gap-1.5">
-                    <span>☁️</span> Cloud Quota: <b>${cloudMapsCache.length} / ${MAX_CLOUD_MAPS}</b> free maps
-                </span>
-                <span class="text-[0.7rem] ${isQuotaFull ? 'font-bold text-amber-700' : 'text-slate-500'}">
-                    ${isQuotaFull ? 'Limit reached (delete or overwrite to add)' : 'Unlimited local storage'}
-                </span>
-            </div>`;
+            const isOverQuota = cloudMapsCache.length > currentCloudUserQuota;
+            const isQuotaFull = cloudMapsCache.length >= currentCloudUserQuota;
+            const isUpgraded = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
+
+            let quotaBannerHtml = '';
+            if (isOverQuota) {
+                quotaBannerHtml = `
+                <div class="mb-3 p-3 rounded-2xl border bg-amber-50 border-amber-300 text-amber-900 text-xs shadow-xs">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-start gap-2">
+                            <span class="text-lg">🛡️</span>
+                            <div>
+                                <p class="font-bold text-amber-950">Soft-Cap Storage Notice: ${cloudMapsCache.length} / ${currentCloudUserQuota} maps</p>
+                                <p class="text-[0.72rem] text-amber-800 mt-0.5 leading-relaxed">
+                                    Your existing maps are <b>100% safe, fully editable, and downloadable</b> anytime. To save brand new maps to the cloud, overwrite an older map or upgrade to Lifetime Pro.
+                                </p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openLifetimeProModal('soft_cap_banner')" class="shrink-0 px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[0.7rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                            <span>⭐</span> Upgrade
+                        </button>
+                    </div>
+                </div>`;
+            } else if (isQuotaFull) {
+                quotaBannerHtml = `
+                <div class="mb-3 p-2.5 rounded-xl border bg-amber-50 border-amber-200 text-amber-800 text-xs flex items-center justify-between">
+                    <span class="font-semibold flex items-center gap-1.5">
+                        <span>☁️</span> Cloud Quota: <b>${cloudMapsCache.length} / ${currentCloudUserQuota}</b> maps (Limit Reached)
+                    </span>
+                    <button type="button" onclick="openLifetimeProModal('quota_full_banner')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-[0.7rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                        <span>⭐</span> Upgrade to Pro
+                    </button>
+                </div>`;
+            } else if (isUpgraded) {
+                quotaBannerHtml = `
+                <div class="mb-3 p-2.5 rounded-xl border bg-indigo-50/80 border-indigo-200 text-indigo-800 text-xs flex items-center justify-between">
+                    <span class="font-semibold flex items-center gap-1.5">
+                        <span>⭐</span> <b>Lifetime Pro Active:</b> ${cloudMapsCache.length} / ${currentCloudUserQuota} cloud slots used
+                    </span>
+                    <span class="text-[0.7rem] text-indigo-700 font-bold bg-indigo-100/70 px-2 py-0.5 rounded-full">
+                        ✓ VIP Storage
+                    </span>
+                </div>`;
+            } else {
+                quotaBannerHtml = `
+                <div class="mb-3 p-2.5 rounded-xl border bg-purple-50/70 border-purple-200/70 text-purple-700 text-xs flex items-center justify-between">
+                    <span class="font-semibold flex items-center gap-1.5">
+                        <span>☁️</span> Cloud Quota: <b>${cloudMapsCache.length} / ${currentCloudUserQuota}</b> free maps
+                    </span>
+                    <button type="button" onclick="openLifetimeProModal('quota_banner')" class="text-[0.7rem] font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1">
+                        <span>⭐</span> Upgrade (50 slots)
+                    </button>
+                </div>`;
+            }
+            let html = quotaBannerHtml;
             cloudMapsCache.forEach(map => {
                 let updatedStr = 'Just now';
                 if (map.updatedAt) {
@@ -2524,11 +2898,11 @@
                 const mapName = (meta ? meta.name : 'Master Idea') || 'Untitled Mind Map';
                 const mapId = targetMapId || (meta ? meta.id : ('map_' + Date.now()));
 
-                // Enforce 3-cloud-map quota limit
+                // Enforce cloud-map quota limit with Option 1 Soft-Cap protection
                 const isExistingCloud = targetMapId || cloudMapsCache.some(m => m.id === mapId);
-                if (!isExistingCloud && cloudMapsCache.length >= MAX_CLOUD_MAPS) {
-                    alert(`Cloud Storage Limit Reached (${cloudMapsCache.length}/${MAX_CLOUD_MAPS} free maps)\n\nYou have reached the 3-map cloud limit on the free tier.\n\nTo save this new map to the cloud, please delete an older cloud map or use the "🔄 Overwrite" button on an existing cloud map.`);
-                    setSaveStatus('saved', '⚠️ Cloud limit reached (3/3)');
+                if (!isExistingCloud && cloudMapsCache.length >= currentCloudUserQuota) {
+                    openQuotaExceededModal(currentCloudUserQuota, cloudMapsCache.length);
+                    setSaveStatus('saved', `⚠️ Cloud limit reached (${cloudMapsCache.length}/${currentCloudUserQuota})`);
                     return;
                 }
 
@@ -2654,10 +3028,10 @@
             const meta = projectRegistry.projects.find(p => p.id === projId);
             if (!meta) return;
 
-            // Enforce 3-cloud-map quota limit
+            // Enforce cloud-map quota limit with Option 1 Soft-Cap protection
             const isAlreadyInCloud = cloudMapsCache.some(m => m.id === projId);
-            if (!isAlreadyInCloud && cloudMapsCache.length >= MAX_CLOUD_MAPS) {
-                alert(`Cloud Storage Limit Reached (${cloudMapsCache.length}/${MAX_CLOUD_MAPS} free maps)\n\nYou have reached the 3-map cloud limit on the free tier.\n\nTo upload a new map, please delete an older cloud map or overwrite an existing one.`);
+            if (!isAlreadyInCloud && cloudMapsCache.length >= currentCloudUserQuota) {
+                openQuotaExceededModal(currentCloudUserQuota, cloudMapsCache.length);
                 return;
             }
 
@@ -2761,34 +3135,66 @@
             const homeView = document.getElementById('app-homepage-view');
             if (!homeView) return;
 
-            // Update Cloud Quota Indicator (Max 3 maps)
+            // Update Cloud Quota Indicator
             const count = cloudMapsCache.length;
-            const pct = Math.min(100, Math.round((count / MAX_CLOUD_MAPS) * 100));
+            const pct = Math.min(100, Math.round((count / currentCloudUserQuota) * 100));
+            const isOverQuota = count > currentCloudUserQuota;
+            const isQuotaFull = count >= currentCloudUserQuota;
+            const isPro = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
+
+            const homeQuotaTitle = document.getElementById('home-quota-title');
+            const homeQuotaUpgradeBtn = document.getElementById('home-quota-upgrade-btn');
+            const homeOverquotaNotice = document.getElementById('home-overquota-notice');
             const quotaBadge = document.getElementById('home-quota-badge');
             const quotaProgress = document.getElementById('home-quota-progress');
             const quotaDesc = document.getElementById('home-quota-desc');
 
+            if (homeQuotaTitle) {
+                homeQuotaTitle.innerHTML = isPro 
+                    ? `<span>⭐</span> Cloud Storage Quota (Lifetime Pro)` 
+                    : `<span>☁️</span> Cloud Storage Quota (Free Tier)`;
+            }
+
+            if (homeQuotaUpgradeBtn) {
+                homeQuotaUpgradeBtn.classList.toggle('hidden', isPro);
+            }
+
+            if (homeOverquotaNotice) {
+                homeOverquotaNotice.classList.toggle('hidden', !isOverQuota);
+            }
+
             if (quotaBadge) {
-                if (count >= MAX_CLOUD_MAPS) {
+                if (isOverQuota) {
+                    quotaBadge.className = "font-mono font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[0.7rem]";
+                    quotaBadge.textContent = `${count} / ${currentCloudUserQuota} (Soft-Cap Active)`;
+                } else if (isQuotaFull) {
                     quotaBadge.className = "font-mono font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[0.7rem]";
-                    quotaBadge.textContent = `${count} / ${MAX_CLOUD_MAPS} (Quota Full)`;
+                    quotaBadge.textContent = `${count} / ${currentCloudUserQuota} (Quota Full)`;
                 } else {
-                    quotaBadge.className = "font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[0.7rem]";
-                    quotaBadge.textContent = `${count} / ${MAX_CLOUD_MAPS} Maps`;
+                    quotaBadge.className = `font-mono font-bold px-2 py-0.5 rounded-full ${isPro ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700'} text-[0.7rem]`;
+                    quotaBadge.textContent = `${count} / ${currentCloudUserQuota} Maps`;
                 }
             }
 
             if (quotaProgress) {
                 quotaProgress.style.width = `${pct}%`;
-                if (count >= MAX_CLOUD_MAPS) {
+                if (isOverQuota) {
+                    quotaProgress.className = "bg-amber-600 h-full rounded-full transition-all duration-500";
+                } else if (isQuotaFull) {
                     quotaProgress.className = "bg-amber-500 h-full rounded-full transition-all duration-500";
                 } else {
-                    quotaProgress.className = "bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full transition-all duration-500";
+                    quotaProgress.className = isPro
+                        ? "bg-gradient-to-r from-indigo-500 to-purple-600 h-full rounded-full transition-all duration-500"
+                        : "bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full transition-all duration-500";
                 }
             }
 
             if (quotaDesc) {
-                quotaDesc.textContent = `${count} of ${MAX_CLOUD_MAPS} cloud slots used • Overwrite or delete anytime`;
+                if (isOverQuota) {
+                    quotaDesc.textContent = `${count} of ${currentCloudUserQuota} slots used • Existing maps safe under Soft-Cap`;
+                } else {
+                    quotaDesc.textContent = `${count} of ${currentCloudUserQuota} cloud slots used • Overwrite or delete anytime`;
+                }
             }
 
             // Update Auth Widget in Homepage Header
@@ -2831,7 +3237,7 @@
 
             if (allCountEl) allCountEl.textContent = localCount + cloudMapsCache.length + sharedCount;
             if (localCountEl) localCountEl.textContent = localCount;
-            if (cloudCountEl) cloudCountEl.textContent = `${cloudMapsCache.length}/${MAX_CLOUD_MAPS}`;
+            if (cloudCountEl) cloudCountEl.textContent = `${cloudMapsCache.length}/${currentCloudUserQuota}`;
             if (sharedCountEl) sharedCountEl.textContent = sharedCount;
 
             renderHomepageMapsList();
