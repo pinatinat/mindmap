@@ -271,6 +271,11 @@
                     <span>👥</span>
                     <span class="hidden sm:inline">Share</span>
                 </button>
+                <!-- LIFETIME PRO UPGRADE / STATUS BUTTON -->
+                <button type="button" onclick="openLifetimeProModal('canvas_header')" id="btn-header-pro" class="ml-1.5 flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-sm active:scale-95 cursor-pointer" title="OmniMind Lifetime Pro & Storage Quota">
+                    <span>⭐</span>
+                    <span id="btn-header-pro-text">Upgrade Pro</span>
+                </button>
             </div>
         </div>
 
@@ -957,7 +962,12 @@
                         <p class="text-xs text-slate-500">Manage local and cloud-synced mind maps</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleProjectManagerModal(false)" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200 text-sm transition-colors leading-none">✕</button>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="openLifetimeProModal('library_header')" id="btn-library-pro" class="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 text-white font-bold text-[0.68rem] shadow-xs hover:shadow transition-transform active:scale-95 flex items-center gap-1 cursor-pointer">
+                        <span>⭐</span> <span id="btn-library-pro-text">Upgrade Pro</span>
+                    </button>
+                    <button type="button" onclick="toggleProjectManagerModal(false)" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200 text-sm transition-colors leading-none">✕</button>
+                </div>
             </div>
 
             <!-- LIBRARY TABS: LOCAL VS CLOUD -->
@@ -1060,12 +1070,15 @@
                                 <span id="cloud-user-email" class="text-[0.65rem] text-slate-500 truncate block">user@example.com</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
                             <button type="button" id="cloud-header-upgrade-btn" onclick="openLifetimeProModal('cloud_header')" class="hidden px-2.5 py-1 bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white rounded-full font-bold text-[0.68rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
                                 <span>⭐</span> Upgrade
                             </button>
-                            <button type="button" onclick="saveActiveMapToCloud()" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold text-[0.7rem] shadow-sm transition-transform active:scale-95 flex items-center gap-1">
+                            <button type="button" onclick="saveActiveMapToCloud(null, false)" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold text-[0.7rem] shadow-sm transition-transform active:scale-95 flex items-center gap-1" title="Update or overwrite this map in the cloud">
                                 <span>☁️</span> Push Active Map
+                            </button>
+                            <button type="button" onclick="saveActiveMapToCloud(null, true)" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full font-semibold text-[0.7rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1" title="Save this active map as a brand new separate cloud map">
+                                <span>➕</span> Save as New
                             </button>
                             <button type="button" onclick="fetchCloudMaps()" class="p-1 rounded-full text-slate-500 hover:bg-purple-100 transition-colors text-xs" title="Refresh cloud maps">
                                 🔄
@@ -1165,7 +1178,7 @@
     </div>
 
     <!-- LIFETIME PRO UPGRADE MODAL -->
-    <div id="lifetime-pro-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeLifetimeProModal()">
+    <div id="lifetime-pro-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeLifetimeProModal()">
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden mx-4 flex flex-col" onclick="event.stopPropagation()">
             <!-- Banner Header -->
             <div class="relative px-6 pt-6 pb-5 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 text-white overflow-hidden">
@@ -1265,7 +1278,7 @@
     </div>
 
     <!-- SOFT-CAP QUOTA EXCEEDED MODAL -->
-    <div id="quota-exceeded-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeQuotaExceededModal()">
+    <div id="quota-exceeded-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeQuotaExceededModal()">
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden mx-4 flex flex-col p-6 text-center" onclick="event.stopPropagation()">
             <div class="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">
                 ☁️
@@ -2562,6 +2575,32 @@
                 if (authCard) authCard.classList.remove('hidden');
                 if (loggedInContainer) loggedInContainer.classList.add('hidden');
             }
+
+            // Update top canvas and library header buttons regardless of auth state
+            const isProGlobal = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
+            const btnHeaderPro = document.getElementById('btn-header-pro');
+            const btnHeaderProText = document.getElementById('btn-header-pro-text');
+            if (btnHeaderPro && btnHeaderProText) {
+                if (isProGlobal) {
+                    btnHeaderProText.textContent = `Pro (${currentCloudUserQuota})`;
+                    btnHeaderPro.className = "ml-1.5 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm active:scale-95 cursor-pointer";
+                } else {
+                    btnHeaderProText.textContent = "Upgrade Pro";
+                    btnHeaderPro.className = "ml-1.5 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-sm active:scale-95 cursor-pointer";
+                }
+            }
+
+            const btnLibraryPro = document.getElementById('btn-library-pro');
+            const btnLibraryProText = document.getElementById('btn-library-pro-text');
+            if (btnLibraryPro && btnLibraryProText) {
+                if (isProGlobal) {
+                    btnLibraryProText.textContent = "⭐ Pro Active";
+                    btnLibraryPro.className = "px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[0.68rem] shadow-2xs flex items-center gap-1";
+                } else {
+                    btnLibraryProText.textContent = "⭐ Upgrade Pro";
+                    btnLibraryPro.className = "px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 text-white font-bold text-[0.68rem] shadow-xs hover:shadow transition-transform active:scale-95 flex items-center gap-1 cursor-pointer";
+                }
+            }
         }
 
         function switchLibraryTab(tab) {
@@ -2777,9 +2816,15 @@
                     <p class="text-base mb-1">☁️</p>
                     <p class="font-semibold text-slate-600 mb-1">No cloud maps found yet</p>
                     <p class="text-slate-400 mb-3">Save your active mind map to the cloud to access it from any device (up to ${currentCloudUserQuota} slots).</p>
-                    <button type="button" onclick="saveActiveMapToCloud()" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95">
-                        ☁️ Push Active Map to Cloud
-                    </button>
+                    <div class="flex items-center justify-center gap-2">
+                        <button type="button" onclick="saveActiveMapToCloud(null, false)" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95">
+                            ☁️ Push Active Map to Cloud
+                        </button>
+                        ${!isUpgraded ? `
+                        <button type="button" onclick="openLifetimeProModal('empty_cloud')" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-purple-600 text-white rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95">
+                            ⭐ Upgrade to Pro
+                        </button>` : ''}
+                    </div>
                 </div>`;
                 return;
             }
@@ -2869,7 +2914,7 @@
                         <button type="button" onclick="downloadCloudMapToLocal('${map.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save copy to Local Browser Maps">
                             ⬇️
                         </button>
-                        <button type="button" onclick="saveActiveMapToCloud('${map.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Overwrite cloud copy with active map">
+                        <button type="button" onclick="saveActiveMapToCloud('${map.id}', false)" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Overwrite cloud copy with active map">
                             🔄
                         </button>
                         <button type="button" onclick="deleteCloudMap('${map.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete from Cloud">
@@ -2882,7 +2927,7 @@
             container.innerHTML = html;
         }
 
-        async function saveActiveMapToCloud(targetMapId = null) {
+        async function saveActiveMapToCloud(targetMapId = null, forceNew = false) {
             if (!fbDb || !currentCloudUser) {
                 toggleProjectManagerModal(true);
                 switchLibraryTab('cloud');
@@ -2895,14 +2940,28 @@
                 const cleanedNodes = cleanNodesForStorage(nodes);
                 const cleanedDecs = cleanDecorationsForStorage(canvasDecorations, false);
                 const meta = getCurrentProjectMeta();
-                const mapName = (meta ? meta.name : 'Master Idea') || 'Untitled Mind Map';
-                const mapId = targetMapId || (meta ? meta.id : ('map_' + Date.now()));
+                let mapName = (meta ? meta.name : 'Master Idea') || 'Untitled Mind Map';
+                let mapId = targetMapId;
+
+                if (forceNew) {
+                    mapId = 'map_' + Date.now();
+                    const customName = prompt('Enter a name for this new separate cloud map:', `${mapName} (Cloud Copy)`);
+                    if (!customName || !customName.trim()) {
+                        setSaveStatus('saved', '✓ Save cancelled');
+                        return;
+                    }
+                    mapName = customName.trim();
+                } else if (!mapId) {
+                    mapId = meta ? meta.id : ('map_' + Date.now());
+                }
 
                 // Enforce cloud-map quota limit with Option 1 Soft-Cap protection
-                const isExistingCloud = targetMapId || cloudMapsCache.some(m => m.id === mapId);
+                const isExistingCloud = !forceNew && (targetMapId || cloudMapsCache.some(m => m.id === mapId));
                 if (!isExistingCloud && cloudMapsCache.length >= currentCloudUserQuota) {
                     openQuotaExceededModal(currentCloudUserQuota, cloudMapsCache.length);
                     setSaveStatus('saved', `⚠️ Cloud limit reached (${cloudMapsCache.length}/${currentCloudUserQuota})`);
+                    alert(`☁️ Cloud Storage Limit Reached (${cloudMapsCache.length}/${currentCloudUserQuota} maps)\n\nYou have reached your free cloud storage limit.\n\nAll your existing maps remain 100% safe and editable!\n\nTo save this new map, upgrade to Lifetime Pro for 50 slots, or overwrite an existing cloud map.`);
+                    openLifetimeProModal('quota_limit_save');
                     return;
                 }
 
@@ -2927,7 +2986,9 @@
 
                 await fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').doc(mapId).set(payload, { merge: true });
                 setSaveStatus('saved', `✓ Saved "${mapName}" to Cloud`);
-                fetchCloudMaps();
+                await fetchCloudMaps();
+                toggleProjectManagerModal(true);
+                switchLibraryTab('cloud');
             } catch (err) {
                 console.error('Cloud save error:', err);
                 alert('Failed to save to cloud: ' + err.message);
