@@ -180,6 +180,12 @@
             transition: box-shadow 0.15s ease;
             pointer-events: auto;
         }
+        .canvas-decoration[data-type="sticky"] {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .canvas-decoration[data-type="sticky"]:hover {
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
         .canvas-decoration.locked {
             pointer-events: none !important;
         }
@@ -190,6 +196,9 @@
             outline: 2px solid #3b82f6 !important;
             outline-offset: 3px;
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+        }
+        .canvas-decoration.selected .decoration-drag-handle {
+            opacity: 1 !important;
         }
         .decoration-resize-handle {
             position: absolute;
@@ -1587,6 +1596,7 @@
         let canvasDecorations = {};
         let canvasImageAssets = {}; // In-memory and storage cache for image links and assets
         let selectedDecorationId = null;
+        let editingDecorationId = null;
         let decDragInfo = null;
         let resizeInfo = null;
         let isDesignSelectable = true;
@@ -5463,9 +5473,13 @@ This will permanently remove this mind map.`)) {
 
                 list.forEach(dec => {
                     const isSelected = selectedDecorationId === dec.id;
+                    const isEditing = editingDecorationId === dec.id;
+                    const isSticky = dec.type === 'textbox' && dec.bg && dec.bg !== 'transparent';
+
                     const el = document.createElement('div');
                     el.dataset.id = dec.id;
-                    el.className = `canvas-decoration absolute cursor-move select-none ${isSelected ? 'selected' : ''} ${!isDesignSelectable ? 'locked' : ''}`;
+                    el.dataset.type = isSticky ? 'sticky' : dec.type;
+                    el.className = `canvas-decoration absolute select-none flex flex-col ${isSelected ? 'selected' : ''} ${!isDesignSelectable ? 'locked' : ''} ${isEditing ? 'editing' : 'cursor-move'}`;
                     el.style.left = dec.x + 'px';
                     el.style.top = dec.y + 'px';
                     el.style.width = dec.width + 'px';
@@ -5491,12 +5505,44 @@ This will permanently remove this mind map.`)) {
                             </div>`;
                         }
                     } else if (dec.type === 'textbox') {
-                        const isSticky = dec.bg && dec.bg !== 'transparent';
-                        contentHtml += `<div contenteditable="true"
-                             class="w-full h-full ${isSticky ? 'p-3 text-sm' : 'p-2 font-bold'} text-slate-800 outline-none cursor-text select-text whitespace-pre-wrap leading-relaxed overflow-hidden"
-                             style="font-size: ${dec.fontSize || (isSticky ? 14 : 20)}px; color: ${dec.color || '#1e293b'}"
-                             onmousedown="event.stopPropagation()"
-                             onblur="updateDecorationText('${dec.id}', this.innerText)">${escapeHtml(dec.text || '')}</div>`;
+                        if (isSticky) {
+                            contentHtml += `
+                            <!-- Sticky Guide Note Dedicated Drag Header -->
+                            <div class="decoration-drag-handle flex items-center justify-between px-3 py-1.5 select-none cursor-grab active:cursor-grabbing border-b border-black/5 bg-black/[0.04] rounded-t-[inherit] shrink-0"
+                                 title="Click to select • Drag anywhere here to move note">
+                                <div class="flex items-center gap-1.5 pointer-events-none">
+                                    <span class="text-xs">📌</span>
+                                    <span class="text-[0.68rem] font-bold tracking-wide uppercase opacity-75">Guide Note</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" 
+                                            onclick="event.stopPropagation(); startEditingDecoration('${dec.id}')"
+                                            class="p-0.5 hover:bg-black/10 rounded text-[0.65rem] opacity-60 hover:opacity-100 transition-opacity"
+                                            title="Edit text (or double-click note)">✏️</button>
+                                    <span class="text-[0.7rem] opacity-50 cursor-grab" title="Drag handle">⠿</span>
+                                </div>
+                            </div>
+                            <!-- Sticky Note Text Area -->
+                            <div class="decoration-text-content flex-1 w-full p-3 text-sm text-slate-800 outline-none whitespace-pre-wrap leading-relaxed overflow-hidden transition-all ${isEditing ? 'cursor-text select-text ring-2 ring-blue-500/50 ring-inset bg-white/40' : 'cursor-move select-none'}"
+                                 contenteditable="${isEditing ? 'true' : 'false'}"
+                                 style="font-size: ${dec.fontSize || 14}px; color: ${dec.color || '#1e293b'}"
+                                 onblur="updateDecorationText('${dec.id}', this.innerText); finishEditingDecoration();"
+                                 onkeydown="if(event.key==='Escape'){ this.blur(); event.preventDefault(); }">${escapeHtml(dec.text || '')}</div>`;
+                        } else {
+                            contentHtml += `
+                            <!-- Plain Text / Section Title -->
+                            <div class="relative w-full h-full flex flex-col justify-center">
+                                <div class="decoration-drag-handle absolute -top-5 left-0 px-1.5 py-0.5 rounded text-[0.62rem] bg-slate-800 text-white font-medium opacity-0 hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex items-center gap-1 select-none z-10"
+                                     title="Drag to move text">
+                                    <span>⠿</span> Move
+                                </div>
+                                <div class="decoration-text-content w-full h-full p-2 font-bold text-slate-800 outline-none whitespace-pre-wrap leading-relaxed overflow-hidden transition-all ${isEditing ? 'cursor-text select-text ring-2 ring-blue-500/50 ring-inset bg-white/60 rounded' : 'cursor-move select-none'}"
+                                     contenteditable="${isEditing ? 'true' : 'false'}"
+                                     style="font-size: ${dec.fontSize || 20}px; color: ${dec.color || '#1e293b'}"
+                                     onblur="updateDecorationText('${dec.id}', this.innerText); finishEditingDecoration();"
+                                     onkeydown="if(event.key==='Escape'){ this.blur(); event.preventDefault(); }">${escapeHtml(dec.text || '')}</div>
+                            </div>`;
+                        }
                     } else if (dec.type === 'image') {
                         const resolvedImgSrc = (dec.src && !dec.src.startsWith('data:') && canvasImageAssets[dec.fileName]) 
                             ? canvasImageAssets[dec.fileName] 
@@ -5520,6 +5566,11 @@ This will permanently remove this mind map.`)) {
                         const isFront = dec.layer === 'front';
                         contentHtml += `
                         <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+                            ${dec.type === 'textbox' ? `
+                            <button type="button" onclick="startEditingDecoration('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Edit text (or double-click note)">
+                                <span>✏️</span> Edit
+                            </button>
+                            ` : ''}
                             <input type="color" value="${(dec.bg && dec.bg.startsWith('#')) ? dec.bg : '#ffffff'}" onchange="setDecorationBg('${dec.id}', this.value)" class="w-5 h-5 rounded-full cursor-pointer" title="Background Color">
                             <button type="button" onclick="cycleDecorationBorder('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-600 border" title="Toggle border style">Border</button>
                             
@@ -5864,7 +5915,7 @@ This will permanently remove this mind map.`)) {
                     y: centerY,
                     width: 220,
                     height: 180,
-                    text: '📌 Guide Note:\n- Important context here\n- Drag anywhere on background',
+                    text: '- Important context here\n- Drag top bar or note to move\n- Double-click to edit text',
                     fontSize: 14,
                     fontWeight: 'normal',
                     color: '#78350f',
@@ -5999,14 +6050,63 @@ This will permanently remove this mind map.`)) {
             event.target.value = '';
         }
 
+        function startEditingDecoration(id) {
+            if (!isDesignSelectable) return;
+            const dec = canvasDecorations[id];
+            if (!dec || dec.type !== 'textbox') return;
+
+            editingDecorationId = id;
+            if (selectedDecorationId !== id) {
+                selectedDecorationId = id;
+            }
+            renderDecorations();
+
+            requestAnimationFrame(() => {
+                const decEl = document.querySelector(`.canvas-decoration[data-id="${id}"]`);
+                if (!decEl) return;
+                const textEl = decEl.querySelector('.decoration-text-content');
+                if (textEl) {
+                    textEl.focus();
+                    try {
+                        const range = document.createRange();
+                        range.selectNodeContents(textEl);
+                        range.collapse(false);
+                        const sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    } catch (e) {}
+                }
+            });
+        }
+
+        function finishEditingDecoration() {
+            if (!editingDecorationId) return;
+            const id = editingDecorationId;
+            const decEl = document.querySelector(`.canvas-decoration[data-id="${id}"]`);
+            if (decEl) {
+                const textEl = decEl.querySelector('.decoration-text-content');
+                if (textEl) {
+                    updateDecorationText(id, textEl.innerText);
+                }
+            }
+            editingDecorationId = null;
+            renderDecorations();
+        }
+
         function selectDecoration(id) {
             if (selectedDecorationId !== id) {
+                if (editingDecorationId && editingDecorationId !== id) {
+                    finishEditingDecoration();
+                }
                 selectedDecorationId = id;
                 renderDecorations();
             }
         }
 
         function deselectDecoration() {
+            if (editingDecorationId !== null) {
+                finishEditingDecoration();
+            }
             if (selectedDecorationId !== null) {
                 selectedDecorationId = null;
                 renderDecorations();
@@ -6014,6 +6114,7 @@ This will permanently remove this mind map.`)) {
         }
 
         function deleteDecoration(id) {
+            if (editingDecorationId === id) editingDecorationId = null;
             const dec = canvasDecorations[id];
             const layer = dec?.layer || 'behind';
             delete canvasDecorations[id];
@@ -6025,6 +6126,7 @@ This will permanently remove this mind map.`)) {
         }
 
         function duplicateDecoration(id) {
+            if (editingDecorationId) finishEditingDecoration();
             const orig = canvasDecorations[id];
             if (!orig) return;
             const newId = 'dec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -6254,22 +6356,42 @@ This will permanently remove this mind map.`)) {
                 const decEl = e.target.closest('.canvas-decoration');
                 if (decEl) {
                     const decId = decEl.dataset.id;
-                    selectDecoration(decId);
-                    // Don't start drag if clicking directly inside editable text
-                    if (!e.target.isContentEditable) {
-                        decDragInfo = {
-                            id: decId,
-                            startX: e.clientX,
-                            startY: e.clientY,
-                            initialX: canvasDecorations[decId].x,
-                            initialY: canvasDecorations[decId].y
-                        };
+                    const isDragHandle = !!e.target.closest('.decoration-drag-handle');
+                    const isTextContent = !!e.target.closest('.decoration-text-content');
+                    const wasAlreadySelected = selectedDecorationId === decId;
+
+                    // If actively editing this decoration and clicking inside the text, allow typing
+                    if (editingDecorationId === decId && isTextContent && !isDragHandle) {
+                        return;
                     }
+
+                    // If actively editing another decoration, finish editing
+                    if (editingDecorationId && editingDecorationId !== decId) {
+                        finishEditingDecoration();
+                    }
+
+                    if (selectedDecorationId !== decId) {
+                        selectDecoration(decId);
+                    }
+
+                    decDragInfo = {
+                        id: decId,
+                        startX: e.clientX,
+                        startY: e.clientY,
+                        initialX: canvasDecorations[decId].x,
+                        initialY: canvasDecorations[decId].y,
+                        hasMoved: false,
+                        wasSelected: wasAlreadySelected,
+                        clickedText: isTextContent
+                    };
                     return;
                 }
             }
 
             // 5. Empty Canvas Click -> Deselect and Pan
+            if (editingDecorationId) {
+                finishEditingDecoration();
+            }
             deselectDecoration();
             isDraggingCanvas = true;
             dragInfo = { startX: e.clientX, startY: e.clientY, initialPanX: panX, initialPanY: panY };
@@ -6280,6 +6402,9 @@ This will permanently remove this mind map.`)) {
             if (decDragInfo) {
                 const dx = (e.clientX - decDragInfo.startX) / zoom;
                 const dy = (e.clientY - decDragInfo.startY) / zoom;
+                if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                    decDragInfo.hasMoved = true;
+                }
                 canvasDecorations[decDragInfo.id].x = Math.round(decDragInfo.initialX + dx);
                 canvasDecorations[decDragInfo.id].y = Math.round(decDragInfo.initialY + dy);
                 updateDecorationElement(decDragInfo.id);
@@ -6321,9 +6446,17 @@ This will permanently remove this mind map.`)) {
             if (e && (e.button === 3 || e.button === 4)) {
                 e.preventDefault();
             }
-            if (decDragInfo || resizeInfo) {
-                triggerAutoSave();
+            if (decDragInfo) {
+                if (!decDragInfo.hasMoved && decDragInfo.wasSelected && decDragInfo.clickedText && !editingDecorationId) {
+                    startEditingDecoration(decDragInfo.id);
+                }
+                if (decDragInfo.hasMoved) {
+                    triggerAutoSave();
+                }
                 decDragInfo = null;
+            }
+            if (resizeInfo) {
+                triggerAutoSave();
                 resizeInfo = null;
             }
             if (dragInfo) {
@@ -6336,10 +6469,21 @@ This will permanently remove this mind map.`)) {
             syncFromMap(); // update markdown outline after move
         });
 
-        // Double-click: start inline editing instead of prompt()
+        // Double-click: start inline editing for nodes or decorations
         canvasBg.addEventListener('dblclick', e => {
             if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar')) {
                 return;
+            }
+            if (isDesignSelectable) {
+                const decEl = e.target.closest('.canvas-decoration');
+                if (decEl) {
+                    const decId = decEl.dataset.id;
+                    const dec = canvasDecorations[decId];
+                    if (dec && dec.type === 'textbox') {
+                        startEditingDecoration(decId);
+                        return;
+                    }
+                }
             }
             const nodeEl = e.target.closest('.bubble-node');
             if (nodeEl) {
@@ -6464,13 +6608,31 @@ This will permanently remove this mind map.`)) {
                     const decEl = e.target.closest('.canvas-decoration');
                     if (decEl) {
                         const decId = decEl.dataset.id;
-                        selectDecoration(decId);
+                        const isDragHandle = !!e.target.closest('.decoration-drag-handle');
+                        const isTextContent = !!e.target.closest('.decoration-text-content');
+                        const wasAlreadySelected = selectedDecorationId === decId;
+
+                        if (editingDecorationId === decId && isTextContent && !isDragHandle) {
+                            return; // Allow virtual keyboard typing
+                        }
+
+                        if (editingDecorationId && editingDecorationId !== decId) {
+                            finishEditingDecoration();
+                        }
+
+                        if (selectedDecorationId !== decId) {
+                            selectDecoration(decId);
+                        }
+
                         decDragInfo = {
                             id: decId,
                             startX: touch.clientX,
                             startY: touch.clientY,
                             initialX: canvasDecorations[decId].x,
-                            initialY: canvasDecorations[decId].y
+                            initialY: canvasDecorations[decId].y,
+                            hasMoved: false,
+                            wasSelected: wasAlreadySelected,
+                            clickedText: isTextContent
                         };
                         e.preventDefault();
                         return;
@@ -6478,6 +6640,9 @@ This will permanently remove this mind map.`)) {
                 }
 
                 // E. Empty canvas touch -> Pan
+                if (editingDecorationId) {
+                    finishEditingDecoration();
+                }
                 deselectDecoration();
                 isDraggingCanvas = true;
                 dragInfo = {
@@ -6578,9 +6743,17 @@ This will permanently remove this mind map.`)) {
                 return;
             }
 
-            if (decDragInfo || resizeInfo) {
-                triggerAutoSave();
+            if (decDragInfo) {
+                if (!touchHasMoved && decDragInfo.wasSelected && decDragInfo.clickedText && !editingDecorationId) {
+                    startEditingDecoration(decDragInfo.id);
+                }
+                if (touchHasMoved) {
+                    triggerAutoSave();
+                }
                 decDragInfo = null;
+            }
+            if (resizeInfo) {
+                triggerAutoSave();
                 resizeInfo = null;
             }
 
@@ -6979,12 +7152,20 @@ This will permanently remove this mind map.`)) {
                     return;
                 }
             }
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingDecorationId) return;
             if (selectedDecorationId && isDesignSelectable) {
                 if (e.key === 'Delete' || e.key === 'Backspace') {
                     deleteDecoration(selectedDecorationId);
                     e.preventDefault();
                     return;
+                }
+                if (e.key === 'Enter' || e.key === 'F2') {
+                    const dec = canvasDecorations[selectedDecorationId];
+                    if (dec && dec.type === 'textbox') {
+                        startEditingDecoration(selectedDecorationId);
+                        e.preventDefault();
+                        return;
+                    }
                 }
                 if (e.key === 'Escape') {
                     deselectDecoration();
