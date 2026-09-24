@@ -299,3 +299,4 @@ Whenever changes are made to the visual engine or storage formats in `MINDMAP.ht
 1. Check if new node properties (e.g., custom border styles, icon flags, line connectors) were added to `cleanNodesForStorage` or `syncFromMap`.
 2. Check if new design layer elements or directives (e.g., new shape types, freehand annotations) were added to `canvasDecorations`.
 3. Update this `aitemplate.md` file so external LLM prompts always produce code taking full advantage of the newest OmniMind features!
+
