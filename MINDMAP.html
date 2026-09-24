@@ -708,7 +708,7 @@
     <!-- ======================================================== -->
     <!-- HOMEPAGE & WORKSPACE DASHBOARD (FULL SCREEN OVERLAY)   -->
     <!-- ======================================================== -->
-    <div id="app-homepage-view" class="fixed inset-0 z-40 bg-slate-50 overflow-y-auto hidden flex-col font-sans">
+    <div id="app-homepage-view" class="fixed inset-0 z-40 bg-slate-50 overflow-y-auto flex flex-col font-sans">
         <!-- Hidden input for file import from Homepage -->
         <input type="file" id="home-file-input" accept=".json" onchange="importJSON(event); toggleHomepageView(false);" class="hidden">
 
@@ -793,8 +793,9 @@
                     <button type="button" onclick="homeCreateNewMap()" class="px-5 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-95">
                         <span class="text-base">➕</span> Create New Mind Map
                     </button>
-                    <button type="button" onclick="toggleHomepageView(false)" class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
-                        <span>🎨 Resume Active Canvas</span>
+                    <button type="button" id="home-btn-resume" onclick="toggleHomepageView(false)" class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95" title="Resume editing active mind map">
+                        <span>🎨</span>
+                        <span id="home-btn-resume-text">Resume Active Canvas</span>
                     </button>
                 </div>
             </div>
@@ -1965,6 +1966,10 @@
             if (modalInput && meta && document.activeElement !== modalInput) {
                 modalInput.value = meta.name;
             }
+            const resumeBtnText = document.getElementById('home-btn-resume-text');
+            if (resumeBtnText) {
+                resumeBtnText.textContent = `Resume "${meta ? meta.name : 'Active Canvas'}"`;
+            }
         }
 
         function loadProjectRegistry() {
@@ -2628,6 +2633,7 @@
                     btnLibraryPro.className = "px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 text-white font-bold text-[0.68rem] shadow-xs hover:shadow transition-transform active:scale-95 flex items-center gap-1 cursor-pointer";
                 }
             }
+            renderHomepage();
         }
 
         function switchLibraryTab(tab) {
@@ -3380,6 +3386,14 @@
             if (cloudCountEl) cloudCountEl.textContent = `${cloudMapsCache.length}/${currentCloudUserQuota}`;
             if (sharedCountEl) sharedCountEl.textContent = sharedCount;
 
+            // Update Resume Active Canvas button label
+            const resumeBtnText = document.getElementById('home-btn-resume-text');
+            if (resumeBtnText) {
+                const meta = getCurrentProjectMeta();
+                const activeName = meta && meta.name ? meta.name : 'Active Canvas';
+                resumeBtnText.textContent = `Resume "${activeName}"`;
+            }
+
             renderHomepageMapsList();
         }
 
@@ -3560,8 +3574,9 @@
         }
 
         function homeCreateNewMap() {
-            quickPromptNewMap();
-            toggleHomepageView(false);
+            if (quickPromptNewMap()) {
+                toggleHomepageView(false);
+            }
         }
 
         function homeGenerateWithAI() {
@@ -3916,6 +3931,7 @@
         }
 
         async function loadSharedMap(ownerUid, mapId) {
+            toggleHomepageView(false);
             if (!fbDb) {
                 // If Firebase DB is not ready yet, initialize
                 initFirebaseCloud();
@@ -4427,9 +4443,10 @@
         function quickPromptNewMap() {
             const defaultName = `Mind Map ${projectRegistry.projects.length + 1}`;
             const name = prompt('Enter name for your new mind map:', defaultName);
-            if (name === null) return;
+            if (name === null) return false;
             const finalName = name.trim() || defaultName;
             createNewProject(finalName);
+            return true;
         }
 
         function duplicateCurrentProject() {
@@ -5288,10 +5305,18 @@ This will permanently remove this mind map.`)) {
             initFirebaseCloud();
             renderHomepage();
             checkUrlForSharedMap();
+
+            const isSharedUrl = window.location.search.includes('share=');
+            if (isSharedUrl) {
+                toggleHomepageView(false);
+            } else {
+                toggleHomepageView(true);
+            }
+
             if (loaded) {
                 const curMeta = getCurrentProjectMeta();
                 setSaveStatus('saved', `✓ Loaded "${curMeta ? curMeta.name : 'map'}"`);
-            } else if (!window.location.search.includes('share=')) {
+            } else if (!isSharedUrl) {
                 triggerAutoSave();
             }
         }
