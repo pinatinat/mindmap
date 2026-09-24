@@ -1582,7 +1582,339 @@
         </div>
     </div>
 
+    <!-- ======================================================== -->
+    <!-- UNIFIED APP MODAL DIALOG (ALERT, CONFIRM, PROMPT)        -->
+    <!-- ======================================================== -->
+    <div id="omni-dialog-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs hidden p-4 transition-opacity duration-200">
+        <div id="omni-dialog-card" class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden flex flex-col transform transition-all scale-95 opacity-0 duration-200" onclick="event.stopPropagation()">
+            <!-- Header bar with icon & close button -->
+            <div class="px-6 pt-6 pb-2 flex items-start gap-3.5">
+                <div id="omni-dialog-icon-container" class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl shrink-0 shadow-xs border border-indigo-100/50">
+                    <span id="omni-dialog-icon">💬</span>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <h3 id="omni-dialog-title" class="font-bold text-slate-800 text-base leading-snug">Notice</h3>
+                    <p id="omni-dialog-subtitle" class="text-xs text-slate-400 mt-0.5 hidden"></p>
+                </div>
+                <button type="button" id="omni-dialog-close-btn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors shrink-0" title="Close">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Body Message & Content -->
+            <div class="px-6 py-3 flex flex-col gap-3">
+                <div id="omni-dialog-message" class="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line select-text"></div>
+
+                <!-- Input Container for Prompt mode -->
+                <div id="omni-dialog-input-container" class="hidden flex flex-col gap-1.5 mt-1">
+                    <input type="text" id="omni-dialog-input" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 shadow-inner bg-slate-50/50" autocomplete="off" spellcheck="false">
+                    <span id="omni-dialog-input-hint" class="text-[0.7rem] text-slate-400 hidden"></span>
+                </div>
+            </div>
+
+            <!-- Action Buttons Footer -->
+            <div class="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button type="button" id="omni-dialog-cancel-btn" class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm shadow-xs transition-colors active:scale-95">
+                    Cancel
+                </button>
+                <button type="button" id="omni-dialog-confirm-btn" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- UNIFIED TOAST NOTIFICATION CONTAINER                     -->
+    <!-- ======================================================== -->
+    <div id="omni-toast-container" class="fixed top-5 right-5 z-[110] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
+
     <script>
+        // ========================================================
+        // MODERN UI DIALOG SYSTEM (ALERT, CONFIRM, PROMPT, TOAST)
+        // ========================================================
+        let omniDialogActiveResolve = null;
+
+        function showUiToast(message, type = 'info', duration = 3200) {
+            const container = document.getElementById('omni-toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-[-10px] opacity-0 ${
+                type === 'success' ? 'bg-white/95 text-emerald-900 border-emerald-200' :
+                type === 'error' ? 'bg-white/95 text-red-900 border-red-200' :
+                type === 'warning' ? 'bg-white/95 text-amber-900 border-amber-200' :
+                'bg-white/95 text-slate-800 border-slate-200'
+            }`;
+
+            const iconMap = {
+                success: '✅',
+                error: '⚠️',
+                warning: '⚡',
+                info: 'ℹ️'
+            };
+            const icon = iconMap[type] || '💬';
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'text-base';
+            iconSpan.textContent = icon;
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'flex-1 leading-snug';
+            textSpan.textContent = message;
+
+            toast.appendChild(iconSpan);
+            toast.appendChild(textSpan);
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-10px]', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        function showUiDialog({
+            mode = 'alert', // 'alert' | 'confirm' | 'prompt'
+            title = 'Notice',
+            subtitle = '',
+            message = '',
+            icon = null,
+            confirmText = 'OK',
+            cancelText = 'Cancel',
+            defaultValue = '',
+            placeholder = '',
+            inputHint = '',
+            isDanger = false,
+            type = 'info' // 'info' | 'danger' | 'warning' | 'success'
+        } = {}) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('omni-dialog-overlay');
+                const card = document.getElementById('omni-dialog-card');
+                const titleEl = document.getElementById('omni-dialog-title');
+                const subEl = document.getElementById('omni-dialog-subtitle');
+                const msgEl = document.getElementById('omni-dialog-message');
+                const iconEl = document.getElementById('omni-dialog-icon');
+                const iconContainer = document.getElementById('omni-dialog-icon-container');
+                const inputContainer = document.getElementById('omni-dialog-input-container');
+                const inputEl = document.getElementById('omni-dialog-input');
+                const inputHintEl = document.getElementById('omni-dialog-input-hint');
+                const cancelBtn = document.getElementById('omni-dialog-cancel-btn');
+                const confirmBtn = document.getElementById('omni-dialog-confirm-btn');
+                const closeBtn = document.getElementById('omni-dialog-close-btn');
+
+                if (!overlay || !card) {
+                    if (mode === 'confirm') return resolve(window.confirm(message));
+                    if (mode === 'prompt') return resolve(window.prompt(message, defaultValue));
+                    window.alert(message);
+                    return resolve(true);
+                }
+
+                // If another dialog was waiting, clean it up first
+                if (omniDialogActiveResolve) {
+                    omniDialogActiveResolve(mode === 'prompt' ? null : false);
+                    omniDialogActiveResolve = null;
+                }
+
+                // Smart Title & Icon detection if message starts with a title-like line or emoji
+                let displayTitle = title;
+                let displayMessage = message;
+                let displayIcon = icon;
+
+                if ((!title || title === 'Notice' || title === 'Please Confirm') && typeof message === 'string' && message.includes('\n\n')) {
+                    const firstDoubleBreak = message.indexOf('\n\n');
+                    const candidateHeader = message.substring(0, firstDoubleBreak).trim();
+                    if (candidateHeader.length < 75 && !candidateHeader.includes('.')) {
+                        displayTitle = candidateHeader;
+                        displayMessage = message.substring(firstDoubleBreak + 2).trim();
+                    }
+                }
+
+                // If displayTitle starts with an emoji, extract it into displayIcon
+                const emojiMatch = typeof displayTitle === 'string' ? displayTitle.match(/^([\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\u{1F300}-\u{1F9FF}]|[\u{2700}-\u{27BF}])/u) : null;
+                if (emojiMatch && !displayIcon) {
+                    displayIcon = emojiMatch[0];
+                    displayTitle = displayTitle.replace(emojiMatch[0], '').trim();
+                }
+
+                let defaultIcon = '💬';
+                let iconBg = 'bg-indigo-50 border-indigo-100/60 text-indigo-600';
+                const lowerTitle = (displayTitle || '').toLowerCase();
+                if (isDanger || type === 'danger' || lowerTitle.includes('delete') || lowerTitle.includes('error')) {
+                    defaultIcon = '🗑️';
+                    iconBg = 'bg-red-50 border-red-100 text-red-600';
+                } else if (type === 'warning' || lowerTitle.includes('limit') || lowerTitle.includes('notice')) {
+                    defaultIcon = '⚠️';
+                    iconBg = 'bg-amber-50 border-amber-100 text-amber-600';
+                } else if (type === 'success' || lowerTitle.includes('activated') || lowerTitle.includes('saved')) {
+                    defaultIcon = '🎉';
+                    iconBg = 'bg-emerald-50 border-emerald-100 text-emerald-600';
+                } else if (mode === 'prompt') {
+                    defaultIcon = '✏️';
+                    iconBg = 'bg-purple-50 border-purple-100 text-purple-600';
+                }
+
+                iconEl.textContent = displayIcon || defaultIcon;
+                iconContainer.className = `w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-xs border ${iconBg}`;
+
+                titleEl.textContent = displayTitle;
+                if (subtitle) {
+                    subEl.textContent = subtitle;
+                    subEl.classList.remove('hidden');
+                } else {
+                    subEl.classList.add('hidden');
+                }
+
+                msgEl.textContent = displayMessage;
+
+                if (mode === 'prompt') {
+                    inputContainer.classList.remove('hidden');
+                    inputEl.value = defaultValue || '';
+                    inputEl.placeholder = placeholder || '';
+                    if (inputHint) {
+                        inputHintEl.textContent = inputHint;
+                        inputHintEl.classList.remove('hidden');
+                    } else {
+                        inputHintEl.classList.add('hidden');
+                    }
+                    cancelBtn.classList.remove('hidden');
+                    cancelBtn.textContent = cancelText;
+                } else if (mode === 'confirm') {
+                    inputContainer.classList.add('hidden');
+                    cancelBtn.classList.remove('hidden');
+                    cancelBtn.textContent = cancelText;
+                } else {
+                    inputContainer.classList.add('hidden');
+                    cancelBtn.classList.add('hidden');
+                }
+
+                confirmBtn.textContent = confirmText;
+                if (isDanger || type === 'danger') {
+                    confirmBtn.className = "px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95";
+                } else {
+                    confirmBtn.className = "px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95";
+                }
+
+                overlay.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    card.classList.remove('scale-95', 'opacity-0');
+                    card.classList.add('scale-100', 'opacity-100');
+                    if (mode === 'prompt') {
+                        inputEl.focus();
+                        inputEl.select();
+                    } else {
+                        confirmBtn.focus();
+                    }
+                });
+
+                function cleanup(value) {
+                    card.classList.remove('scale-100', 'opacity-100');
+                    card.classList.add('scale-95', 'opacity-0');
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                    }, 150);
+
+                    document.removeEventListener('keydown', handleKey);
+                    overlay.onclick = null;
+                    confirmBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                    closeBtn.onclick = null;
+                    omniDialogActiveResolve = null;
+                    resolve(value);
+                }
+
+                omniDialogActiveResolve = cleanup;
+
+                function handleConfirm() {
+                    if (mode === 'prompt') {
+                        cleanup(inputEl.value);
+                    } else if (mode === 'confirm') {
+                        cleanup(true);
+                    } else {
+                        cleanup(true);
+                    }
+                }
+
+                function handleCancel() {
+                    if (mode === 'prompt') {
+                        cleanup(null);
+                    } else if (mode === 'confirm') {
+                        cleanup(false);
+                    } else {
+                        cleanup(false);
+                    }
+                }
+
+                function handleKey(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleConfirm();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        handleCancel();
+                    }
+                }
+
+                confirmBtn.onclick = handleConfirm;
+                cancelBtn.onclick = handleCancel;
+                closeBtn.onclick = handleCancel;
+                overlay.onclick = (e) => {
+                    if (e.target === overlay) handleCancel();
+                };
+                document.addEventListener('keydown', handleKey);
+            });
+        }
+
+        function showUiAlert(messageOrOpts, maybeTitle) {
+            let opts = {};
+            if (typeof messageOrOpts === 'string') {
+                opts = { message: messageOrOpts, title: maybeTitle || 'Notice' };
+            } else {
+                opts = messageOrOpts || {};
+            }
+            opts.mode = 'alert';
+            return showUiDialog(opts);
+        }
+
+        function showUiConfirm(messageOrOpts, maybeTitle) {
+            let opts = {};
+            if (typeof messageOrOpts === 'string') {
+                opts = { message: messageOrOpts, title: maybeTitle || 'Please Confirm' };
+            } else {
+                opts = messageOrOpts || {};
+            }
+            opts.mode = 'confirm';
+            return showUiDialog(opts);
+        }
+
+        function showUiPrompt(messageOrOpts, defaultValue, maybeTitle) {
+            let opts = {};
+            if (typeof messageOrOpts === 'string') {
+                opts = { message: messageOrOpts, defaultValue: defaultValue || '', title: maybeTitle || 'Enter Value' };
+            } else {
+                opts = messageOrOpts || {};
+            }
+            opts.mode = 'prompt';
+            return showUiDialog(opts);
+        }
+
+        window.showAlert = showUiAlert;
+        window.showConfirm = showUiConfirm;
+        window.showPrompt = showUiPrompt;
+        window.showToast = showUiToast;
+
+        // Graceful override for standard window.alert so all notifications use custom UI
+        window.alert = function(msg) {
+            showUiAlert({
+                title: 'Notice',
+                message: String(msg)
+            });
+        };
+
         // --- CUSTOM CANVAS GRAPH ENGINE (Multi-Root) ---
         const STORAGE_KEY = 'omnimind_mindmap_data_v1';
         const PROJECT_REGISTRY_KEY = 'omnimind_project_index_v1';
@@ -2431,10 +2763,16 @@
             if (modal) modal.classList.add('hidden');
         }
 
-        function handlePayMongoUpgradeClick() {
+        async function handlePayMongoUpgradeClick() {
             // Check if user is signed in first
             if (!currentCloudUser) {
-                const proceed = confirm("Tip: Signing in with Google before upgrading ensures your Lifetime Pro pass is permanently linked to your account.\n\nClick OK to sign in now, or Cancel to continue directly to payment.");
+                const proceed = await showConfirm({
+                    title: 'Sign In Tip',
+                    icon: '💡',
+                    message: "Tip: Signing in with Google before upgrading ensures your Lifetime Pro pass is permanently linked to your account.\n\nClick 'Sign In' to connect your Google account now, or 'Continue' to proceed directly to payment.",
+                    confirmText: 'Sign In with Google',
+                    cancelText: 'Continue to Payment'
+                });
                 if (proceed) {
                     closeLifetimeProModal();
                     signInWithGoogle();
@@ -2445,9 +2783,15 @@
             // Check if link is still placeholder
             const isPlaceholder = PAYMONGO_PRO_PAYMENT_LINK.includes('your-custom-link') || PAYMONGO_PRO_PAYMENT_LINK.includes('omnimind-lifetime-pro');
             if (isPlaceholder) {
-                const choice = confirm("PayMongo Merchant Verification Notice:\n\nYour PayMongo account is currently undergoing approval. Once approved, your live payment link will open directly.\n\nIn the meantime, you can activate Lifetime Pro immediately for testing using the activation code 'OMNIPRO50'.\n\nWould you like to enter the activation code now?");
+                const choice = await showConfirm({
+                    title: 'PayMongo Merchant Notice',
+                    icon: '⚡',
+                    message: "PayMongo Merchant Verification Notice:\n\nYour PayMongo account is currently undergoing approval. Once approved, your live payment link will open directly.\n\nIn the meantime, you can activate Lifetime Pro immediately for testing using the activation code 'OMNIPRO50'.\n\nWould you like to enter the activation code now?",
+                    confirmText: 'Enter Activation Code',
+                    cancelText: 'Later'
+                });
                 if (choice) {
-                    promptActivationCode();
+                    await promptActivationCode();
                 }
                 return;
             }
@@ -2461,16 +2805,28 @@
             window.open(checkoutUrl, '_blank');
         }
 
-        function promptActivationCode() {
-            const code = prompt("Enter Lifetime Pro Activation Code:\n(For testing, you can use: OMNIPRO50)");
+        async function promptActivationCode() {
+            const code = await showPrompt({
+                title: 'Lifetime Pro Activation',
+                icon: '⭐',
+                message: 'Enter Lifetime Pro Activation Code:\n(For instant testing, use: OMNIPRO50)',
+                placeholder: 'OMNIPRO50',
+                defaultValue: '',
+                confirmText: 'Activate Pro'
+            });
             if (!code || !code.trim()) return;
-            applyProActivationCode(code.trim());
+            await applyProActivationCode(code.trim());
         }
 
         async function applyProActivationCode(code) {
             const cleanCode = code.toUpperCase().trim();
             if (!PRO_ACTIVATION_CODES.includes(cleanCode) && !cleanCode.startsWith('PRO_')) {
-                alert('Invalid activation code. Please check and try again.');
+                showAlert({
+                    title: 'Invalid Code',
+                    icon: '⚠️',
+                    message: 'Invalid activation code. Please check and try again.',
+                    type: 'danger'
+                });
                 return;
             }
 
@@ -2496,7 +2852,12 @@
             renderCloudMapsList();
             renderHomepage();
             updateCloudAuthUI();
-            alert(`🎉 Lifetime Pro Activated!\n\nYour cloud storage has been expanded to ${PRO_CLOUD_MAPS} maps with Soft-Cap Protection.`);
+            showAlert({
+                title: 'Lifetime Pro Activated!',
+                icon: '🎉',
+                message: `Your cloud storage has been expanded to ${PRO_CLOUD_MAPS} maps with Soft-Cap Protection.\n\nEnjoy unlimited cloud sync!`,
+                type: 'success'
+            });
         }
 
         function initFirebaseCloud() {
@@ -2750,8 +3111,15 @@
             }
         }
 
-        function resetFirebaseConfig() {
-            if (!confirm('Are you sure you want to reset your Firebase configuration?')) return;
+        async function resetFirebaseConfig() {
+            const confirmed = await showConfirm({
+                title: 'Reset Cloud Configuration',
+                icon: '🔄',
+                message: 'Are you sure you want to reset your Firebase configuration?\n\nThis will clear your saved cloud keys on this browser.',
+                isDanger: true,
+                confirmText: 'Reset Configuration'
+            });
+            if (!confirmed) return;
             localStorage.removeItem(FIREBASE_CONFIG_KEY);
             toggleCloudConfigModal(false);
             if (fbAuth) fbAuth.signOut().catch(() => {});
@@ -2981,7 +3349,13 @@
 
                 if (forceNew) {
                     mapId = 'map_' + Date.now();
-                    const customName = prompt('Enter a name for this new separate cloud map:', `${mapName} (Cloud Copy)`);
+                    const customName = await showPrompt({
+                        title: 'Save as New Cloud Map',
+                        icon: '☁️',
+                        message: 'Enter a name for this new separate cloud map:',
+                        defaultValue: `${mapName} (Cloud Copy)`,
+                        confirmText: 'Save to Cloud'
+                    });
                     if (!customName || !customName.trim()) {
                         setSaveStatus('saved', '✓ Save cancelled');
                         return;
@@ -3178,14 +3552,20 @@
             const map = cloudMapsCache.find(m => m.id === mapId);
             if (!map) return;
             const currentName = map.name || 'Untitled Mind Map';
-            const newName = prompt('Enter new mind map name for cloud save:', currentName);
+            const newName = await showPrompt({
+                title: 'Rename Cloud Mind Map',
+                icon: '✏️',
+                message: 'Enter new mind map name for cloud save:',
+                defaultValue: currentName,
+                confirmText: 'Save Name'
+            });
             if (!newName || !newName.trim() || newName.trim() === currentName) return;
             await renameCloudMap(mapId, newName.trim());
         }
 
         async function renameCloudMap(mapId, newName) {
             if (!fbDb || !currentCloudUser) {
-                alert('You must be signed in to rename cloud maps.');
+                showAlert('You must be signed in to rename cloud maps.', 'Sign In Required');
                 return;
             }
             setSaveStatus('saving', `Renaming cloud map to "${newName}"...`);
@@ -3218,7 +3598,7 @@
                 setSaveStatus('saved', `✓ Renamed cloud map to "${newName}"`);
             } catch (err) {
                 console.error('Failed to rename cloud map:', err);
-                alert('Failed to rename cloud map: ' + (err.message || err));
+                showAlert('Failed to rename cloud map: ' + (err.message || err), 'Error');
                 setSaveStatus('error', '⚠️ Rename failed');
             }
         }
@@ -3226,7 +3606,14 @@
         async function deleteCloudMap(mapId) {
             const map = cloudMapsCache.find(m => m.id === mapId);
             const mapName = map ? map.name : 'this cloud map';
-            if (!confirm(`Are you sure you want to delete "${mapName}" from your Cloud library?\n\nThis cannot be undone.`)) {
+            const confirmed = await showConfirm({
+                title: 'Delete Cloud Map',
+                icon: '🗑️',
+                message: `Are you sure you want to delete "${mapName}" from your Cloud library?\n\nThis action cannot be undone.`,
+                isDanger: true,
+                confirmText: 'Delete Map'
+            });
+            if (!confirmed) {
                 return;
             }
 
@@ -3573,14 +3960,21 @@
             grid.innerHTML = html;
         }
 
-        function homeCreateNewMap() {
-            if (quickPromptNewMap()) {
+        async function homeCreateNewMap() {
+            const created = await quickPromptNewMap();
+            if (created) {
                 toggleHomepageView(false);
             }
         }
 
-        function homeGenerateWithAI() {
-            const topic = prompt('What topic or concept would you like Gemini AI to build a mind map for?');
+        async function homeGenerateWithAI() {
+            const topic = await showPrompt({
+                title: 'Generate Mind Map with AI',
+                icon: '✨',
+                message: 'What topic or concept would you like Gemini AI to build a mind map for?',
+                placeholder: 'e.g., Renewable Energy Grid, Product Launch Strategy, Deep Learning 101...',
+                confirmText: 'Generate with AI'
+            });
             if (!topic || !topic.trim()) return;
 
             toggleHomepageView(false);
@@ -4393,10 +4787,16 @@
             renameProject(currentProjectId, newName);
         }
 
-        function promptRenameProject(projId) {
+        async function promptRenameProject(projId) {
             const meta = projectRegistry.projects.find(p => p.id === projId);
             if (!meta) return;
-            const newName = prompt('Enter new mind map name:', meta.name);
+            const newName = await showPrompt({
+                title: 'Rename Mind Map',
+                icon: '✏️',
+                message: 'Enter new mind map name:',
+                defaultValue: meta.name,
+                confirmText: 'Rename'
+            });
             if (newName && newName.trim() && newName.trim() !== meta.name) {
                 renameProject(projId, newName.trim());
             }
@@ -4431,18 +4831,30 @@
             }
         }
 
-        function promptNewProjectModal() {
+        async function promptNewProjectModal() {
             const defaultName = `Mind Map ${projectRegistry.projects.length + 1}`;
-            const name = prompt('Enter name for the new mind map:', defaultName);
+            const name = await showPrompt({
+                title: 'New Mind Map',
+                icon: '➕',
+                message: 'Enter name for your new mind map:',
+                defaultValue: defaultName,
+                confirmText: 'Create Map'
+            });
             if (name === null) return;
             const finalName = name.trim() || defaultName;
             createNewProject(finalName);
             toggleProjectManagerModal(false);
         }
 
-        function quickPromptNewMap() {
+        async function quickPromptNewMap() {
             const defaultName = `Mind Map ${projectRegistry.projects.length + 1}`;
-            const name = prompt('Enter name for your new mind map:', defaultName);
+            const name = await showPrompt({
+                title: 'Create New Mind Map',
+                icon: '🗺️',
+                message: 'Enter name for your new mind map:',
+                defaultValue: defaultName,
+                confirmText: 'Create Map'
+            });
             if (name === null) return false;
             const finalName = name.trim() || defaultName;
             createNewProject(finalName);
@@ -4511,21 +4923,33 @@
             setSaveStatus('saved', `✓ Duplicated as "${dupName}"`);
         }
 
-        function deleteProject(projId) {
+        async function deleteProject(projId) {
             const meta = projectRegistry.projects.find(p => p.id === projId);
             if (!meta) return;
 
             if (projectRegistry.projects.length <= 1) {
-                if (confirm(`"${meta.name}" is your only mind map. You cannot delete it, but would you like to clear it to a fresh canvas?`)) {
-                    resetToDefault();
+                const clearCanvas = await showConfirm({
+                    title: 'Clear Canvas',
+                    icon: '⚠️',
+                    message: `"${meta.name}" is your only mind map in the library.\n\nYou cannot delete the only map, but would you like to clear it to a fresh blank canvas?`,
+                    confirmText: 'Clear Canvas',
+                    isDanger: true
+                });
+                if (clearCanvas) {
+                    await resetToDefault(true);
                     toggleProjectManagerModal(false);
                 }
                 return;
             }
 
-            if (!confirm(`Are you sure you want to delete "${meta.name}"?
-
-This will permanently remove this mind map.`)) {
+            const confirmed = await showConfirm({
+                title: 'Delete Mind Map',
+                icon: '🗑️',
+                message: `Are you sure you want to delete "${meta.name}"?\n\nThis will permanently remove this mind map from your local library.`,
+                confirmText: 'Delete Map',
+                isDanger: true
+            });
+            if (!confirmed) {
                 return;
             }
 
@@ -5111,17 +5535,20 @@ This will permanently remove this mind map.`)) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (parsed && typeof parsed === 'object') {
                         const fileNameBase = file.name.replace(/\.json$/i, '').replace(/[-_]\d{4}-\d{2}-\d{2}$/, '').replace(/[_-]/g, ' ');
                         const detectedName = parsed.name || fileNameBase || 'Imported Mind Map';
 
-                        const importAsNew = confirm(`Import "${detectedName}"?
-
-• Click OK to import as a NEW mind map in your library.
-• Click Cancel to overwrite the current canvas.`);
+                        const importAsNew = await showConfirm({
+                            title: 'Import Mind Map',
+                            icon: '📂',
+                            message: `How would you like to import "${detectedName}"?\n\n• Click "Import as New Map" to add it to your library.\n• Click "Overwrite Current" to replace the active canvas.`,
+                            confirmText: 'Import as New Map',
+                            cancelText: 'Overwrite Current'
+                        });
                         
                         if (importAsNew) {
                             const newNodes = parsed.nodes || parsed;
@@ -5242,12 +5669,21 @@ This will permanently remove this mind map.`)) {
             setSaveStatus('saved', `✓ Backed up ${projectRegistry.projects.length} mind maps`);
         }
 
-        function resetToDefault() {
+        async function resetToDefault(skipConfirm = false) {
             if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
                 showCollabViewOnlyNotice();
                 return;
             }
-            if (!confirm('Are you sure you want to reset this mind map to default?')) return;
+            if (!skipConfirm) {
+                const confirmed = await showConfirm({
+                    title: 'Reset Mind Map',
+                    icon: '🔄',
+                    message: 'Are you sure you want to reset this mind map to the default blank canvas?\n\nAll current bubbles and connections on this map will be cleared.',
+                    isDanger: true,
+                    confirmText: 'Reset to Default'
+                });
+                if (!confirmed) return;
+            }
             if (currentProjectId) {
                 localStorage.removeItem(getProjectStorageKey(currentProjectId));
             }
@@ -6032,10 +6468,17 @@ This will permanently remove this mind map.`)) {
             setSaveStatus('saved', '✓ Added Design Element');
         }
 
-        function promptImageGuideUrl(existingId) {
+        async function promptImageGuideUrl(existingId) {
             const dec = existingId ? canvasDecorations[existingId] : null;
             const currentVal = dec ? (dec.url || dec.fileName || (dec.src && !dec.src.startsWith('data:') ? dec.src : '')) : '';
-            const inputUrl = prompt("Enter image link, URL, or relative file path:\n(e.g., https://example.com/mockup.png or ./wireframe.png)", currentVal);
+            const inputUrl = await showPrompt({
+                title: 'Image / Wireframe Link',
+                icon: '🖼️',
+                message: 'Enter image link, URL, or relative file path:\n(e.g., https://example.com/mockup.png or ./wireframe.png)',
+                defaultValue: currentVal,
+                placeholder: 'https://...',
+                confirmText: 'Insert Image'
+            });
             if (!inputUrl || !inputUrl.trim()) return;
             const cleanUrl = inputUrl.trim();
             if (existingId && dec) {
