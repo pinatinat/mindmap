@@ -47,18 +47,26 @@ Your task is to take any topic, document, strategy, or concept and convert it in
    - `@text "Section Title" @ (x, y, width, height) {layer: front, z: 1, size: 22, color: #0f172a, bg: transparent}`
 
 ### SPATIAL COORDINATE RULES (PREVENTS OVERLAPPING BUBBLES):
-1. **X-Axis Progression (Left-to-Right Horizontal Tree Layout):**
+1. **X-Axis Progression (Left-to-Right Horizontal Tree Layout — Default):**
    - Root Node: `X = 200`
    - Level 1 Children: `X = 520` (X + 320px)
    - Level 2 Children: `X = 840` (X + 320px)
    - Level 3 Children: `X = 1160` (X + 320px)
-2. **Y-Axis Vertical Distribution:**
-   - Sibling nodes MUST be vertically separated by at least `80px` to `100px` (e.g. `Y = 160`, `Y = 250`, `Y = 340`, `Y = 430`, `Y = 520`).
+   - Sibling nodes MUST be vertically separated by at least `80px` to `100px` (e.g. `Y = 160`, `Y = 250`, `Y = 340`, `Y = 430`).
    - Center children vertically around their parent node's Y coordinate.
-   - If there are multiple root trees, space each root tree at least `350px` to `500px` apart vertically (e.g. Root 1 at `Y = 250`, Root 2 at `Y = 650`).
+
+2. **Y-Axis Progression (Top-Down Vertical Tree / Org-Chart Layout):**
+   - OmniMind features an intelligent **Transpose Layout Engine** (`[ 🔄 Transpose ]` button). When generating a top-down vertical tree:
+     - Root Node: centered at top, e.g. `(500, 150)`.
+     - Depth descends along Y: Level 1 at `Y = 290` (Y + 140px), Level 2 at `Y = 430` (Y + 140px), Level 3 at `Y = 570` (Y + 140px).
+     - Siblings are distributed horizontally: space sibling centers at least `160px` to `240px` apart along X (e.g., Child 1 at `X = 260`, Child 2 at `X = 500`, Child 3 at `X = 740`).
+     - Center the parent node horizontally above its children: `Parent.X = (FirstChild.X + LastChild.X) / 2`.
+   - Connector lines automatically adapt their 360° Bezier curve to exit smoothly from the bottom of the parent into the top of each child!
+
 3. **Design Element Bounding Boxes:**
    - A `@zone` or `@card` enclosing nodes must encompass their coordinates with ~40px margin:
      `x = minX - 40`, `y = minY - 40`, `width = (maxX - minX) + 80`, `height = (maxY - minY) + 80`.
+
 4. **Infinite 2D Canvas & Directional Flexibility:**
    - Coordinates operate on a true infinite 2D plane: both positive and negative coordinates (e.g. `X = -300`, `Y = -150`) are fully supported with unbroken connection lines across 360 degrees.
    - For multi-directional, radial, or branched layouts extending leftward or upward from a central root, negative coordinates can be used freely.
@@ -169,6 +177,31 @@ Requirements:
 # Design Elements
 @circle "Recommended Path" @ (530, 250, 430, 170) {layer: behind, z: 1, bg: rgba(254, 243, 199, 0.4), border: dashed #f59e0b}
 @sticky "🏆 Final Recommendation:\nStart with Option B (SaaS) to validate PMF within 30 days, then migrate critical microservices in-house." @ (960, 220, 270, 180) {layer: front, z: 2, bg: #fef08a, color: #854d0e}
+```
+
+---
+
+### Example 4: Top-Down Vertical Tree (Executive Org Hierarchy / Org-Chart)
+
+*Use this layout when requested to produce a top-down hierarchical tree or organization chart. OmniMind will automatically route smooth downward connector curves and render a clean hierarchical structure.*
+
+```markdown
+# 🏛️ Chief Executive Office @ (500, 140) [Leadership] {bg: #1e293b, fg: #ffffff, size: 20, bold}
+  - 🛠️ Chief Technology Officer @ (240, 280) [Tech Core] {bg: #eff6ff, fg: #1d4ed8, bold}
+    - AI & Data Systems @ (150, 420) {wrap: 180}
+    - Platform Engineering @ (330, 420) {wrap: 180}
+  - 📈 Chief Revenue Officer @ (500, 280) [Growth] {bg: #f0fdf4, fg: #15803d, bold}
+    - Enterprise Sales @ (420, 420)
+    - Global Partnerships @ (580, 420)
+  - 🎨 Chief Product Officer @ (760, 280) [Design] {bg: #fdf2f8, fg: #be185d, bold}
+    - UX Architecture @ (690, 420)
+    - Product Discovery @ (830, 420)
+
+---
+# Design Elements
+@zone "Engineering Division" @ (70, 230, 340, 240) {layer: behind, z: 1, bg: rgba(239, 246, 255, 0.45), border: dashed #3b82f6, radius: 16}
+@zone "Go-to-Market Division" @ (390, 230, 480, 240) {layer: behind, z: 1, bg: rgba(240, 253, 244, 0.45), border: dashed #22c55e, radius: 16}
+@sticky "📌 Org Governance Note:\nCross-functional squads report bi-weekly directly to executive leads." @ (890, 140, 240, 160) {layer: front, z: 2, bg: #fef08a, color: #713f12}
 ```
 
 ---

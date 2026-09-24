@@ -329,6 +329,9 @@
                     <button type="button" onclick="toggleAllNodesWrap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
                         <span>↩️</span> Toggle Wrap All
                     </button>
+                    <button type="button" onclick="transposeBranchOrMap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
+                        <span>🔄</span> Transpose Layout (Tree)
+                    </button>
                     <button type="button" onclick="openShareModal()" class="text-left px-3 py-2 hover:bg-purple-50 text-purple-700 font-bold rounded-xl flex items-center gap-2">
                         <span>👥</span> Share with Team
                     </button>
@@ -469,6 +472,33 @@
                             <button type="button" onclick="setMapWrap(true)" class="hover:text-blue-600 hover:underline transition-colors" title="Enable wrapping on all nodes in this mind map">Wrap all</button>
                             <span>•</span>
                             <button type="button" onclick="setMapWrap(false)" class="hover:text-slate-700 hover:underline transition-colors" title="Reset all nodes in this mind map to single-line">Single-line all</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Branch Layout & Transpose -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase">Branch Layout</label>
+                        <span id="prop-layout-mode-badge" class="text-[0.65rem] text-slate-400 font-medium">Auto-align</span>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <button type="button" onclick="transposeBranch()" id="btn-transpose-branch" class="flex-1 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg text-xs font-bold border border-slate-200 text-slate-700 transition-colors" title="Toggle selected branch between Right-Facing and Vertical Tree">
+                            <span class="text-sm">🔄</span>
+                            <span>Transpose</span>
+                        </button>
+                        <div class="flex items-center gap-1">
+                            <button type="button" onclick="transposeBranch(null, 'horizontal')" id="btn-layout-horiz" class="px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Force Horizontal (Right-Facing) layout">➔ Right</button>
+                            <button type="button" onclick="transposeBranch(null, 'vertical')" id="btn-layout-vert" class="px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Force Vertical Tree (Top-Down) layout">🌳 Tree</button>
+                        </div>
+                    </div>
+                    <!-- Batch Transpose Shortcuts -->
+                    <div class="flex items-center justify-between text-[0.68rem] text-slate-500 pt-0.5">
+                        <span class="text-slate-400">Map Layout:</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="transposeMap('horizontal')" class="hover:text-blue-600 hover:underline transition-colors" title="Layout all root trees horizontally">➔ Horizontal All</button>
+                            <span>•</span>
+                            <button type="button" onclick="transposeMap('vertical')" class="hover:text-blue-600 hover:underline transition-colors" title="Layout all root trees as vertical trees">🌳 Tree All</button>
                         </div>
                     </div>
                 </div>
@@ -634,6 +664,11 @@
                 <!-- Text Wrap All Toggle Button -->
                 <button type="button" onclick="toggleAllNodesWrap()" id="btn-toggle-all-wrap" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Toggle text wrapping across all nodes on canvas">
                     <span>↩️</span> <span class="hidden sm:inline">Wrap</span>
+                </button>
+
+                <!-- Transpose Layout Toggle Button -->
+                <button type="button" onclick="transposeBranchOrMap()" id="btn-toggle-transpose" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Transpose layout: converts between Horizontal Map and Vertical Tree">
+                    <span>🔄</span> <span class="hidden sm:inline">Transpose</span>
                 </button>
 
                 <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
@@ -2061,6 +2096,20 @@
                     wrapStatus.classList.add('text-slate-400');
                 }
                 if (wrapControls) wrapControls.classList.add('hidden');
+
+                const layoutBadge = document.getElementById('prop-layout-mode-badge');
+                const btnLayoutHoriz = document.getElementById('btn-layout-horiz');
+                const btnLayoutVert = document.getElementById('btn-layout-vert');
+                if (layoutBadge) {
+                    layoutBadge.textContent = 'Auto-align';
+                    layoutBadge.className = 'text-[0.65rem] text-slate-400 font-medium';
+                }
+                if (btnLayoutHoriz) {
+                    btnLayoutHoriz.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed';
+                }
+                if (btnLayoutVert) {
+                    btnLayoutVert.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed';
+                }
                 return;
             }
 
@@ -2122,6 +2171,56 @@
                     wrapStatus.classList.remove('text-blue-600', 'font-semibold');
                     wrapStatus.classList.add('text-slate-400');
                     wrapControls.classList.add('hidden');
+                }
+            }
+
+            // Layout orientation & transpose controls
+            const layoutBadge = document.getElementById('prop-layout-mode-badge');
+            const btnLayoutHoriz = document.getElementById('btn-layout-horiz');
+            const btnLayoutVert = document.getElementById('btn-layout-vert');
+
+            let branchOrientation = 'horizontal';
+            let branchChildren = Object.values(nodes).filter(n => n.parentId === node.id);
+            let orientNode = node;
+            if (branchChildren.length === 0 && node.parentId && nodes[node.parentId]) {
+                orientNode = nodes[node.parentId];
+                branchChildren = Object.values(nodes).filter(n => n.parentId === orientNode.id);
+            }
+
+            if (branchChildren.length > 0) {
+                let totDx = 0, totDy = 0;
+                branchChildren.forEach(c => {
+                    totDx += (c.x - orientNode.x);
+                    totDy += (c.y - orientNode.y);
+                });
+                const avgX = totDx / branchChildren.length;
+                const avgY = totDy / branchChildren.length;
+                branchOrientation = avgY > avgX ? 'vertical' : 'horizontal';
+            }
+
+            if (layoutBadge) {
+                if (branchChildren.length === 0) {
+                    layoutBadge.textContent = 'Single Node';
+                    layoutBadge.className = 'text-[0.65rem] text-slate-400 font-medium';
+                } else if (branchOrientation === 'vertical') {
+                    layoutBadge.textContent = '🌳 Vertical Tree';
+                    layoutBadge.className = 'text-[0.65rem] text-emerald-600 font-bold';
+                } else {
+                    layoutBadge.textContent = '➔ Right-Facing';
+                    layoutBadge.className = 'text-[0.65rem] text-blue-600 font-bold';
+                }
+            }
+
+            if (btnLayoutHoriz && btnLayoutVert) {
+                if (branchChildren.length === 0) {
+                    btnLayoutHoriz.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors';
+                    btnLayoutVert.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors';
+                } else if (branchOrientation === 'vertical') {
+                    btnLayoutVert.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-emerald-600 bg-emerald-600 text-white shadow-xs transition-colors';
+                    btnLayoutHoriz.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors';
+                } else {
+                    btnLayoutHoriz.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-blue-600 bg-blue-600 text-white shadow-xs transition-colors';
+                    btnLayoutVert.className = 'px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors';
                 }
             }
 
@@ -5938,8 +6037,13 @@
                 if (node.edgeEl && node.parentId && nodes[node.parentId]) {
                     const p = nodes[node.parentId];
                     const dx = node.x - p.x;
-                    // Draw a smooth center-to-center bezier curve
-                    node.edgeEl.setAttribute('d', `M ${p.x} ${p.y} C ${p.x + dx/2.5} ${p.y}, ${node.x - dx/2.5} ${node.y}, ${node.x} ${node.y}`);
+                    const dy = node.y - p.y;
+                    // Adapt curve orientation: vertical tree curves along Y, horizontal curves along X
+                    if (Math.abs(dy) > Math.abs(dx)) {
+                        node.edgeEl.setAttribute('d', `M ${p.x} ${p.y} C ${p.x} ${p.y + dy/2.5}, ${node.x} ${node.y - dy/2.5}, ${node.x} ${node.y}`);
+                    } else {
+                        node.edgeEl.setAttribute('d', `M ${p.x} ${p.y} C ${p.x + dx/2.5} ${p.y}, ${node.x - dx/2.5} ${node.y}, ${node.x} ${node.y}`);
+                    }
                 }
             });
         }
@@ -7530,7 +7634,7 @@
             setSaveStatus('saved', '✓ View Fitted to Content');
         }
 
-        // --- 3. LOGIC UTILS ---
+        // --- 3. LOGIC UTILS & LAYOUT ENGINE ---
         function getDescendants(id) {
             let desc = [];
             Object.values(nodes).filter(n => n.parentId === id).forEach(c => {
@@ -7540,36 +7644,254 @@
             return desc;
         }
 
-        // Auto-arrange a raw tree into visual coordinates
-        function autoLayoutTree(rootId, startX, startY) {
+        // Measure visual layout width of a node (DOM offsetWidth or calculated estimate)
+        function getNodeVisualWidth(nodeId) {
+            const node = typeof nodeId === 'object' ? nodeId : nodes[nodeId];
+            if (!node) return 140;
+            const el = document.querySelector(`.bubble-node[data-id="${node.id}"]`);
+            if (el && el.offsetWidth) {
+                return Math.max(el.offsetWidth, 120);
+            }
+            if (node.wrap && node.maxWidth) {
+                return Math.max(node.maxWidth, 140);
+            }
+            const textLen = (node.text || '').length;
+            return Math.max(Math.min(textLen * 9 + 48, 360), 120);
+        }
+
+        // Auto-arrange a raw tree horizontally (Right-facing)
+        function autoLayoutTreeHorizontal(rootId, startX, startY, childGapX = 280, siblingGapY = 90) {
             let currentY = startY;
             function traverse(nId, depth) {
-                if(!nodes[nId]) return;
-                nodes[nId].x = startX + (depth * 280);
+                if (!nodes[nId]) return;
+                nodes[nId].x = startX + (depth * childGapX);
                 
                 const children = Object.values(nodes).filter(n => n.parentId === nId);
                 if (children.length === 0) {
                     nodes[nId].y = currentY;
-                    currentY += 90; // vertical spacing
+                    currentY += siblingGapY;
                 } else {
                     let topY = currentY;
                     children.forEach(c => traverse(c.id, depth + 1));
-                    let bottomY = currentY - 90; 
+                    let bottomY = currentY - siblingGapY; 
                     nodes[nId].y = (topY + bottomY) / 2; // Center parent among children
                 }
             }
             traverse(rootId, 0);
-            return currentY; // Return the Y cursor so callers can stagger the next tree
+            return currentY; // Return next Y cursor
         }
 
-        // Layout all root trees with staggered vertical positions
-        function autoLayoutAllRoots(startX, startY) {
+        // Backward compatibility alias for autoLayoutTree
+        function autoLayoutTree(rootId, startX, startY) {
+            return autoLayoutTreeHorizontal(rootId, startX, startY);
+        }
+
+        // Auto-arrange a tree vertically (Top-Down org chart)
+        function autoLayoutTreeVertical(rootId, startX, startY, depthGapY = 140, siblingPaddingX = 24) {
+            if (!nodes[rootId]) return { totalWidth: 0, maxY: startY, nextLeft: startX + 120 };
+
+            // Pass 1: calculate subtree widths bottom-up
+            const subtreeWidths = {};
+            function calcWidth(nId) {
+                const node = nodes[nId];
+                if (!node) return 0;
+                const myW = getNodeVisualWidth(node) + siblingPaddingX;
+                const children = Object.values(nodes).filter(n => n.parentId === nId);
+                if (children.length === 0) {
+                    subtreeWidths[nId] = myW;
+                    return myW;
+                }
+                let totalChildW = 0;
+                children.forEach(c => {
+                    totalChildW += calcWidth(c.id);
+                });
+                const finalW = Math.max(myW, totalChildW);
+                subtreeWidths[nId] = finalW;
+                return finalW;
+            }
+
+            const rootTotalWidth = calcWidth(rootId);
+            let maxY = startY;
+
+            // Pass 2: place nodes top-down
+            function place(nId, depth, slotLeftX, slotWidth) {
+                const node = nodes[nId];
+                if (!node) return;
+                node.y = startY + depth * depthGapY;
+                if (node.y > maxY) maxY = node.y;
+
+                const children = Object.values(nodes).filter(n => n.parentId === nId);
+                if (children.length === 0) {
+                    node.x = Math.round(slotLeftX + slotWidth / 2);
+                } else {
+                    let childrenTotalW = 0;
+                    children.forEach(c => { childrenTotalW += subtreeWidths[c.id]; });
+
+                    let curLeft = slotLeftX + (slotWidth - childrenTotalW) / 2;
+                    children.forEach(c => {
+                        const cW = subtreeWidths[c.id];
+                        place(c.id, depth + 1, curLeft, cW);
+                        curLeft += cW;
+                    });
+
+                    // Center parent between first and last child
+                    const firstChild = children[0];
+                    const lastChild = children[children.length - 1];
+                    node.x = Math.round((nodes[firstChild.id].x + nodes[lastChild.id].x) / 2);
+                }
+            }
+
+            const rootSlotLeft = startX - rootTotalWidth / 2;
+            place(rootId, 0, rootSlotLeft, rootTotalWidth);
+
+            return { totalWidth: rootTotalWidth, maxY, nextLeft: rootSlotLeft + rootTotalWidth + 120 };
+        }
+
+        // Layout all root trees horizontally stacked vertically
+        function autoLayoutAllRootsHorizontal(startX = 200, startY = 150) {
             const roots = getRoots();
             let currentY = startY;
             roots.forEach(root => {
-                currentY = autoLayoutTree(root.id, startX, currentY);
+                currentY = autoLayoutTreeHorizontal(root.id, startX, currentY);
                 currentY += 80; // gap between independent trees
             });
+            return currentY;
+        }
+
+        // Layout all root trees vertically placed side-by-side
+        function autoLayoutAllRootsVertical(startX = 200, startY = 150) {
+            const roots = getRoots();
+            let curLeft = startX;
+            roots.forEach(root => {
+                const temp = autoLayoutTreeVertical(root.id, curLeft, startY);
+                const res = autoLayoutTreeVertical(root.id, curLeft + temp.totalWidth / 2, startY);
+                curLeft = res.nextLeft;
+            });
+            return curLeft;
+        }
+
+        // Backward compatibility
+        function autoLayoutAllRoots(startX, startY) {
+            return autoLayoutAllRootsHorizontal(startX || 200, startY || 150);
+        }
+
+        // Transpose a branch between Right-Facing (Horizontal) and Top-Down Tree (Vertical)
+        function transposeBranch(nodeId, explicitMode) {
+            if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
+                showCollabViewOnlyNotice();
+                return;
+            }
+            const targetId = nodeId || selectedNodeId;
+            if (!targetId || !nodes[targetId]) {
+                setSaveStatus('error', '⚠️ Select a node first to transpose');
+                return;
+            }
+
+            let target = nodes[targetId];
+            let children = Object.values(nodes).filter(n => n.parentId === target.id);
+            
+            // If child/leaf was clicked, transpose its parent's branch
+            if (children.length === 0 && target.parentId && nodes[target.parentId]) {
+                target = nodes[target.parentId];
+                children = Object.values(nodes).filter(n => n.parentId === target.id);
+            }
+
+            if (children.length === 0) {
+                setSaveStatus('error', '⚠️ Node has no connected children to transpose');
+                return;
+            }
+
+            // Detect orientation using signed average displacement
+            let totalDx = 0, totalDy = 0;
+            children.forEach(c => {
+                totalDx += (c.x - target.x);
+                totalDy += (c.y - target.y);
+            });
+            const avgDx = totalDx / children.length;
+            const avgDy = totalDy / children.length;
+            const currentOrientation = avgDy > avgDx ? 'vertical' : 'horizontal';
+            const targetOrientation = explicitMode || (currentOrientation === 'vertical' ? 'horizontal' : 'vertical');
+
+            const anchorX = target.x;
+            const anchorY = target.y;
+
+            if (targetOrientation === 'vertical') {
+                autoLayoutTreeVertical(target.id, anchorX, anchorY);
+            } else {
+                autoLayoutTreeHorizontal(target.id, anchorX, anchorY);
+            }
+
+            // Preserve parent anchor position
+            const shiftX = anchorX - target.x;
+            const shiftY = anchorY - target.y;
+
+            if (shiftX !== 0 || shiftY !== 0) {
+                target.x += shiftX;
+                target.y += shiftY;
+                const descIds = getDescendants(target.id);
+                descIds.forEach(id => {
+                    if (nodes[id]) {
+                        nodes[id].x += shiftX;
+                        nodes[id].y += shiftY;
+                    }
+                });
+            }
+
+            updatePositions();
+            syncFromMap();
+            updatePropertiesPanel();
+            triggerAutoSave();
+            setSaveStatus('saved', `✓ Transposed branch to ${targetOrientation === 'vertical' ? 'Vertical Tree 🌳' : 'Right-Facing ➔'}`);
+        }
+
+        // Transpose the entire mind map
+        function transposeMap(explicitMode) {
+            if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
+                showCollabViewOnlyNotice();
+                return;
+            }
+            const roots = getRoots();
+            if (roots.length === 0) return;
+
+            let totalDx = 0, totalDy = 0, count = 0;
+            Object.values(nodes).forEach(n => {
+                if (n.parentId && nodes[n.parentId]) {
+                    const p = nodes[n.parentId];
+                    totalDx += (n.x - p.x);
+                    totalDy += (n.y - p.y);
+                    count++;
+                }
+            });
+            const avgDx = count ? totalDx / count : 0;
+            const avgDy = count ? totalDy / count : 0;
+            const currentOrientation = avgDy > avgDx ? 'vertical' : 'horizontal';
+            const targetOrientation = explicitMode || (currentOrientation === 'vertical' ? 'horizontal' : 'vertical');
+
+            if (targetOrientation === 'vertical') {
+                autoLayoutAllRootsVertical(200, 150);
+            } else {
+                autoLayoutAllRootsHorizontal(200, 150);
+            }
+
+            updatePositions();
+            syncFromMap();
+            updatePropertiesPanel();
+            fitView();
+            triggerAutoSave();
+            setSaveStatus('saved', `✓ Mind map layout set to ${targetOrientation === 'vertical' ? 'Vertical Tree 🌳' : 'Horizontal ➔'}`);
+        }
+
+        // Smart transpose action (branch if node selected, whole map if nothing selected)
+        function transposeBranchOrMap() {
+            if (selectedNodeId && nodes[selectedNodeId]) {
+                const node = nodes[selectedNodeId];
+                const children = Object.values(nodes).filter(n => n.parentId === node.id);
+                if (children.length > 0 || (node.parentId && nodes[node.parentId])) {
+                    transposeBranch(selectedNodeId);
+                    return;
+                }
+            }
+            transposeMap();
         }
 
         // --- 4. UI MUTATION ACTIONS ---
