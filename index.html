@@ -3386,6 +3386,16 @@
                 });
                 renderCloudMapsList();
                 updateCloudAuthUI();
+
+                // If currently open map is one of the owner's shared maps, connect live sync so collaborator edits stream live
+                const activeInCloud = cloudMapsCache.find(m => m.id === currentProjectId);
+                if (activeInCloud && activeInCloud.shareSettings && (!activeCollabMode || activeCollabMode === 'owner')) {
+                    activeCollabMode = 'owner';
+                    activeCollabOwnerId = currentCloudUser.uid;
+                    activeCollabMapId = currentProjectId;
+                    activeCollabAllowCopy = (activeInCloud.shareSettings.allowCopy !== false);
+                    subscribeToSharedMapLive(currentCloudUser.uid, currentProjectId);
+                }
             } catch (err) {
                 console.warn('Could not fetch cloud maps:', err);
                 if (container) {
@@ -3667,6 +3677,17 @@
 
                 // Save locally too
                 saveCurrentProjectImmediate();
+
+                // If map is shared, connect owner live sync so collaborator edits stream directly
+                if (map.shareSettings) {
+                    activeCollabMode = 'owner';
+                    activeCollabOwnerId = currentCloudUser.uid;
+                    activeCollabMapId = mapId;
+                    activeCollabAllowCopy = (map.shareSettings.allowCopy !== false);
+                    subscribeToSharedMapLive(currentCloudUser.uid, mapId);
+                } else if (activeCollabMode === 'owner') {
+                    exitSharedMode();
+                }
 
                 toggleProjectManagerModal(false);
                 setSaveStatus('saved', `✓ Loaded "${map.name}" from Cloud`);
@@ -4351,6 +4372,14 @@
                 if (copyToggle) copyToggle.checked = (settings.allowCopy !== false);
 
                 renderShareMembersList(settings.invitedMembers || []);
+
+                // Activate bidirectional live sync for the owner as well!
+                activeCollabMode = 'owner';
+                activeCollabOwnerId = currentCloudUser.uid;
+                activeCollabMapId = currentProjectId;
+                activeCollabAllowCopy = (settings.allowCopy !== false);
+                subscribeToSharedMapLive(currentCloudUser.uid, currentProjectId);
+                setSaveStatus('saved', '⚡ Live Collaboration Active (Owner)');
             }
 
             modal.classList.remove('hidden');
@@ -4390,6 +4419,10 @@
 
             // Update in local cache
             if (cloudMap) cloudMap.shareSettings = shareSettings;
+            activeCollabMode = 'owner';
+            activeCollabOwnerId = currentCloudUser.uid;
+            activeCollabMapId = currentProjectId;
+            activeCollabAllowCopy = allowCopy;
 
             const ind = document.getElementById('share-save-indicator');
             if (ind) ind.textContent = 'Saving settings...';
@@ -4532,6 +4565,24 @@
                 }
             }
 
+            // Ensure auth state is settled or sign in anonymously for guest editors so Firestore rules allow access
+            if (fbAuth && !fbAuth.currentUser) {
+                await new Promise((resolve) => {
+                    const unsubscribe = fbAuth.onAuthStateChanged((user) => {
+                        try { unsubscribe(); } catch (e) {}
+                        resolve(user);
+                    });
+                    setTimeout(() => resolve(fbAuth.currentUser), 500);
+                });
+                if (!fbAuth.currentUser) {
+                    try {
+                        await fbAuth.signInAnonymously();
+                    } catch (authErr) {
+                        console.warn('Guest sign-in note for shared map:', authErr);
+                    }
+                }
+            }
+
             setSaveStatus('saving', '☁️ Fetching shared mind map...');
 
             try {
@@ -4670,6 +4721,9 @@
                 }
             }, (err) => {
                 console.warn('Live subscription error:', err);
+                if (err && (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission')))) {
+                    setSaveStatus('error', '⚠️ Live read error: Check Firestore Security Rules');
+                }
             });
         }
 
@@ -4699,7 +4753,8 @@
                     setSaveStatus('saved', '✓ Live changes synced to team');
                 } catch (err) {
                     console.warn('Live sync error:', err);
-                    setSaveStatus('error', '⚠️ Live sync failed');
+                    const isPermErr = err && (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission')));
+                    setSaveStatus('error', isPermErr ? '⚠️ Live sync failed: Permission Denied (Firestore Rules)' : '⚠️ Live sync failed');
                 }
             }, 350);
         }
@@ -5189,6 +5244,15 @@
         function createNewProject(name, initialNodes = null, initialDecorations = null, pX = null, pY = null, zVal = null, bgCol = '#f8fafc', gridSt = 'dots') {
             saveCurrentProjectImmediate();
 
+            // Clear any active shared collab listener
+            if (collabLiveUnsubscribe) {
+                try { collabLiveUnsubscribe(); } catch (e) {}
+                collabLiveUnsubscribe = null;
+            }
+            activeCollabMode = null;
+            activeCollabOwnerId = null;
+            activeCollabMapId = null;
+
             const newId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
             const finalName = (name || 'Untitled Mind Map').trim();
 
@@ -5259,6 +5323,15 @@
 
             saveCurrentProjectImmediate();
 
+            // Clear any active shared collab listener
+            if (collabLiveUnsubscribe) {
+                try { collabLiveUnsubscribe(); } catch (e) {}
+                collabLiveUnsubscribe = null;
+            }
+            activeCollabMode = null;
+            activeCollabOwnerId = null;
+            activeCollabMapId = null;
+
             currentProjectId = targetId;
             projectRegistry.activeId = targetId;
             saveProjectRegistry(false);
@@ -5282,6 +5355,18 @@
             updatePropertiesPanel();
             updateProjectHeaderUI();
             fitView();
+
+            // If switched project is one of the owner's shared cloud maps, connect live sync
+            if (currentCloudUser && cloudMapsCache && cloudMapsCache.length > 0) {
+                const activeInCloud = cloudMapsCache.find(m => m.id === targetId);
+                if (activeInCloud && activeInCloud.shareSettings) {
+                    activeCollabMode = 'owner';
+                    activeCollabOwnerId = currentCloudUser.uid;
+                    activeCollabMapId = targetId;
+                    activeCollabAllowCopy = (activeInCloud.shareSettings.allowCopy !== false);
+                    subscribeToSharedMapLive(currentCloudUser.uid, targetId);
+                }
+            }
 
             const curMeta = getCurrentProjectMeta();
             const displayName = curMeta ? curMeta.name : 'map';
