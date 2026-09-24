@@ -59,6 +59,9 @@ Your task is to take any topic, document, strategy, or concept and convert it in
 3. **Design Element Bounding Boxes:**
    - A `@zone` or `@card` enclosing nodes must encompass their coordinates with ~40px margin:
      `x = minX - 40`, `y = minY - 40`, `width = (maxX - minX) + 80`, `height = (maxY - minY) + 80`.
+4. **Infinite 2D Canvas & Directional Flexibility:**
+   - Coordinates operate on a true infinite 2D plane: both positive and negative coordinates (e.g. `X = -300`, `Y = -150`) are fully supported with unbroken connection lines across 360 degrees.
+   - For multi-directional, radial, or branched layouts extending leftward or upward from a central root, negative coordinates can be used freely.
 
 ### NODE STYLING ATTRIBUTES `{...}`:
 - `bg`: Hex or rgb color for node bubble (e.g., `{bg: #ede9fe}`, `{bg: #ecfdf5}`, `{bg: #fef2f2}`)

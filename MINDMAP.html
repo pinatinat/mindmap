@@ -67,9 +67,13 @@
             }
         }
 
-        /* Smooth Bezier Edge Lines */
+        /* Infinite SVG Canvas & Smooth Bezier Edge Lines */
+        #edges-svg {
+            overflow: visible !important;
+        }
         path.edge {
             transition: d 0.05s linear;
+            overflow: visible !important;
         }
 
         /* Inline editing input inside bubbles */
@@ -723,8 +727,8 @@
             <div id="pan-zoom-container" class="absolute top-0 left-0 w-full h-full transform-gpu origin-top-left">
                 <!-- Background Design Layer (Behind Nodes) -->
                 <div id="canvas-decorations-back" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 5;"></div>
-                <!-- SVG Layer for connection edges -->
-                <svg id="edges-svg" class="absolute inset-0 w-[5000px] h-[5000px] pointer-events-none" style="z-index: 10;"></svg>
+                <!-- SVG Layer for connection edges (Infinite 2D plane with overflow visible) -->
+                <svg id="edges-svg" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible" style="z-index: 10; overflow: visible !important;"></svg>
                 <!-- HTML Layer for Bubbles -->
                 <div id="nodes-container" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 20;"></div>
                 <!-- Foreground Design Layer (In Front of Nodes) -->
@@ -5481,7 +5485,8 @@
                 .bubble-node.has-attachment { flex-direction: column; border-radius: 1rem !important; white-space: normal !important; padding: 8px 12px; }
                 .bubble-img { max-width: 180px; max-height: 120px; border-radius: 0.5rem; object-fit: cover; margin-bottom: 6px; }
                 .canvas-decoration { position: absolute; box-sizing: border-box; font-family: ui-sans-serif, system-ui, sans-serif; }
-                path.edge { fill: none; stroke: ${getEdgeStrokeColor()}; stroke-width: 3px; }
+                #edges-svg, svg { overflow: visible !important; }
+                path.edge { fill: none; stroke: ${getEdgeStrokeColor()}; stroke-width: 3px; overflow: visible !important; }
             </style>\n`;
 
             svgStr += `  <g id="edges-layer">\n    ${edgesContent}\n  </g>\n`;
