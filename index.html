@@ -2938,6 +2938,9 @@
                         <button type="button" onclick="loadCloudMap('${map.id}')" class="px-2.5 py-1 text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg shadow-2xs transition-colors" title="Open this mind map">
                             Open
                         </button>
+                        <button type="button" onclick="promptRenameCloudMap('${map.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename cloud map">
+                            ✏️
+                        </button>
                         <button type="button" onclick="downloadCloudMapToLocal('${map.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save copy to Local Browser Maps">
                             ⬇️
                         </button>
@@ -3162,6 +3165,55 @@
                 fetchCloudMaps();
             } catch (err) {
                 alert('Failed to upload to cloud: ' + err.message);
+            }
+        }
+
+        async function promptRenameCloudMap(mapId) {
+            const map = cloudMapsCache.find(m => m.id === mapId);
+            if (!map) return;
+            const currentName = map.name || 'Untitled Mind Map';
+            const newName = prompt('Enter new mind map name for cloud save:', currentName);
+            if (!newName || !newName.trim() || newName.trim() === currentName) return;
+            await renameCloudMap(mapId, newName.trim());
+        }
+
+        async function renameCloudMap(mapId, newName) {
+            if (!fbDb || !currentCloudUser) {
+                alert('You must be signed in to rename cloud maps.');
+                return;
+            }
+            setSaveStatus('saving', `Renaming cloud map to "${newName}"...`);
+            try {
+                // Update in Firestore
+                await fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').doc(mapId).update({
+                    name: newName,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Update in-memory cloud cache
+                const map = cloudMapsCache.find(m => m.id === mapId);
+                if (map) {
+                    map.name = newName;
+                    map.updatedAt = new Date();
+                }
+
+                // If currently loaded/active local map corresponds to this mapId, update local meta as well
+                const localMeta = projectRegistry.projects.find(p => p.id === mapId);
+                if (localMeta) {
+                    localMeta.name = newName;
+                    localMeta.updatedAt = Date.now();
+                    saveProjectRegistry(false);
+                    updateProjectHeaderUI();
+                }
+
+                // Re-render UI
+                renderCloudMapsList();
+                renderHomepage();
+                setSaveStatus('saved', `✓ Renamed cloud map to "${newName}"`);
+            } catch (err) {
+                console.error('Failed to rename cloud map:', err);
+                alert('Failed to rename cloud map: ' + (err.message || err));
+                setSaveStatus('error', '⚠️ Rename failed');
             }
         }
 
@@ -3493,6 +3545,7 @@
                                     <button type="button" onclick="exportLocalMapToCloud('${item.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Upload to Cloud (Max 3)">☁️</button>
                                     <button type="button" onclick="deleteProject('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Delete Map">🗑️</button>
                                 ` : `
+                                    <button type="button" onclick="promptRenameCloudMap('${item.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs" title="Rename Cloud Map">✏️</button>
                                     <button type="button" onclick="downloadCloudMapToLocal('${item.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs" title="Download to Local Library">⬇️</button>
                                     <button type="button" onclick="saveActiveMapToCloud('${item.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Overwrite cloud copy with active canvas">🔄</button>
                                     <button type="button" onclick="deleteCloudMap('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Delete from Cloud">🗑️</button>
@@ -4342,6 +4395,24 @@
             updateProjectHeaderUI();
             renderProjectList();
             setSaveStatus('saved', `✓ Renamed to "${meta.name}"`);
+
+            // If this map is also in Cloud, automatically sync the new name to Cloud
+            if (fbDb && currentCloudUser && cloudMapsCache.some(m => m.id === projId)) {
+                fbDb.collection('users').doc(currentCloudUser.uid).collection('maps').doc(projId).update({
+                    name: meta.name,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    const cloudMap = cloudMapsCache.find(m => m.id === projId);
+                    if (cloudMap) {
+                        cloudMap.name = meta.name;
+                        cloudMap.updatedAt = new Date();
+                    }
+                    renderCloudMapsList();
+                    renderHomepage();
+                }).catch(err => {
+                    console.warn('Could not sync renamed name to cloud:', err);
+                });
+            }
         }
 
         function promptNewProjectModal() {
