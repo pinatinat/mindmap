@@ -322,6 +322,9 @@
                     <button type="button" onclick="deleteNode()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
                         <span>🗑️</span> Delete Node
                     </button>
+                    <button type="button" onclick="toggleAllNodesWrap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
+                        <span>↩️</span> Toggle Wrap All
+                    </button>
                     <button type="button" onclick="openShareModal()" class="text-left px-3 py-2 hover:bg-purple-50 text-purple-700 font-bold rounded-xl flex items-center gap-2">
                         <span>👥</span> Share with Team
                     </button>
@@ -435,6 +438,34 @@
                         <button onclick="setFontSize(12)" class="flex-1 bg-slate-100 hover:bg-slate-200 py-2 rounded-lg text-xs border border-slate-200">Small</button>
                         <button onclick="setFontSize(16)" class="flex-1 bg-slate-100 hover:bg-slate-200 py-2 rounded-lg text-sm border border-slate-200">Med</button>
                         <button onclick="setFontSize(24)" class="flex-1 bg-slate-100 hover:bg-slate-200 py-2 rounded-lg text-base font-bold border border-slate-200">Lg</button>
+                    </div>
+                </div>
+
+                <!-- Text Wrapping -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase">Text Wrapping</label>
+                        <span id="prop-wrap-status" class="text-[0.65rem] text-slate-400 font-medium">Single line</span>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <button onclick="toggleTextWrap()" id="btn-text-wrap" class="flex-1 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-lg text-xs font-bold border border-slate-200 text-slate-700 transition-colors" title="Toggle text wrapping for the selected node">
+                            <span class="text-sm">↩️</span>
+                            <span id="btn-text-wrap-label">Wrap Text</span>
+                        </button>
+                        <div id="wrap-width-controls" class="hidden flex items-center gap-1">
+                            <button onclick="setWrapWidth(180)" id="btn-wrap-180" class="px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Narrow (180px)">180px</button>
+                            <button onclick="setWrapWidth(240)" id="btn-wrap-240" class="px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Standard (240px)">240px</button>
+                            <button onclick="setWrapWidth(320)" id="btn-wrap-320" class="px-2 py-1.5 rounded-lg text-[0.7rem] font-bold border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Wide (320px)">320px</button>
+                        </div>
+                    </div>
+                    <!-- Batch Wrapping Shortcuts -->
+                    <div class="flex items-center justify-between text-[0.68rem] text-slate-500 pt-0.5">
+                        <button type="button" onclick="applyWrapToBranch()" class="hover:text-blue-600 hover:underline transition-colors" title="Apply selected node's wrapping style to all its children">↳ Apply to branch</button>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="setMapWrap(true)" class="hover:text-blue-600 hover:underline transition-colors" title="Enable wrapping on all nodes in this mind map">Wrap all</button>
+                            <span>•</span>
+                            <button type="button" onclick="setMapWrap(false)" class="hover:text-slate-700 hover:underline transition-colors" title="Reset all nodes in this mind map to single-line">Single-line all</button>
+                        </div>
                     </div>
                 </div>
 
@@ -594,6 +625,11 @@
                 <!-- Fit View Button -->
                 <button type="button" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Center and fit all content on screen">
                     <span>🎯</span> Fit
+                </button>
+
+                <!-- Text Wrap All Toggle Button -->
+                <button type="button" onclick="toggleAllNodesWrap()" id="btn-toggle-all-wrap" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Toggle text wrapping across all nodes on canvas">
+                    <span>↩️</span> <span class="hidden sm:inline">Wrap</span>
                 </button>
 
                 <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
@@ -2002,10 +2038,25 @@
             const sizeVal = document.getElementById('prop-font-size-val');
             const btnBold = document.getElementById('btn-bold');
             const btnItalic = document.getElementById('btn-italic');
+            const btnWrap = document.getElementById('btn-text-wrap');
+            const wrapLabel = document.getElementById('btn-text-wrap-label');
+            const wrapStatus = document.getElementById('prop-wrap-status');
+            const wrapControls = document.getElementById('wrap-width-controls');
 
             if (!node) {
                 labelEl.textContent = '— No selection —';
                 textInput.value = '';
+                if (btnWrap) {
+                    btnWrap.classList.add('bg-slate-100', 'text-slate-700', 'border-slate-200');
+                    btnWrap.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                }
+                if (wrapLabel) wrapLabel.textContent = 'Wrap Text';
+                if (wrapStatus) {
+                    wrapStatus.textContent = 'Single line';
+                    wrapStatus.classList.remove('text-blue-600', 'font-semibold');
+                    wrapStatus.classList.add('text-slate-400');
+                }
+                if (wrapControls) wrapControls.classList.add('hidden');
                 return;
             }
 
@@ -2032,6 +2083,43 @@
             // Italic toggle
             const isItalic = node.style === 'italic';
             btnItalic.classList.toggle('active', isItalic);
+
+            // Text wrap toggle & width controls
+            const isWrapped = !!node.wrap;
+            const currentWrapWidth = node.maxWidth || 240;
+
+            if (btnWrap && wrapLabel && wrapStatus && wrapControls) {
+                if (isWrapped) {
+                    btnWrap.classList.remove('bg-slate-100', 'text-slate-700', 'border-slate-200');
+                    btnWrap.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                    wrapLabel.textContent = 'Wrapped';
+                    wrapStatus.textContent = `Wrapped (${currentWrapWidth}px)`;
+                    wrapStatus.classList.add('text-blue-600', 'font-semibold');
+                    wrapStatus.classList.remove('text-slate-400');
+                    wrapControls.classList.remove('hidden');
+
+                    [180, 240, 320].forEach(w => {
+                        const wBtn = document.getElementById('btn-wrap-' + w);
+                        if (wBtn) {
+                            if (currentWrapWidth === w) {
+                                wBtn.classList.remove('bg-slate-100', 'text-slate-700', 'border-slate-200');
+                                wBtn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                            } else {
+                                wBtn.classList.add('bg-slate-100', 'text-slate-700', 'border-slate-200');
+                                wBtn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                            }
+                        }
+                    });
+                } else {
+                    btnWrap.classList.add('bg-slate-100', 'text-slate-700', 'border-slate-200');
+                    btnWrap.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                    wrapLabel.textContent = 'Wrap Text';
+                    wrapStatus.textContent = 'Single line';
+                    wrapStatus.classList.remove('text-blue-600', 'font-semibold');
+                    wrapStatus.classList.add('text-slate-400');
+                    wrapControls.classList.add('hidden');
+                }
+            }
 
             // Attachment preview
             updateAttachmentPreview();
@@ -5770,7 +5858,19 @@
                 const el = document.createElement('div');
                 el.dataset.id = node.id;
                 const hasAttachment = !!node.attachment;
-                el.className = `bubble-node absolute shadow-md cursor-grab select-none transition-shadow hover:shadow-lg flex items-center justify-center border-2 bg-white ${hasAttachment ? 'has-attachment' : 'rounded-full px-5 py-2.5 whitespace-nowrap'} ${node.id === selectedNodeId ? 'border-blue-500 ring-4 ring-blue-200' : 'border-transparent'}`;
+                const isWrapped = !!node.wrap;
+                const wrapWidth = node.maxWidth || 240;
+
+                let bubbleShapeClass = '';
+                if (hasAttachment) {
+                    bubbleShapeClass = 'has-attachment';
+                } else if (isWrapped) {
+                    bubbleShapeClass = 'rounded-2xl px-4 py-2.5 whitespace-normal break-words text-center leading-snug';
+                } else {
+                    bubbleShapeClass = 'rounded-full px-5 py-2.5 whitespace-nowrap';
+                }
+
+                el.className = `bubble-node absolute shadow-md cursor-grab select-none transition-shadow hover:shadow-lg flex items-center justify-center border-2 bg-white ${bubbleShapeClass} ${node.id === selectedNodeId ? 'border-blue-500 ring-4 ring-blue-200' : 'border-transparent'}`;
                 
                 el.style.left = node.x + 'px';
                 el.style.top = node.y + 'px';
@@ -5780,6 +5880,10 @@
                 el.style.fontSize = (node.size || 16) + 'px';
                 el.style.fontWeight = node.weight || 'normal';
                 if (node.style === 'italic') el.style.fontStyle = 'italic';
+                if (isWrapped) {
+                    el.style.maxWidth = wrapWidth + 'px';
+                    el.style.width = 'max-content';
+                }
 
                 let html = '';
 
@@ -5794,10 +5898,11 @@
                 }
 
                 // Render text row
-                html += '<div class="flex items-center justify-center">';
-                if (node.flag) html += `<span class="mr-1.5">${escapeHtml(node.flag)}</span>`;
-                html += `<span class="node-text-span">${escapeHtml(node.text)}</span>`;
-                if (node.tag) html += `<span class="ml-2 text-[0.65rem] bg-black/10 px-2 py-0.5 rounded-full font-bold uppercase">${escapeHtml(node.tag)}</span>`;
+                const textRowClass = isWrapped ? 'flex flex-wrap items-center justify-center text-center leading-snug' : 'flex items-center justify-center';
+                html += `<div class="${textRowClass}">`;
+                if (node.flag) html += `<span class="mr-1.5 flex-shrink-0 inline-block">${escapeHtml(node.flag)}</span>`;
+                html += `<span class="node-text-span ${isWrapped ? 'break-words inline' : ''}">${escapeHtml(node.text)}</span>`;
+                if (node.tag) html += `<span class="ml-2 text-[0.65rem] bg-black/10 px-2 py-0.5 rounded-full font-bold uppercase flex-shrink-0 inline-block">${escapeHtml(node.tag)}</span>`;
                 html += '</div>';
 
                 el.innerHTML = html;
@@ -6739,11 +6844,35 @@
             if (!textSpan) return;
 
             const currentText = node.text;
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = currentText;
-            input.className = 'bubble-inline-input';
-            input.style.width = Math.max(textSpan.offsetWidth + 20, 80) + 'px';
+            const isWrapped = !!node.wrap;
+            let input;
+
+            if (isWrapped) {
+                input = document.createElement('textarea');
+                input.value = currentText;
+                input.className = 'bubble-inline-input';
+                const targetW = Math.min(Math.max(textSpan.offsetWidth + 20, 140), node.maxWidth || 240);
+                input.style.width = targetW + 'px';
+                input.style.minHeight = Math.max(textSpan.offsetHeight + 4, 34) + 'px';
+                input.style.resize = 'none';
+                input.style.overflow = 'hidden';
+                input.style.textAlign = 'center';
+                input.style.lineHeight = '1.35';
+                input.style.whiteSpace = 'normal';
+                input.style.wordBreak = 'break-word';
+
+                // Auto-adjust height on input
+                input.addEventListener('input', () => {
+                    input.style.height = 'auto';
+                    input.style.height = Math.max(input.scrollHeight, 34) + 'px';
+                });
+            } else {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentText;
+                input.className = 'bubble-inline-input';
+                input.style.width = Math.max(textSpan.offsetWidth + 20, 80) + 'px';
+            }
 
             // Replace span with input
             textSpan.replaceWith(input);
@@ -6774,6 +6903,10 @@
             input.addEventListener('keydown', e => {
                 e.stopPropagation(); // Don't trigger global shortcuts
                 if (e.key === 'Enter') {
+                    if (isWrapped && e.shiftKey) {
+                        // Allow Shift+Enter to insert line break in wrapped mode
+                        return;
+                    }
                     e.preventDefault();
                     input.blur(); // triggers commitEdit via blur handler
                 }
@@ -7814,6 +7947,95 @@
             triggerAutoSave();
         }
 
+        // --- TEXT WRAPPING CONTROLS ---
+        function toggleTextWrap(nodeId) {
+            const id = nodeId || selectedNodeId;
+            if (!id || !nodes[id]) return;
+            const node = nodes[id];
+            node.wrap = !node.wrap;
+            if (node.wrap && !node.maxWidth) {
+                node.maxWidth = 240;
+            }
+            renderTree();
+            syncFromMap();
+            updatePropertiesPanel();
+            triggerAutoSave();
+            if (typeof showUiToast === 'function') {
+                showUiToast(node.wrap ? `Text wrapping enabled (${node.maxWidth}px)` : 'Text wrapping disabled', 'info', 2000);
+            }
+        }
+
+        function setWrapWidth(width, nodeId) {
+            const id = nodeId || selectedNodeId;
+            if (!id || !nodes[id]) return;
+            const node = nodes[id];
+            node.wrap = true;
+            node.maxWidth = parseInt(width, 10) || 240;
+            renderTree();
+            syncFromMap();
+            updatePropertiesPanel();
+            triggerAutoSave();
+            if (typeof showUiToast === 'function') {
+                showUiToast(`Wrap width set to ${node.maxWidth}px`, 'info', 2000);
+            }
+        }
+
+        function applyWrapToBranch(nodeId) {
+            const id = nodeId || selectedNodeId;
+            if (!id || !nodes[id]) {
+                if (typeof showUiToast === 'function') showUiToast('Select a node first', 'warning');
+                return;
+            }
+            const rootNode = nodes[id];
+            const targetWrap = rootNode.wrap ?? true;
+            const targetWidth = rootNode.maxWidth || 240;
+
+            function recurse(nId) {
+                if (!nodes[nId]) return;
+                nodes[nId].wrap = targetWrap;
+                if (targetWrap) {
+                    nodes[nId].maxWidth = targetWidth;
+                }
+                Object.values(nodes).filter(c => c.parentId === nId).forEach(c => recurse(c.id));
+            }
+
+            recurse(id);
+            renderTree();
+            syncFromMap();
+            updatePropertiesPanel();
+            triggerAutoSave();
+            if (typeof showUiToast === 'function') {
+                showUiToast(targetWrap ? `Applied wrapping (${targetWidth}px) to branch` : 'Applied single-line to branch', 'success');
+            }
+        }
+
+        function setMapWrap(enable, width) {
+            const allNodes = Object.values(nodes);
+            if (allNodes.length === 0) return;
+            const targetWidth = parseInt(width, 10) || 240;
+            allNodes.forEach(n => {
+                n.wrap = enable;
+                if (enable) {
+                    n.maxWidth = n.maxWidth || targetWidth;
+                }
+            });
+            renderTree();
+            syncFromMap();
+            updatePropertiesPanel();
+            triggerAutoSave();
+            if (typeof showUiToast === 'function') {
+                showUiToast(enable ? `Enabled text wrapping for all nodes (${targetWidth}px)` : 'Reset all nodes to single-line', 'success');
+            }
+        }
+
+        function toggleAllNodesWrap() {
+            const allNodes = Object.values(nodes);
+            if (allNodes.length === 0) return;
+            const wrappedCount = allNodes.filter(n => !!n.wrap).length;
+            const targetState = (wrappedCount < allNodes.length / 2);
+            setMapWrap(targetState);
+        }
+
         // Legacy setFont
         function setFont(sz, wt) { 
             if(selectedNodeId && nodes[selectedNodeId]){ 
@@ -8087,6 +8309,13 @@
                 if (node.size && node.size !== 16 && !(depth === 0 && node.size === 20)) extraAttrs.push(`size: ${node.size}`);
                 if (node.weight === 'bold' && depth !== 0) extraAttrs.push(`bold`);
                 if (node.style === 'italic') extraAttrs.push(`italic`);
+                if (node.wrap) {
+                    if (node.maxWidth && node.maxWidth !== 240) {
+                        extraAttrs.push(`wrap: ${node.maxWidth}`);
+                    } else {
+                        extraAttrs.push(`wrap`);
+                    }
+                }
                 if (node.attachment) {
                     let attVal = node.attachment;
                     if (attVal.startsWith('data:')) {
@@ -8454,6 +8683,15 @@
                         else if (key === 'fg') attrs.fg = val;
                         else if (key === 'size') attrs.size = parseInt(val, 10);
                         else if (key === 'attachment') attrs.attachment = val;
+                        else if (key === 'wrap') {
+                            attrs.wrap = true;
+                            if (val && !isNaN(parseInt(val, 10))) {
+                                attrs.maxWidth = parseInt(val, 10);
+                            }
+                        }
+                        else if (key === 'maxwidth') {
+                            attrs.maxWidth = parseInt(val, 10);
+                        }
                     });
                     topic = topic.replace(styleMatch[0], '').trim();
                 }

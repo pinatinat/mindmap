@@ -66,6 +66,7 @@ Your task is to take any topic, document, strategy, or concept and convert it in
 - `size`: Font size in px (e.g., `{size: 20}` for root, `{size: 16}` for branch, `{size: 14}` for leaf)
 - `bold`: Make text bold (`{bold}`)
 - `italic`: Make text italic (`{italic}`)
+- `wrap`: Enables multi-line text wrapping with comfortable line breaks (`{wrap}` or `{wrap: 240}`, `{wrap: 320}`). Use for dense explanations or long action items to keep the map compact without horizontal stretching.
 - `attachment`: URL or path to an image preview attached to the bubble (`{attachment: https://...}`)
 
 ### TAGS `[...]` AND EMOJIS:
@@ -100,7 +101,7 @@ Requirements:
 ```markdown
 # 🚀 Project Titan: Product Launch Vision @ (200, 320) [Strategic] {bg: #ffffff, fg: #1e293b, size: 22, bold}
   - 🎯 Phase 1: Research & Discovery @ (540, 180) [Q1] {bg: #eff6ff, fg: #1e40af, bold}
-    - User Interviews & Surveys @ (860, 140) [30+ Cohorts]
+    - User Interviews & Surveys across diverse target personas @ (860, 140) [30+ Cohorts] {wrap: 260}
     - Competitive Landscape Matrix @ (860, 220) [Deep Dive]
   - ⚙️ Phase 2: MVP Architecture & Core Engine @ (540, 320) [Q2] {bg: #f5f3ff, fg: #5b21b6, bold}
     - Cloud Sync & Realtime Database @ (860, 290) [Firestore]
@@ -152,7 +153,7 @@ Requirements:
 ```markdown
 # ⚖️ Strategic Decision: SaaS vs Custom Build @ (250, 320) [Executive] {bg: #ffffff, size: 22, bold}
   - 🏢 Option A: Custom In-House Build @ (570, 180) [High IP]
-    - Complete UX & brand control @ (880, 140)
+    - Complete UX and end-to-end design lifecycle control @ (880, 140) {wrap}
     - Full proprietary IP ownership @ (880, 220)
   - ☁️ Option B: Off-the-Shelf SaaS @ (570, 320) [Speed]
     - Instant time-to-market @ (880, 290)
@@ -192,6 +193,7 @@ Requirements:
 - `size: <number>` — Font size in pixels (e.g., `14`, `16`, `18`, `20`, `24`).
 - `bold` — Toggles font weight bold.
 - `italic` — Toggles font style italic.
+- `wrap` or `wrap: <width>` — Enables multi-line text wrapping for long titles or sentences (default width: `240`px). Examples: `{wrap}`, `{wrap: 180}` (compact/narrow), `{wrap: 320}` (wide). Multi-line bubbles dynamically morph into elegant rounded card-pills (`rounded-2xl`).
 - `attachment: <url>` — Attaches an image or document preview banner to the node.
 
 ---
