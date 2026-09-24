@@ -238,83 +238,83 @@
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
 
     <!-- TOP NAVIGATION -->
-    <header class="bg-white border-b border-slate-200 px-3 md:px-4 py-2.5 flex items-center justify-between z-30 shadow-sm relative">
-        <div class="flex items-center gap-2 md:gap-3">
+    <header class="bg-white border-b border-slate-200 px-2.5 md:px-3.5 py-1.5 flex items-center justify-between z-30 shadow-sm relative">
+        <div class="flex items-center gap-1.5 sm:gap-2">
             <!-- Mobile Sidebar Drawer Toggle Button -->
-            <button type="button" id="btn-mobile-sidebar-toggle" onclick="toggleMobileSidebar()" class="md:hidden flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-lg leading-none transition-colors border border-slate-200" title="Toggle Sidebar / Properties">
+            <button type="button" id="btn-mobile-sidebar-toggle" onclick="toggleMobileSidebar()" class="md:hidden flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-base leading-none transition-colors border border-slate-200" title="Toggle Sidebar / Properties">
                 ☰
             </button>
 
-            <h1 onclick="toggleHomepageView(true)" class="font-bold text-base md:text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate max-w-[120px] sm:max-w-none cursor-pointer hover:opacity-80 transition-opacity" title="Open Homepage / Dashboard">OmniMind</h1>
-            <span class="hidden sm:inline-block text-[0.65rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono border">MM_V4</span>
+            <h1 onclick="toggleHomepageView(true)" class="font-bold text-sm sm:text-base md:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity shrink-0" title="Open Homepage / Dashboard">OmniMind</h1>
+            <span class="hidden sm:inline-block text-[0.6rem] bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-mono border shrink-0">MM_V4</span>
             
             <!-- HOME / DASHBOARD BUTTON -->
-            <button type="button" onclick="toggleHomepageView(true)" id="btn-home-dashboard" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-purple-50 hover:text-purple-600 text-slate-700 border border-slate-200 transition-all shadow-sm" title="Go to Dashboard / Homepage">
-                <span class="text-xs sm:text-sm">🏠</span>
+            <button type="button" onclick="toggleHomepageView(true)" id="btn-home-dashboard" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-purple-50 hover:text-purple-600 text-slate-700 border border-slate-200 transition-all shadow-xs shrink-0" title="Go to Dashboard / Homepage">
+                <span class="text-xs">🏠</span>
                 <span class="hidden sm:inline font-bold">Home</span>
             </button>
 
             <!-- SAVE STATUS NOTIFICATION -->
-            <div id="save-status" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all duration-300">
-                <span id="save-icon" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <div id="save-status" class="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all duration-300 shrink-0">
+                <span id="save-icon" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 <span id="save-text">✓ Saved locally</span>
             </div>
 
             <!-- DIVIDER -->
-            <div class="hidden sm:block h-6 w-px bg-slate-200 mx-0.5"></div>
+            <div class="hidden sm:block h-5 w-px bg-slate-200 mx-0.5 shrink-0"></div>
 
             <!-- PROJECT / MAPS SELECTOR PILL -->
-            <div class="relative flex items-center">
-                <button type="button" onclick="toggleProjectManagerModal(true)" id="btn-project-selector" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition-all shadow-sm max-w-[130px] sm:max-w-[210px]" title="Open Mind Map Library & Projects Manager">
-                    <span class="text-xs sm:text-sm">🗺️</span>
+            <div class="relative flex items-center shrink-0">
+                <button type="button" onclick="toggleProjectManagerModal(true)" id="btn-project-selector" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition-all shadow-xs max-w-[120px] sm:max-w-[180px]" title="Open Mind Map Library & Projects Manager">
+                    <span class="text-xs">🗺️</span>
                     <span id="header-project-name" class="truncate font-bold">Master Idea</span>
-                    <span id="header-project-badge" class="bg-blue-100 text-blue-700 text-[0.65rem] px-1.5 py-0.2 rounded-full font-mono">1</span>
-                    <span class="text-slate-400 text-[0.65rem]">▼</span>
+                    <span id="header-project-badge" class="bg-blue-100 text-blue-700 text-[0.6rem] px-1.5 py-0.2 rounded-full font-mono">1</span>
+                    <span class="text-slate-400 text-[0.6rem]">▼</span>
                 </button>
-                <button type="button" onclick="quickPromptNewMap()" class="ml-1 p-1.5 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-600 hover:text-purple-600 border border-slate-200 transition-colors shadow-sm" title="Create New Mind Map">
-                    <span class="text-xs font-bold leading-none">➕</span>
+                <button type="button" onclick="quickPromptNewMap()" class="ml-1 p-1 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-600 hover:text-purple-600 border border-slate-200 transition-colors shadow-xs" title="Create New Mind Map">
+                    <span class="text-[0.65rem] font-bold leading-none">➕</span>
                 </button>
                 <!-- CLOUD SYNC STATUS PILL -->
-                <button type="button" onclick="handleCloudButtonClick()" id="btn-cloud-status" class="ml-1.5 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-all shadow-sm" title="Cloud Storage & Online Sync">
-                    <span id="cloud-status-icon" class="text-xs sm:text-sm">☁️</span>
+                <button type="button" onclick="handleCloudButtonClick()" id="btn-cloud-status" class="ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-all shadow-xs shrink-0" title="Cloud Storage & Online Sync">
+                    <span id="cloud-status-icon" class="text-xs">☁️</span>
                     <span id="cloud-status-text" class="hidden sm:inline font-medium">Cloud Sync</span>
                 </button>
                 <!-- TEAM SHARE BUTTON -->
-                <button type="button" onclick="openShareModal()" id="btn-share-map" class="ml-1.5 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all shadow-sm active:scale-95" title="Share map with team or get public view link">
-                    <span>👥</span>
+                <button type="button" onclick="openShareModal()" id="btn-share-map" class="ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all shadow-xs active:scale-95 shrink-0" title="Share map with team or get public view link">
+                    <span class="text-xs">👥</span>
                     <span class="hidden sm:inline">Share</span>
                 </button>
                 <!-- LIFETIME PRO UPGRADE / STATUS BUTTON -->
-                <button type="button" onclick="openLifetimeProModal('canvas_header')" id="btn-header-pro" class="ml-1.5 flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-sm active:scale-95 cursor-pointer" title="OmniMind Lifetime Pro & Storage Quota">
-                    <span>⭐</span>
+                <button type="button" onclick="openLifetimeProModal('canvas_header')" id="btn-header-pro" class="ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0" title="OmniMind Lifetime Pro & Storage Quota">
+                    <span class="text-[0.65rem]">⭐</span>
                     <span id="btn-header-pro-text">Upgrade Pro</span>
                 </button>
             </div>
         </div>
 
         <!-- DESKTOP ACTIONS (Screens >= 768px) -->
-        <div class="hidden md:flex items-center gap-2">
-            <button onclick="addNewRoot()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-full text-sm font-medium shadow-sm transition-transform active:scale-95">🌟 + New Root</button>
-            <button onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-full text-sm font-medium shadow-sm transition-transform active:scale-95">+ Child (Tab)</button>
-            <button onclick="addSibling()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-1.5 rounded-full text-sm font-medium shadow-sm transition-transform active:scale-95">+ Sibling (Enter)</button>
-            <button onclick="deleteNode()" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-4 py-1.5 rounded-full text-sm font-medium transition-transform active:scale-95">Delete (Del)</button>
+        <div class="hidden md:flex items-center gap-1.5 shrink-0">
+            <button onclick="addNewRoot()" class="bg-purple-600 hover:bg-purple-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95">🌟 + New Root</button>
+            <button onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95">+ Child (Tab)</button>
+            <button onclick="addSibling()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium shadow-xs transition-transform active:scale-95">+ Sibling (Enter)</button>
+            <button onclick="deleteNode()" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-transform active:scale-95">Delete (Del)</button>
             
-            <div class="h-6 w-px bg-slate-200 mx-1"></div>
+            <div class="h-5 w-px bg-slate-200 mx-0.5"></div>
             
-            <button onclick="openExportImageModal()" title="Export mind map as PNG, JPEG, or SVG image" class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-transform active:scale-95">🖼️ Export Image</button>
-            <button onclick="exportJSON()" title="Export JSON file to your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1">💾 Export JSON</button>
-            <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer flex items-center gap-1">
+            <button onclick="openExportImageModal()" title="Export mind map as PNG, JPEG, or SVG image" class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-2 py-1 rounded-full text-[0.7rem] font-semibold flex items-center gap-1 shadow-xs transition-transform active:scale-95">🖼️ Export Image</button>
+            <button onclick="exportJSON()" title="Export JSON file to your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1">💾 Export JSON</button>
+            <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1">
                 📂 Import <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
             </label>
-            <button onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1">🎯 Fit View</button>
-            <button onclick="resetToDefault()" title="Reset map to default" class="text-slate-400 hover:text-red-500 p-1.5 rounded-full text-xs">🔄</button>
+            <button onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1">🎯 Fit View</button>
+            <button onclick="resetToDefault()" title="Reset map to default" class="text-slate-400 hover:text-red-500 p-1 rounded-full text-xs">🔄</button>
         </div>
 
         <!-- MOBILE COMPACT ACTIONS (Screens < 768px) -->
-        <div class="flex md:hidden items-center gap-1.5">
-            <button onclick="addNewRoot()" class="bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95" title="New Root">🌟 Root</button>
-            <button onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95" title="Add Child">+ Child</button>
-            <button onclick="fitView()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-1.5 rounded-full text-xs" title="Fit View">🎯</button>
+        <div class="flex md:hidden items-center gap-1">
+            <button onclick="addNewRoot()" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-full text-[0.7rem] font-semibold shadow-xs transition-transform active:scale-95" title="New Root">🌟 Root</button>
+            <button onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-full text-[0.7rem] font-semibold shadow-xs transition-transform active:scale-95" title="Add Child">+ Child</button>
+            <button onclick="fitView()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-1 rounded-full text-xs" title="Fit View">🎯</button>
             
             <!-- Mobile Overflow Dropdown Menu -->
             <div class="relative">
@@ -2245,15 +2245,15 @@
                 statusEl.onclick = null;
                 statusEl.style.cursor = 'default';
                 statusEl.title = "";
-                statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 transition-all duration-200";
-                iconEl.className = "w-2 h-2 rounded-full bg-amber-500 animate-ping";
+                statusEl.className = "flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-medium bg-amber-50 text-amber-700 border border-amber-200 transition-all duration-200 shrink-0";
+                iconEl.className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping";
                 textEl.textContent = message || "💾 Saving changes...";
             } else if (state === 'saved') {
                 const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 if (message && message.includes('Cloud limit reached')) {
-                    statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all duration-300 cursor-pointer shadow-xs active:scale-95";
-                    iconEl.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
-                    textEl.innerHTML = `${escapeHtml(message)} <span class="underline ml-1 font-extrabold text-amber-900 bg-amber-200/80 px-1.5 py-0.5 rounded shadow-2xs">Upgrade ⭐</span>`;
+                    statusEl.className = "flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all duration-300 cursor-pointer shadow-xs active:scale-95 shrink-0";
+                    iconEl.className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse";
+                    textEl.innerHTML = `${escapeHtml(message)} <span class="underline ml-1 font-extrabold text-amber-900 bg-amber-200/80 px-1 py-0.2 rounded shadow-2xs">Upgrade ⭐</span>`;
                     statusEl.onclick = () => openLifetimeProModal('save_status_limit');
                     statusEl.title = "Cloud Storage Limit Reached! Click to Upgrade to Lifetime Pro";
                     return;
@@ -2261,15 +2261,15 @@
                 statusEl.onclick = null;
                 statusEl.style.cursor = 'default';
                 statusEl.title = "";
-                statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all duration-300";
-                iconEl.className = "w-2 h-2 rounded-full bg-emerald-500";
+                statusEl.className = "flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all duration-300 shrink-0";
+                iconEl.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
                 textEl.textContent = message || `✓ Saved (${timeStr})`;
             } else if (state === 'error') {
                 statusEl.onclick = null;
                 statusEl.style.cursor = 'default';
                 statusEl.title = "";
-                statusEl.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200 transition-all duration-200";
-                iconEl.className = "w-2 h-2 rounded-full bg-red-500";
+                statusEl.className = "flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-medium bg-red-50 text-red-700 border border-red-200 transition-all duration-200 shrink-0";
+                iconEl.className = "w-1.5 h-1.5 rounded-full bg-red-500";
                 textEl.textContent = message || "⚠️ Storage full";
             }
         }
@@ -3173,10 +3173,10 @@
             if (btnHeaderPro && btnHeaderProText) {
                 if (isProGlobal) {
                     btnHeaderProText.textContent = `Pro (${currentCloudUserQuota})`;
-                    btnHeaderPro.className = "ml-1.5 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm active:scale-95 cursor-pointer";
+                    btnHeaderPro.className = "ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0";
                 } else {
                     btnHeaderProText.textContent = "Upgrade Pro";
-                    btnHeaderPro.className = "ml-1.5 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-sm active:scale-95 cursor-pointer";
+                    btnHeaderPro.className = "ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0";
                 }
             }
 
