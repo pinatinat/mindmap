@@ -67,6 +67,32 @@
             }
         }
 
+        /* Desktop / Tablet Sidebar Collapse */
+        #canvas-sidebar {
+            transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+        }
+        @media (min-width: 769px) {
+            #canvas-sidebar.desktop-collapsed {
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                border-right: none !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+        }
+        @media (max-width: 768px) {
+            #btn-expand-sidebar-edge {
+                display: none !important;
+            }
+        }
+
+        /* Custom smooth scrollbar & hidden scrollbar for horizontal toolbars */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
         /* Infinite SVG Canvas & Smooth Bezier Edge Lines */
         #edges-svg {
             overflow: visible !important;
@@ -237,119 +263,133 @@
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
 
-    <!-- TOP NAVIGATION -->
-    <header class="bg-white border-b border-slate-200 px-2.5 md:px-3.5 py-1.5 flex items-center justify-between z-30 shadow-sm relative">
-        <div class="flex items-center gap-1.5 sm:gap-2">
-            <!-- Mobile Sidebar Drawer Toggle Button -->
-            <button type="button" id="btn-mobile-sidebar-toggle" onclick="toggleMobileSidebar()" class="md:hidden flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-base leading-none transition-colors border border-slate-200" title="Toggle Sidebar / Properties">
-                ☰
+    <!-- TOP NAVIGATION (Horizontally Scrollable on Mobile/Tablet with Momentum Scrolling) -->
+    <header class="bg-white border-b border-slate-200 px-2 sm:px-3 py-1.5 z-30 shadow-sm relative flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap select-none" style="touch-action: pan-x; -webkit-overflow-scrolling: touch;">
+        <!-- Mobile Sidebar Drawer Toggle Button -->
+        <button type="button" id="btn-mobile-sidebar-toggle" onclick="toggleMobileSidebar()" class="md:hidden flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-base leading-none transition-colors border border-slate-200 shrink-0" title="Toggle Sidebar (Style, Code, Adv)">
+            ☰
+        </button>
+
+        <h1 onclick="toggleHomepageView(true)" class="font-bold text-sm sm:text-base md:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity shrink-0" title="Open Homepage / Dashboard">OmniMind</h1>
+        <span class="hidden sm:inline-block text-[0.6rem] bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-mono border shrink-0">MM_V4</span>
+        
+        <!-- HOME / DASHBOARD BUTTON -->
+        <button type="button" onclick="toggleHomepageView(true)" id="btn-home-dashboard" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-purple-50 hover:text-purple-600 text-slate-700 border border-slate-200 transition-all shadow-xs shrink-0" title="Go to Dashboard / Homepage">
+            <span class="text-xs">🏠</span>
+            <span class="hidden sm:inline font-bold">Home</span>
+        </button>
+
+        <!-- PROJECT / MAPS SELECTOR PILL -->
+        <div class="relative flex items-center shrink-0">
+            <button type="button" onclick="toggleProjectManagerModal(true)" id="btn-project-selector" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition-all shadow-xs max-w-[120px] sm:max-w-[180px]" title="Open Mind Map Library & Projects Manager">
+                <span class="text-xs">🗺️</span>
+                <span id="header-project-name" class="truncate font-bold">Master Idea</span>
+                <span id="header-project-badge" class="bg-blue-100 text-blue-700 text-[0.6rem] px-1.5 py-0.2 rounded-full font-mono">1</span>
+                <span class="text-slate-400 text-[0.6rem]">▼</span>
             </button>
-
-            <h1 onclick="toggleHomepageView(true)" class="font-bold text-sm sm:text-base md:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity shrink-0" title="Open Homepage / Dashboard">OmniMind</h1>
-            <span class="hidden sm:inline-block text-[0.6rem] bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-mono border shrink-0">MM_V4</span>
-            
-            <!-- HOME / DASHBOARD BUTTON -->
-            <button type="button" onclick="toggleHomepageView(true)" id="btn-home-dashboard" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-purple-50 hover:text-purple-600 text-slate-700 border border-slate-200 transition-all shadow-xs shrink-0" title="Go to Dashboard / Homepage">
-                <span class="text-xs">🏠</span>
-                <span class="hidden sm:inline font-bold">Home</span>
+            <button type="button" onclick="quickPromptNewMap()" class="ml-1 p-1 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-600 hover:text-purple-600 border border-slate-200 transition-colors shadow-xs shrink-0" title="Create New Mind Map">
+                <span class="text-[0.65rem] font-bold leading-none">➕</span>
             </button>
-
-            <!-- SAVE STATUS NOTIFICATION -->
-            <div id="save-status" class="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all duration-300 shrink-0">
-                <span id="save-icon" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span id="save-text">✓ Saved locally</span>
-            </div>
-
-            <!-- DIVIDER -->
-            <div class="hidden sm:block h-5 w-px bg-slate-200 mx-0.5 shrink-0"></div>
-
-            <!-- PROJECT / MAPS SELECTOR PILL -->
-            <div class="relative flex items-center shrink-0">
-                <button type="button" onclick="toggleProjectManagerModal(true)" id="btn-project-selector" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition-all shadow-xs max-w-[120px] sm:max-w-[180px]" title="Open Mind Map Library & Projects Manager">
-                    <span class="text-xs">🗺️</span>
-                    <span id="header-project-name" class="truncate font-bold">Master Idea</span>
-                    <span id="header-project-badge" class="bg-blue-100 text-blue-700 text-[0.6rem] px-1.5 py-0.2 rounded-full font-mono">1</span>
-                    <span class="text-slate-400 text-[0.6rem]">▼</span>
-                </button>
-                <button type="button" onclick="quickPromptNewMap()" class="ml-1 p-1 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-600 hover:text-purple-600 border border-slate-200 transition-colors shadow-xs" title="Create New Mind Map">
-                    <span class="text-[0.65rem] font-bold leading-none">➕</span>
-                </button>
-                <!-- CLOUD SYNC STATUS PILL -->
-                <button type="button" onclick="handleCloudButtonClick()" id="btn-cloud-status" class="ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-all shadow-xs shrink-0" title="Cloud Storage & Online Sync">
-                    <span id="cloud-status-icon" class="text-xs">☁️</span>
-                    <span id="cloud-status-text" class="hidden sm:inline font-medium">Cloud Sync</span>
-                </button>
-                <!-- TEAM SHARE BUTTON -->
-                <button type="button" onclick="openShareModal()" id="btn-share-map" class="ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all shadow-xs active:scale-95 shrink-0" title="Share map with team or get public view link">
-                    <span class="text-xs">👥</span>
-                    <span class="hidden sm:inline">Share</span>
-                </button>
-                <!-- LIFETIME PRO UPGRADE / STATUS BUTTON -->
-                <button type="button" onclick="openLifetimeProModal('canvas_header')" id="btn-header-pro" class="ml-1 flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0" title="OmniMind Lifetime Pro & Storage Quota">
-                    <span class="text-[0.65rem]">⭐</span>
-                    <span id="btn-header-pro-text">Upgrade Pro</span>
-                </button>
-            </div>
         </div>
 
-        <!-- DESKTOP ACTIONS (Screens >= 768px) -->
-        <div class="hidden md:flex items-center gap-1.5 shrink-0">
-            <button onclick="addNewRoot()" class="bg-purple-600 hover:bg-purple-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95">🌟 + New Root</button>
-            <button onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95">+ Child (Tab)</button>
-            <button onclick="addSibling()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium shadow-xs transition-transform active:scale-95">+ Sibling (Enter)</button>
-            <button onclick="deleteNode()" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-transform active:scale-95">Delete (Del)</button>
-            
-            <div class="h-5 w-px bg-slate-200 mx-0.5"></div>
-            
-            <button onclick="openExportImageModal()" title="Export mind map as PNG, JPEG, or SVG image" class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-2 py-1 rounded-full text-[0.7rem] font-semibold flex items-center gap-1 shadow-xs transition-transform active:scale-95">🖼️ Export Image</button>
-            <button onclick="exportJSON()" title="Export JSON file to your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1">💾 Export JSON</button>
-            <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1">
+        <!-- CLOUD SYNC STATUS PILL -->
+        <button type="button" onclick="handleCloudButtonClick()" id="btn-cloud-status" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-all shadow-xs shrink-0" title="Cloud Storage & Online Sync">
+            <span id="cloud-status-icon" class="text-xs">☁️</span>
+            <span id="cloud-status-text" class="hidden sm:inline font-medium">Cloud Sync</span>
+        </button>
+
+        <!-- TEAM SHARE BUTTON -->
+        <button type="button" onclick="openShareModal()" id="btn-share-map" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all shadow-xs active:scale-95 shrink-0" title="Share map with team or get public view link">
+            <span class="text-xs">👥</span>
+            <span class="hidden sm:inline">Share</span>
+        </button>
+
+        <!-- LIFETIME PRO UPGRADE / STATUS BUTTON -->
+        <button type="button" onclick="openLifetimeProModal('canvas_header')" id="btn-header-pro" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0" title="OmniMind Lifetime Pro & Storage Quota">
+            <span class="text-[0.65rem]">⭐</span>
+            <span id="btn-header-pro-text">Upgrade Pro</span>
+        </button>
+
+        <!-- DIVIDER -->
+        <div class="h-5 w-px bg-slate-200 mx-0.5 shrink-0"></div>
+
+        <!-- NODE ACTIONS (Always available across mobile, tablet, and desktop) -->
+        <div class="flex items-center gap-1 shrink-0">
+            <button type="button" onclick="addNewRoot()" class="bg-purple-600 hover:bg-purple-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95 shrink-0" title="Add New Central Root Node">🌟 + Root</button>
+            <button type="button" onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95 shrink-0" title="Add Child to Selected Node (Tab)">+ Child</button>
+            <button type="button" onclick="addSibling()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium shadow-xs transition-transform active:scale-95 shrink-0" title="Add Sibling to Selected Node (Enter)">+ Sibling</button>
+            <button type="button" onclick="deleteNode()" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-transform active:scale-95 shrink-0" title="Delete Selected Node (Del)">Delete</button>
+        </div>
+
+        <!-- DIVIDER -->
+        <div class="h-5 w-px bg-slate-200 mx-0.5 shrink-0"></div>
+
+        <!-- WORKSPACE VIEW EDITORS (Style, Code, Adv Code directly accessible on Mobile & Tablet!) -->
+        <div class="flex items-center gap-1 shrink-0">
+            <button type="button" onclick="openSidebarTab('manual')" class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold flex items-center gap-1 shadow-xs transition-transform active:scale-95 shrink-0" title="Open Node Style & Properties Editor">
+                <span>🎨</span> Style
+            </button>
+            <button type="button" onclick="openSidebarTab('code')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0" title="Open Markdown List Code Mode">
+                <span>📝</span> Code
+            </button>
+            <button type="button" onclick="openSidebarTab('advcode')" class="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold flex items-center gap-1 shadow-xs transition-transform active:scale-95 shrink-0" title="Open Advanced Code Editor (with Coordinates)">
+                <span>⚡</span> Adv Code
+            </button>
+            <button type="button" onclick="openSidebarTab('ai')" class="bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-semibold flex items-center gap-1 shadow-xs transition-transform active:scale-95 shrink-0" title="Open AI Mind Map Generator">
+                <span>✨</span> AI
+            </button>
+        </div>
+
+        <!-- DIVIDER -->
+        <div class="h-5 w-px bg-slate-200 mx-0.5 shrink-0"></div>
+
+        <!-- CANVAS TOOLS & EXPORT -->
+        <div class="flex items-center gap-1 shrink-0">
+            <button type="button" onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🎯 Fit</button>
+            <button type="button" onclick="openExportImageModal()" title="Export mind map as PNG, JPEG, or SVG image" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🖼️ Export</button>
+            <button type="button" onclick="exportJSON()" title="Export JSON file to your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">💾 JSON</button>
+            <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
                 📂 Import <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
             </label>
-            <button onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1">🎯 Fit View</button>
-            <button onclick="resetToDefault()" title="Reset map to default" class="text-slate-400 hover:text-red-500 p-1 rounded-full text-xs">🔄</button>
+            <button type="button" onclick="resetToDefault()" title="Reset map to default" class="text-slate-400 hover:text-red-500 p-1 rounded-full text-xs shrink-0">🔄</button>
         </div>
 
-        <!-- MOBILE COMPACT ACTIONS (Screens < 768px) -->
-        <div class="flex md:hidden items-center gap-1">
-            <button onclick="addNewRoot()" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-full text-[0.7rem] font-semibold shadow-xs transition-transform active:scale-95" title="New Root">🌟 Root</button>
-            <button onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-full text-[0.7rem] font-semibold shadow-xs transition-transform active:scale-95" title="Add Child">+ Child</button>
-            <button onclick="fitView()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-1 rounded-full text-xs" title="Fit View">🎯</button>
-            
-            <!-- Mobile Overflow Dropdown Menu -->
-            <div class="relative">
-                <button type="button" onclick="toggleMobileOverflowMenu()" id="btn-mobile-overflow" class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-2 border border-slate-200" title="More Actions">⋮</button>
-                <div id="mobile-overflow-menu" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl p-1.5 min-w-[170px] z-50 text-xs font-medium" onclick="toggleMobileOverflowMenu(false)">
-                    <button type="button" onclick="addSibling()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
-                        <span>➕</span> + Sibling
-                    </button>
-                    <button type="button" onclick="deleteNode()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
-                        <span>🗑️</span> Delete Node
-                    </button>
-                    <button type="button" onclick="toggleAllNodesWrap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
-                        <span>↩️</span> Toggle Wrap All
-                    </button>
-                    <button type="button" onclick="transposeBranchOrMap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
-                        <span>🔄</span> Transpose Layout (4-Way)
-                    </button>
-                    <button type="button" onclick="openShareModal()" class="text-left px-3 py-2 hover:bg-purple-50 text-purple-700 font-bold rounded-xl flex items-center gap-2">
-                        <span>👥</span> Share with Team
-                    </button>
-                    <div class="h-px bg-slate-100 my-1"></div>
-                    <button type="button" onclick="openExportImageModal()" class="text-left px-3 py-2 hover:bg-indigo-50 text-indigo-700 font-bold rounded-xl flex items-center gap-2">
-                        <span>🖼️</span> Export Image
-                    </button>
-                    <button type="button" onclick="exportJSON()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
-                        <span>💾</span> Export JSON
-                    </button>
-                    <label class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
-                        <span>📂</span> Import JSON <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
-                    </label>
-                    <div class="h-px bg-slate-100 my-1"></div>
-                    <button type="button" onclick="resetToDefault()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
-                        <span>🔄</span> Reset to Default
-                    </button>
-                </div>
+        <!-- DIVIDER -->
+        <div class="h-5 w-px bg-slate-200 mx-0.5 shrink-0"></div>
+
+        <!-- SAVE STATUS NOTIFICATION -->
+        <div id="save-status" class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all duration-300 shrink-0">
+            <span id="save-icon" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span id="save-text">✓ Saved locally</span>
+        </div>
+
+        <!-- Mobile Overflow Dropdown Menu -->
+        <div class="relative shrink-0 md:hidden">
+            <button type="button" onclick="toggleMobileOverflowMenu()" id="btn-mobile-overflow" class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-2 border border-slate-200 shrink-0" title="More Actions">⋮</button>
+            <div id="mobile-overflow-menu" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl p-1.5 min-w-[170px] z-50 text-xs font-medium" onclick="toggleMobileOverflowMenu(false)">
+                <button type="button" onclick="toggleAllNodesWrap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>↩️</span> Toggle Wrap All
+                </button>
+                <button type="button" onclick="transposeBranchOrMap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>🔄</span> Transpose Layout (4-Way)
+                </button>
+                <button type="button" onclick="openShareModal()" class="text-left px-3 py-2 hover:bg-purple-50 text-purple-700 font-bold rounded-xl flex items-center gap-2">
+                    <span>👥</span> Share with Team
+                </button>
+                <div class="h-px bg-slate-100 my-1"></div>
+                <button type="button" onclick="openExportImageModal()" class="text-left px-3 py-2 hover:bg-indigo-50 text-indigo-700 font-bold rounded-xl flex items-center gap-2">
+                    <span>🖼️</span> Export Image
+                </button>
+                <button type="button" onclick="exportJSON()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>💾</span> Export JSON
+                </button>
+                <label class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
+                    <span>📂</span> Import JSON <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+                </label>
+                <div class="h-px bg-slate-100 my-1"></div>
+                <button type="button" onclick="resetToDefault()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
+                    <span>🔄</span> Reset to Default
+                </button>
             </div>
         </div>
     </header>
@@ -375,7 +415,10 @@
                     <button onclick="switchTab('advcode')" id="tab-advcode" class="flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate" title="Advanced Code (with Coordinates)">⚡ Adv</button>
                     <button onclick="switchTab('ai')" id="tab-ai" class="flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate" title="AI Generator">✨ AI</button>
                 </div>
-                <button type="button" onclick="toggleMobileSidebar(false)" class="md:hidden p-1.5 rounded-full hover:bg-slate-200 text-slate-500 font-bold ml-1 text-sm leading-none" title="Close Sidebar">✕</button>
+                <!-- Mobile Close Drawer Button -->
+                <button type="button" onclick="toggleMobileSidebar(false)" class="md:hidden flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold ml-1 text-xs shrink-0" title="Close Sidebar & View Canvas">✕ Done</button>
+                <!-- Desktop / Tablet Collapse Sidebar Button -->
+                <button type="button" onclick="toggleDesktopSidebar(false)" id="btn-collapse-sidebar-desktop" class="hidden md:flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 font-bold ml-1 text-xs leading-none transition-colors shrink-0" title="Collapse Sidebar (Fullscreen Canvas)">◀</button>
             </div>
 
             <!-- TAB 1: Properties Panel -->
@@ -663,117 +706,136 @@
         <!-- Mobile Sidebar Backdrop Overlay -->
         <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar(false)"></div>
 
+        <!-- Desktop / Tablet Expand Sidebar Tab (Visible when sidebar is collapsed) -->
+        <button type="button" id="btn-expand-sidebar-edge" onclick="toggleDesktopSidebar(true)" class="hidden fixed left-0 top-1/2 -translate-y-1/2 z-20 bg-white/95 hover:bg-slate-50 border border-l-0 border-slate-300 shadow-md px-1.5 py-3 rounded-r-xl text-xs font-bold text-slate-600 transition-all hover:pl-2.5 cursor-pointer" title="Expand Sidebar (Style, Code, AI)">
+            ▶
+        </button>
+
         <!-- INFINITE CANVAS -->
         <main id="canvas-bg" class="flex-1 relative overflow-hidden z-10">
-            <!-- Floating Canvas Design Toolbar -->
-            <div id="floating-canvas-design-toolbar" class="floating-canvas-toolbar absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium max-w-[calc(100%-24px)] overflow-visible select-none" style="touch-action: manipulation; -webkit-user-select: none;">
-                <span class="text-slate-400 font-bold uppercase tracking-wider text-[0.62rem] mr-1 hidden sm:inline">Design</span>
-                
-                <!-- Selection Lock Toggle -->
-                <button type="button" onclick="toggleDesignSelection()" id="btn-design-select-toggle" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100" title="Click to lock design layer from being selected">
-                    <span id="icon-design-select">🔓</span> <span id="text-design-select">Selectable</span>
+            <!-- Floating Canvas Design Toolbar with Smooth Collapse Effect -->
+            <div id="floating-canvas-design-toolbar" class="floating-canvas-toolbar absolute top-2 right-2 sm:top-3 sm:right-3 z-30 transition-all duration-200 select-none" style="touch-action: manipulation; -webkit-user-select: none;">
+                <!-- Collapsed Mini Pill (Visible when collapsed) -->
+                <button type="button" id="btn-design-toolbar-expand" onclick="toggleDesignToolbarCollapse(false)" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 shadow-md hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all active:scale-95 cursor-pointer" title="Expand Design Toolbar (Shapes, Cards, Zones, Canvas Theme)">
+                    <span>🎨 Design</span>
+                    <span class="text-[0.65rem] text-slate-400">▼</span>
                 </button>
 
-                <!-- Fit View Button -->
-                <button type="button" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Center and fit all content on screen">
-                    <span>🎯</span> Fit
-                </button>
-
-                <!-- Text Wrap All Toggle Button -->
-                <button type="button" onclick="toggleAllNodesWrap()" id="btn-toggle-all-wrap" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Toggle text wrapping across all nodes on canvas">
-                    <span>↩️</span> <span class="hidden sm:inline">Wrap</span>
-                </button>
-
-                <!-- Transpose Layout Toggle Button -->
-                <button type="button" onclick="transposeBranchOrMap()" id="btn-toggle-transpose" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors" title="Transpose layout: toggle branch or map orientation across 4 directions (Right, Tree, Left, Up)">
-                    <span>🔄</span> <span class="hidden sm:inline">Transpose</span>
-                </button>
-
-                <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
-
-                <!-- Shape Dropdown -->
-                <div class="relative">
-                    <button type="button" onclick="toggleDesignDropdown('shape', event)" id="btn-dropdown-shape" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none">
-                        🔲 Shape <span class="text-[0.6rem] text-slate-400">▼</span>
+                <!-- Expanded Toolbar Content (Hidden when collapsed) -->
+                <div id="design-toolbar-expanded-content" class="flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar whitespace-nowrap">
+                    <span class="text-slate-400 font-bold uppercase tracking-wider text-[0.62rem] mr-0.5 hidden sm:inline">Design</span>
+                    
+                    <!-- Selection Lock Toggle -->
+                    <button type="button" onclick="toggleDesignSelection()" id="btn-design-select-toggle" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 shrink-0" title="Click to lock design layer from being selected">
+                        <span id="icon-design-select">🔓</span> <span id="text-design-select">Selectable</span>
                     </button>
-                    <div id="dropdown-menu-shape" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[155px] z-50">
-                        <button type="button" onclick="addDecoration('zone'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
-                            <span>🔲</span> Grouping Zone
-                        </button>
-                        <button type="button" onclick="addDecoration('card'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
-                            <span>📄</span> Solid Card
-                        </button>
-                        <button type="button" onclick="addDecoration('circle'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
-                            <span>⭕</span> Circle Frame
-                        </button>
-                    </div>
-                </div>
 
-                <!-- Text Dropdown -->
-                <div class="relative">
-                    <button type="button" onclick="toggleDesignDropdown('text', event)" id="btn-dropdown-text" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none">
-                        🏷️ Text <span class="text-[0.6rem] text-slate-400">▼</span>
+                    <!-- Fit View Button -->
+                    <button type="button" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
+                        <span>🎯</span> Fit
                     </button>
-                    <div id="dropdown-menu-text" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[155px] z-50">
-                        <button type="button" onclick="addDecoration('textbox'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
-                            <span>✏️</span> Free Heading
-                        </button>
-                        <button type="button" onclick="addDecoration('sticky'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
-                            <span>📌</span> Sticky Guide Note
-                        </button>
-                    </div>
-                </div>
 
-                <!-- Image Guide Dropdown -->
-                <div class="relative">
-                    <button type="button" onclick="toggleDesignDropdown('image', event)" id="btn-dropdown-image" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none" title="Add Image Guide (URL link or file upload)">
-                        🖼️ Image Guide <span class="text-[0.6rem] text-slate-400">▼</span>
+                    <!-- Text Wrap All Toggle Button -->
+                    <button type="button" onclick="toggleAllNodesWrap()" id="btn-toggle-all-wrap" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Toggle text wrapping across all nodes on canvas">
+                        <span>↩️</span> <span class="hidden sm:inline">Wrap</span>
                     </button>
-                    <div id="dropdown-menu-image" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[185px] z-50">
-                        <button type="button" onclick="promptImageGuideUrl(); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
-                            <span>🔗</span> Enter Image URL / Link
-                        </button>
-                        <label class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs cursor-pointer">
-                            <span>📁</span> Upload Image File
-                            <input type="file" accept="image/*" onchange="handleImageGuideUpload(event); closeDesignDropdowns();" class="hidden">
-                        </label>
-                    </div>
-                </div>
 
-                <!-- Canvas Background & Theme Dropdown -->
-                <div class="relative">
-                    <button type="button" onclick="toggleDesignDropdown('canvas', event)" id="btn-dropdown-canvas" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none" title="Change Canvas Background Color & Grid">
-                        🎨 Canvas <span class="text-[0.6rem] text-slate-400">▼</span>
+                    <!-- Transpose Layout Toggle Button -->
+                    <button type="button" onclick="transposeBranchOrMap()" id="btn-toggle-transpose" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Transpose layout: toggle branch or map orientation across 4 directions (Right, Tree, Left, Up)">
+                        <span>🔄</span> <span class="hidden sm:inline">Transpose</span>
                     </button>
-                    <div id="dropdown-menu-canvas" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-3 min-w-[220px] z-50">
-                        <div class="text-[0.68rem] font-bold text-slate-500 uppercase tracking-wider mb-2">Canvas Color</div>
-                        <div class="grid grid-cols-6 gap-1.5 mb-3" id="toolbar-canvas-presets">
-                            <button type="button" onclick="setCanvasBg('#f8fafc'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f8fafc] hover:scale-110 transition-transform shadow-xs" title="Slate Default (#f8fafc)"></button>
-                            <button type="button" onclick="setCanvasBg('#ffffff'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-white hover:scale-110 transition-transform shadow-xs" title="Pure White (#ffffff)"></button>
-                            <button type="button" onclick="setCanvasBg('#faf8f5'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#faf8f5] hover:scale-110 transition-transform shadow-xs" title="Warm Paper (#faf8f5)"></button>
-                            <button type="button" onclick="setCanvasBg('#f0fdf4'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f0fdf4] hover:scale-110 transition-transform shadow-xs" title="Soft Mint (#f0fdf4)"></button>
-                            <button type="button" onclick="setCanvasBg('#0f172a'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-700 bg-[#0f172a] hover:scale-110 transition-transform shadow-xs" title="Midnight Dark (#0f172a)"></button>
-                            <button type="button" onclick="setCanvasBg('#000000'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-800 bg-[#000000] hover:scale-110 transition-transform shadow-xs" title="OLED Black (#000000)"></button>
+
+                    <div class="h-4 w-px bg-slate-200 mx-0.5 shrink-0"></div>
+
+                    <!-- Shape Dropdown -->
+                    <div class="relative shrink-0">
+                        <button type="button" onclick="toggleDesignDropdown('shape', event)" id="btn-dropdown-shape" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none">
+                            🔲 Shape <span class="text-[0.6rem] text-slate-400">▼</span>
+                        </button>
+                        <div id="dropdown-menu-shape" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[155px] z-50">
+                            <button type="button" onclick="addDecoration('zone'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                                <span>🔲</span> Grouping Zone
+                            </button>
+                            <button type="button" onclick="addDecoration('card'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                                <span>📄</span> Solid Card
+                            </button>
+                            <button type="button" onclick="addDecoration('circle'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                                <span>⭕</span> Circle Frame
+                            </button>
                         </div>
-                        <div class="flex items-center justify-between gap-2 p-1.5 bg-slate-50 rounded-lg border border-slate-200 mb-3">
-                            <div class="flex items-center gap-2">
-                                <input type="color" id="canvas-bg-picker" oninput="setCanvasBg(this.value)" class="w-7 h-7 cursor-pointer" value="#f8fafc" title="Custom Canvas Color">
-                                <span class="text-xs font-semibold text-slate-700">Custom</span>
+                    </div>
+
+                    <!-- Text Dropdown -->
+                    <div class="relative shrink-0">
+                        <button type="button" onclick="toggleDesignDropdown('text', event)" id="btn-dropdown-text" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none">
+                            🏷️ Text <span class="text-[0.6rem] text-slate-400">▼</span>
+                        </button>
+                        <div id="dropdown-menu-text" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[155px] z-50">
+                            <button type="button" onclick="addDecoration('textbox'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                                <span>✏️</span> Free Heading
+                            </button>
+                            <button type="button" onclick="addDecoration('sticky'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                                <span>📌</span> Sticky Guide Note
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Image Guide Dropdown -->
+                    <div class="relative shrink-0">
+                        <button type="button" onclick="toggleDesignDropdown('image', event)" id="btn-dropdown-image" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none" title="Add Image Guide (URL link or file upload)">
+                            🖼️ Image Guide <span class="text-[0.6rem] text-slate-400">▼</span>
+                        </button>
+                        <div id="dropdown-menu-image" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[185px] z-50">
+                            <button type="button" onclick="promptImageGuideUrl(); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
+                                <span>🔗</span> Enter Image URL / Link
+                            </button>
+                            <label class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs cursor-pointer">
+                                <span>📁</span> Upload Image File
+                                <input type="file" accept="image/*" onchange="handleImageGuideUpload(event); closeDesignDropdowns();" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Background & Theme Dropdown -->
+                    <div class="relative shrink-0">
+                        <button type="button" onclick="toggleDesignDropdown('canvas', event)" id="btn-dropdown-canvas" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none" title="Change Canvas Background Color & Grid">
+                            🎨 Canvas <span class="text-[0.6rem] text-slate-400">▼</span>
+                        </button>
+                        <div id="dropdown-menu-canvas" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-3 min-w-[220px] z-50">
+                            <div class="text-[0.68rem] font-bold text-slate-500 uppercase tracking-wider mb-2">Canvas Color</div>
+                            <div class="grid grid-cols-6 gap-1.5 mb-3" id="toolbar-canvas-presets">
+                                <button type="button" onclick="setCanvasBg('#f8fafc'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f8fafc] hover:scale-110 transition-transform shadow-xs" title="Slate Default (#f8fafc)"></button>
+                                <button type="button" onclick="setCanvasBg('#ffffff'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-white hover:scale-110 transition-transform shadow-xs" title="Pure White (#ffffff)"></button>
+                                <button type="button" onclick="setCanvasBg('#faf8f5'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#faf8f5] hover:scale-110 transition-transform shadow-xs" title="Warm Paper (#faf8f5)"></button>
+                                <button type="button" onclick="setCanvasBg('#f0fdf4'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-300 bg-[#f0fdf4] hover:scale-110 transition-transform shadow-xs" title="Soft Mint (#f0fdf4)"></button>
+                                <button type="button" onclick="setCanvasBg('#0f172a'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-700 bg-[#0f172a] hover:scale-110 transition-transform shadow-xs" title="Midnight Dark (#0f172a)"></button>
+                                <button type="button" onclick="setCanvasBg('#000000'); closeDesignDropdowns();" class="w-6 h-6 rounded-full border border-slate-800 bg-[#000000] hover:scale-110 transition-transform shadow-xs" title="OLED Black (#000000)"></button>
                             </div>
-                            <span id="label-canvas-hex" class="text-[0.68rem] font-mono text-slate-500 font-medium">#f8fafc</span>
-                        </div>
-                        <div class="text-[0.68rem] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Grid Style</div>
-                        <div class="flex gap-1.5 bg-slate-100 p-1 rounded-lg">
-                            <button type="button" id="btn-grid-dots" onclick="setCanvasGridStyle('dots')" class="flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-xs text-slate-800 transition-all">Dots</button>
-                            <button type="button" id="btn-grid-plain" onclick="setCanvasGridStyle('plain')" class="flex-1 py-1 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900 transition-all">Plain</button>
+                            <div class="flex items-center justify-between gap-2 p-1.5 bg-slate-50 rounded-lg border border-slate-200 mb-3">
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="canvas-bg-picker" oninput="setCanvasBg(this.value)" class="w-7 h-7 cursor-pointer" value="#f8fafc" title="Custom Canvas Color">
+                                    <span class="text-xs font-semibold text-slate-700">Custom</span>
+                                </div>
+                                <span id="label-canvas-hex" class="text-[0.68rem] font-mono text-slate-500 font-medium">#f8fafc</span>
+                            </div>
+                            <div class="text-[0.68rem] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Grid Style</div>
+                            <div class="flex gap-1.5 bg-slate-100 p-1 rounded-lg">
+                                <button type="button" id="btn-grid-dots" onclick="setCanvasGridStyle('dots')" class="flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-xs text-slate-800 transition-all">Dots</button>
+                                <button type="button" id="btn-grid-plain" onclick="setCanvasGridStyle('plain')" class="flex-1 py-1 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900 transition-all">Plain</button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
-                <button type="button" onclick="openExportImageModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100" title="Export as PNG, JPEG, or SVG image">
-                    <span>🖼️</span> Export
-                </button>
+                    <div class="h-4 w-px bg-slate-200 mx-0.5 shrink-0"></div>
+                    <button type="button" onclick="openExportImageModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 shrink-0" title="Export as PNG, JPEG, or SVG image">
+                        <span>🖼️</span> Export
+                    </button>
+
+                    <!-- Collapse / Fold Button -->
+                    <button type="button" onclick="toggleDesignToolbarCollapse(true)" class="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors ml-0.5 shrink-0" title="Collapse Design Toolbar (Unblock Canvas)">
+                        <span class="text-xs font-bold leading-none">✕</span>
+                    </button>
+                </div>
             </div>
 
             <!-- This container handles Panning and Zooming -->
@@ -2057,6 +2119,73 @@
                 sidebar.classList.remove('mobile-open');
                 if (backdrop) backdrop.classList.remove('active');
             }
+        }
+
+        // Desktop / Tablet Sidebar Collapse State
+        let isDesktopSidebarCollapsed = false;
+
+        function toggleDesktopSidebar(show) {
+            const sidebar = document.getElementById('canvas-sidebar');
+            const edgeBtn = document.getElementById('btn-expand-sidebar-edge');
+            if (!sidebar) return;
+            // show = true means expand; show = false means collapse; undefined toggles
+            isDesktopSidebarCollapsed = (typeof show === 'boolean') ? !show : !isDesktopSidebarCollapsed;
+            if (isDesktopSidebarCollapsed) {
+                sidebar.classList.add('desktop-collapsed');
+                if (edgeBtn) {
+                    edgeBtn.classList.remove('hidden');
+                    edgeBtn.classList.add('flex');
+                }
+            } else {
+                sidebar.classList.remove('desktop-collapsed');
+                if (edgeBtn) {
+                    edgeBtn.classList.add('hidden');
+                    edgeBtn.classList.remove('flex');
+                }
+            }
+            try { localStorage.setItem('omnimind_desktop_sidebar_collapsed', isDesktopSidebarCollapsed ? '1' : '0'); } catch (e) {}
+        }
+
+        function openSidebarTab(tab) {
+            if (typeof switchTab === 'function') switchTab(tab);
+            if (window.innerWidth < 768) {
+                toggleMobileSidebar(true);
+            } else {
+                toggleDesktopSidebar(true);
+            }
+        }
+
+        // Floating Design Toolbar Collapse State
+        let isDesignToolbarCollapsed = (window.innerWidth < 768);
+
+        function toggleDesignToolbarCollapse(forceCollapse) {
+            const toolbar = document.getElementById('floating-canvas-design-toolbar');
+            const expandBtn = document.getElementById('btn-design-toolbar-expand');
+            const expandedContent = document.getElementById('design-toolbar-expanded-content');
+            if (!toolbar) return;
+            // forceCollapse = true means collapse; forceCollapse = false means expand; undefined toggles
+            isDesignToolbarCollapsed = (typeof forceCollapse === 'boolean') ? forceCollapse : !isDesignToolbarCollapsed;
+            if (isDesignToolbarCollapsed) {
+                if (expandBtn) {
+                    expandBtn.classList.remove('hidden');
+                    expandBtn.classList.add('flex');
+                }
+                if (expandedContent) {
+                    expandedContent.classList.add('hidden');
+                    expandedContent.classList.remove('flex');
+                }
+                if (typeof closeDesignDropdowns === 'function') closeDesignDropdowns();
+            } else {
+                if (expandBtn) {
+                    expandBtn.classList.add('hidden');
+                    expandBtn.classList.remove('flex');
+                }
+                if (expandedContent) {
+                    expandedContent.classList.remove('hidden');
+                    expandedContent.classList.add('flex');
+                }
+            }
+            try { localStorage.setItem('omnimind_design_toolbar_collapsed', isDesignToolbarCollapsed ? '1' : '0'); } catch (e) {}
         }
 
         function toggleMobileOverflowMenu(show) {
@@ -6031,6 +6160,20 @@
             } else {
                 toggleHomepageView(true);
             }
+
+            // Restore collapse preferences for desktop sidebar and mobile/tablet design toolbar
+            try {
+                const savedSidebar = localStorage.getItem('omnimind_desktop_sidebar_collapsed');
+                if (savedSidebar === '1' && window.innerWidth >= 768) {
+                    toggleDesktopSidebar(false);
+                }
+                const savedDesign = localStorage.getItem('omnimind_design_toolbar_collapsed');
+                if (savedDesign !== null) {
+                    toggleDesignToolbarCollapse(savedDesign === '1');
+                } else if (window.innerWidth < 768) {
+                    toggleDesignToolbarCollapse(true);
+                }
+            } catch (e) {}
 
             if (loaded) {
                 const curMeta = getCurrentProjectMeta();
