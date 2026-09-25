@@ -373,6 +373,9 @@
                 <button type="button" onclick="transposeBranchOrMap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
                     <span>🔄</span> Transpose Layout (4-Way)
                 </button>
+                <button type="button" onclick="toggleCanvasGuide()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>💡</span> Toggle Canvas Guide
+                </button>
                 <button type="button" onclick="openShareModal()" class="text-left px-3 py-2 hover:bg-purple-50 text-purple-700 font-bold rounded-xl flex items-center gap-2">
                     <span>👥</span> Share with Team
                 </button>
@@ -830,6 +833,9 @@
                     <button type="button" onclick="openExportImageModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 shrink-0" title="Export as PNG, JPEG, or SVG image">
                         <span>🖼️</span> Export
                     </button>
+                    <button type="button" onclick="toggleCanvasGuide()" id="btn-design-toggle-guide" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors hover:bg-slate-100 text-slate-700 shrink-0" title="Toggle canvas controls & shortcuts guide">
+                        <span>💡</span> <span class="hidden sm:inline">Guide</span>
+                    </button>
 
                     <!-- Collapse / Fold Button -->
                     <button type="button" onclick="toggleDesignToolbarCollapse(true)" class="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors ml-0.5 shrink-0" title="Collapse Design Toolbar (Unblock Canvas)">
@@ -850,13 +856,30 @@
                 <div id="canvas-decorations-front" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 25;"></div>
             </div>
             
-            <div id="canvas-instructions-card" class="absolute bottom-4 left-4 bg-white/90 backdrop-blur border px-4 py-3 rounded-xl shadow-sm text-xs text-slate-500 pointer-events-none transition-colors">
-                <p>🌟 <b>+ New Root:</b> Create independent tree</p>
-                <p>🖱️ <b>Drag Background:</b> Pan Map</p>
-                <p>📜 <b>Scroll Wheel:</b> Zoom In/Out (Tilt to Pan)</p>
-                <p>🤏 <b>Drag Bubble:</b> Move branch freely</p>
-                <p>✏️ <b>Double-Click:</b> Edit text inline</p>
+            <!-- Canvas Shortcuts & Instructions Card -->
+            <div id="canvas-instructions-card" class="absolute bottom-4 left-4 bg-white/95 backdrop-blur border border-slate-200 px-3.5 py-2.5 rounded-xl shadow-md text-xs text-slate-600 transition-colors z-20 select-none max-w-[260px] pointer-events-auto">
+                <div class="flex items-center justify-between gap-2 pb-1.5 mb-1.5 border-b border-slate-200/70" id="guide-header-border">
+                    <span class="font-bold text-[0.7rem] uppercase tracking-wider text-slate-500 flex items-center gap-1" id="guide-header-title">
+                        <span>💡</span> Controls Guide
+                    </span>
+                    <button type="button" onclick="toggleCanvasGuide(false)" class="p-1 -mr-1 -my-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors leading-none cursor-pointer" id="btn-close-canvas-guide" title="Hide Guide">
+                        <span class="text-xs font-bold leading-none">✕</span>
+                    </button>
+                </div>
+                <div class="space-y-1 text-[0.72rem] leading-snug">
+                    <p>🌟 <b>+ New Root:</b> Create independent tree</p>
+                    <p>🖱️ <b>Drag Background:</b> Pan Map</p>
+                    <p>📜 <b>Scroll Wheel:</b> Zoom In/Out (Tilt to Pan)</p>
+                    <p>🤏 <b>Drag Bubble:</b> Move branch freely</p>
+                    <p>✏️ <b>Double-Click:</b> Edit text inline</p>
+                </div>
             </div>
+
+            <!-- Floating Button to Re-Open the Guide when Hidden -->
+            <button type="button" id="btn-show-canvas-guide" onclick="toggleCanvasGuide(true)" class="hidden absolute bottom-4 left-4 z-20 items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur border border-slate-300 shadow-md hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-all active:scale-95 cursor-pointer" title="Show Canvas Controls & Shortcuts Guide">
+                <span>💡</span>
+                <span>Guide</span>
+            </button>
         </main>
     </div>
 
@@ -2186,6 +2209,46 @@
                 }
             }
             try { localStorage.setItem('omnimind_design_toolbar_collapsed', isDesignToolbarCollapsed ? '1' : '0'); } catch (e) {}
+        }
+
+        // Canvas Instructions Guide Visibility State
+        let isCanvasGuideHidden = false;
+        try {
+            const savedGuidePref = localStorage.getItem('omnimind_canvas_guide_hidden');
+            if (savedGuidePref !== null) {
+                isCanvasGuideHidden = (savedGuidePref === '1');
+            } else if (window.innerWidth < 768) {
+                isCanvasGuideHidden = true;
+            }
+        } catch (e) {}
+
+        function toggleCanvasGuide(show) {
+            const card = document.getElementById('canvas-instructions-card');
+            const showBtn = document.getElementById('btn-show-canvas-guide');
+            
+            // show = true means make visible; show = false means hide; undefined toggles
+            isCanvasGuideHidden = (typeof show === 'boolean') ? !show : !isCanvasGuideHidden;
+
+            if (card) {
+                if (isCanvasGuideHidden) {
+                    card.classList.add('hidden');
+                } else {
+                    card.classList.remove('hidden');
+                }
+            }
+            if (showBtn) {
+                if (isCanvasGuideHidden) {
+                    showBtn.classList.remove('hidden');
+                    showBtn.classList.add('flex');
+                } else {
+                    showBtn.classList.add('hidden');
+                    showBtn.classList.remove('flex');
+                }
+            }
+
+            try {
+                localStorage.setItem('omnimind_canvas_guide_hidden', isCanvasGuideHidden ? '1' : '0');
+            } catch (e) {}
         }
 
         function toggleMobileOverflowMenu(show) {
@@ -6173,6 +6236,12 @@
                 } else if (window.innerWidth < 768) {
                     toggleDesignToolbarCollapse(true);
                 }
+                // Restore canvas guide visibility
+                if (isCanvasGuideHidden) {
+                    toggleCanvasGuide(false);
+                } else {
+                    toggleCanvasGuide(true);
+                }
             } catch (e) {}
 
             if (loaded) {
@@ -6733,14 +6802,39 @@
                 p.setAttribute('stroke', edgeStroke);
             });
 
-            // Adapt bottom-left instruction card
+            // Adapt bottom-left instruction card & guide toggle button
             const instrCard = document.getElementById('canvas-instructions-card');
+            const showGuideBtn = document.getElementById('btn-show-canvas-guide');
+            const guideHeaderBorder = document.getElementById('guide-header-border');
+            const guideHeaderTitle = document.getElementById('guide-header-title');
+            const btnCloseGuide = document.getElementById('btn-close-canvas-guide');
+
             if (instrCard) {
-                if (isDark) {
-                    instrCard.className = "absolute bottom-4 left-4 bg-slate-900/90 text-slate-300 border border-slate-700 backdrop-blur px-4 py-3 rounded-xl shadow-lg text-xs pointer-events-none transition-colors";
-                } else {
-                    instrCard.className = "absolute bottom-4 left-4 bg-white/90 text-slate-500 border border-slate-200 backdrop-blur px-4 py-3 rounded-xl shadow-sm text-xs pointer-events-none transition-colors";
-                }
+                const baseClass = isDark
+                    ? "absolute bottom-4 left-4 bg-slate-900/90 text-slate-300 border border-slate-700 backdrop-blur px-3.5 py-2.5 rounded-xl shadow-lg text-xs pointer-events-auto transition-colors z-20 select-none max-w-[260px]"
+                    : "absolute bottom-4 left-4 bg-white/95 text-slate-600 border border-slate-200 backdrop-blur px-3.5 py-2.5 rounded-xl shadow-md text-xs pointer-events-auto transition-colors z-20 select-none max-w-[260px]";
+                instrCard.className = isCanvasGuideHidden ? `${baseClass} hidden` : baseClass;
+            }
+            if (guideHeaderBorder) {
+                guideHeaderBorder.className = isDark 
+                    ? "flex items-center justify-between gap-2 pb-1.5 mb-1.5 border-b border-slate-700"
+                    : "flex items-center justify-between gap-2 pb-1.5 mb-1.5 border-b border-slate-200/70";
+            }
+            if (guideHeaderTitle) {
+                guideHeaderTitle.className = isDark
+                    ? "font-bold text-[0.7rem] uppercase tracking-wider text-slate-400 flex items-center gap-1"
+                    : "font-bold text-[0.7rem] uppercase tracking-wider text-slate-500 flex items-center gap-1";
+            }
+            if (btnCloseGuide) {
+                btnCloseGuide.className = isDark
+                    ? "p-1 -mr-1 -my-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors leading-none cursor-pointer"
+                    : "p-1 -mr-1 -my-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors leading-none cursor-pointer";
+            }
+            if (showGuideBtn) {
+                const baseShowBtnClass = isDark
+                    ? "absolute bottom-4 left-4 z-20 items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 text-slate-300 border border-slate-700 backdrop-blur shadow-md hover:bg-slate-800 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                    : "absolute bottom-4 left-4 z-20 items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 text-slate-700 border border-slate-300 backdrop-blur shadow-md hover:bg-slate-50 text-xs font-semibold transition-all active:scale-95 cursor-pointer";
+                showGuideBtn.className = isCanvasGuideHidden ? `${baseShowBtnClass} flex` : `${baseShowBtnClass} hidden`;
             }
 
             if (!skipSave) {
