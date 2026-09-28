@@ -7244,10 +7244,23 @@
                 const defaultW = arrowStyle === 'bidirectional' ? 240 : 220;
                 const defaultH = isVerticalKind ? 130 : (arrowStyle === 'block' ? 80 : 60);
 
+                const sx = centerX + 10;
+                const sy = centerY + defaultH / 2;
+                const ex = centerX + defaultW - 10;
+                const ey = centerY + defaultH / 2;
+
                 canvasDecorations[id] = {
                     id,
                     type: 'arrow',
                     arrowStyle: arrowStyle,
+                    startX: sx,
+                    startY: sy,
+                    endX: ex,
+                    endY: ey,
+                    startNodeId: null,
+                    startAnchor: null,
+                    endNodeId: null,
+                    endAnchor: null,
                     x: centerX,
                     y: centerY,
                     width: defaultW,
@@ -7258,10 +7271,16 @@
                     rotation: 0,
                     flipX: 1,
                     flipY: 1,
+                    curveFlip: 1,
                     opacity: 1,
                     layer: 'behind',
                     zIndex: order
                 };
+                const bounds = computeArrowBounds(canvasDecorations[id]);
+                canvasDecorations[id].x = bounds.x;
+                canvasDecorations[id].y = bounds.y;
+                canvasDecorations[id].width = bounds.width;
+                canvasDecorations[id].height = bounds.height;
             }
 
             selectedDecorationId = id;
@@ -7570,19 +7589,83 @@
         function rotateArrow(id) {
             const dec = canvasDecorations[id];
             if (!dec) return;
-            dec.rotation = ((dec.rotation || 0) + 90) % 360;
+            if (dec.startX === undefined || dec.endX === undefined) {
+                computeArrowBounds(dec);
+            }
+            const mx = (dec.startX + dec.endX) / 2;
+            const my = (dec.startY + dec.endY) / 2;
+            const dx = dec.endX - dec.startX;
+            const dy = dec.endY - dec.startY;
+
+            // Clockwise 90° rotation: (dx', dy') = (-dy, dx)
+            const newDx = -dy;
+            const newDy = dx;
+
+            dec.startX = Math.round(mx - newDx / 2);
+            dec.startY = Math.round(my - newDy / 2);
+            dec.endX = Math.round(mx + newDx / 2);
+            dec.endY = Math.round(my + newDy / 2);
+
+            // Unbind from nodes when explicitly rotated
+            dec.startNodeId = null;
+            dec.startAnchor = null;
+            dec.endNodeId = null;
+            dec.endAnchor = null;
+
+            const angleDeg = Math.round(Math.atan2(dec.endY - dec.startY, dec.endX - dec.startX) * 180 / Math.PI);
+            dec.rotation = ((angleDeg % 360) + 360) % 360;
+
+            const bounds = computeArrowBounds(dec);
+            dec.x = bounds.x;
+            dec.y = bounds.y;
+            dec.width = bounds.width;
+            dec.height = bounds.height;
+
             renderDecorations();
             syncFromMap();
             triggerAutoSave();
+            setSaveStatus('saved', `✓ Rotated Arrow 90° (${dec.rotation}°)`);
         }
 
         function flipArrow(id) {
             const dec = canvasDecorations[id];
             if (!dec) return;
+            if (dec.startX === undefined || dec.endX === undefined) {
+                computeArrowBounds(dec);
+            }
+
+            // Swap start and end points
+            const tempX = dec.startX;
+            const tempY = dec.startY;
+            dec.startX = dec.endX;
+            dec.startY = dec.endY;
+            dec.endX = tempX;
+            dec.endY = tempY;
+
+            // Swap node connections if bound
+            const tempNode = dec.startNodeId;
+            const tempAnchor = dec.startAnchor;
+            dec.startNodeId = dec.endNodeId;
+            dec.startAnchor = dec.endAnchor;
+            dec.endNodeId = tempNode;
+            dec.endAnchor = tempAnchor;
+
+            dec.curveFlip = (dec.curveFlip || 1) === 1 ? -1 : 1;
             dec.flipX = (dec.flipX || 1) === 1 ? -1 : 1;
+
+            const angleDeg = Math.round(Math.atan2(dec.endY - dec.startY, dec.endX - dec.startX) * 180 / Math.PI);
+            dec.rotation = ((angleDeg % 360) + 360) % 360;
+
+            const bounds = computeArrowBounds(dec);
+            dec.x = bounds.x;
+            dec.y = bounds.y;
+            dec.width = bounds.width;
+            dec.height = bounds.height;
+
             renderDecorations();
             syncFromMap();
             triggerAutoSave();
+            setSaveStatus('saved', '✓ Flipped Arrow Direction');
         }
 
         function cycleArrowStroke(id) {
@@ -7793,11 +7876,33 @@
             const sy = dec.startY;
             const ex = dec.endX;
             const ey = dec.endY;
-            const pad = Math.max(26, (dec.strokeWidth || 3) * 4);
-            const minX = Math.min(sx, ex) - pad;
-            const minY = Math.min(sy, ey) - pad;
-            const maxX = Math.max(sx, ex) + pad;
-            const maxY = Math.max(sy, ey) + pad;
+
+            let minX = Math.min(sx, ex);
+            let minY = Math.min(sy, ey);
+            let maxX = Math.max(sx, ex);
+            let maxY = Math.max(sy, ey);
+
+            if (dec.arrowStyle === 'curved') {
+                const mx = (sx + ex) / 2;
+                const my = (sy + ey) / 2;
+                const dx = ex - sx;
+                const dy = ey - sy;
+                const norm = Math.hypot(dx, dy) || 1;
+                const curveMultiplier = (dec.curveFlip || 1);
+                const curveOffset = Math.min(70, Math.max(20, norm * 0.22)) * curveMultiplier;
+                const cx = mx - (dy / norm) * curveOffset;
+                const cy = my + (dx / norm) * curveOffset;
+                minX = Math.min(minX, cx);
+                minY = Math.min(minY, cy);
+                maxX = Math.max(maxX, cx);
+                maxY = Math.max(maxY, cy);
+            }
+
+            const pad = Math.max(30, (dec.strokeWidth || 3) * 4);
+            minX -= pad;
+            minY -= pad;
+            maxX += pad;
+            maxY += pad;
 
             return {
                 x: Math.round(minX),
@@ -7879,6 +7984,7 @@
                 rotation: 0,
                 flipX: 1,
                 flipY: 1,
+                curveFlip: 1,
                 opacity: 1,
                 layer: 'behind',
                 zIndex: order
@@ -7960,7 +8066,7 @@
                 const mx = (lx1 + lx2) / 2;
                 const my = (ly1 + ly2) / 2;
                 const norm = dist || 1;
-                const curveOffset = Math.min(70, Math.max(20, norm * 0.22));
+                const curveOffset = Math.min(70, Math.max(20, norm * 0.22)) * (dec.curveFlip || 1);
                 const cx = mx - (dy / norm) * curveOffset;
                 const cy = my + (dx / norm) * curveOffset;
 
@@ -8476,16 +8582,21 @@
                         selectDecoration(decId);
                     }
 
+                    const dec = canvasDecorations[decId];
+                    if (dec && dec.type === 'arrow' && (dec.startX === undefined || dec.endX === undefined)) {
+                        computeArrowBounds(dec);
+                    }
+
                     decDragInfo = {
                         id: decId,
                         startX: e.clientX,
                         startY: e.clientY,
-                        initialX: canvasDecorations[decId].x,
-                        initialY: canvasDecorations[decId].y,
-                        initialStartX: canvasDecorations[decId].startX,
-                        initialStartY: canvasDecorations[decId].startY,
-                        initialEndX: canvasDecorations[decId].endX,
-                        initialEndY: canvasDecorations[decId].endY,
+                        initialX: dec ? dec.x : 0,
+                        initialY: dec ? dec.y : 0,
+                        initialStartX: dec ? dec.startX : undefined,
+                        initialStartY: dec ? dec.startY : undefined,
+                        initialEndX: dec ? dec.endX : undefined,
+                        initialEndY: dec ? dec.endY : undefined,
                         hasMoved: false,
                         wasSelected: wasAlreadySelected,
                         clickedText: isTextContent
@@ -8678,10 +8789,16 @@
                 return;
             }
             if (decDragInfo) {
-                if (!decDragInfo.hasMoved && decDragInfo.wasSelected && decDragInfo.clickedText && !editingDecorationId) {
+                const hadMoved = decDragInfo.hasMoved;
+                const dec = canvasDecorations[decDragInfo.id];
+                const isArrow = dec && dec.type === 'arrow';
+                if (!hadMoved && decDragInfo.wasSelected && decDragInfo.clickedText && !editingDecorationId) {
                     startEditingDecoration(decDragInfo.id);
                 }
-                if (decDragInfo.hasMoved) {
+                if (hadMoved) {
+                    if (isArrow) {
+                        renderDecorations();
+                    }
                     triggerAutoSave();
                     syncFromMap();
                 }
@@ -8904,16 +9021,21 @@
                             selectDecoration(decId);
                         }
 
+                        const dec = canvasDecorations[decId];
+                        if (dec && dec.type === 'arrow' && (dec.startX === undefined || dec.endX === undefined)) {
+                            computeArrowBounds(dec);
+                        }
+
                         decDragInfo = {
                             id: decId,
                             startX: touch.clientX,
                             startY: touch.clientY,
-                            initialX: canvasDecorations[decId].x,
-                            initialY: canvasDecorations[decId].y,
-                            initialStartX: canvasDecorations[decId].startX,
-                            initialStartY: canvasDecorations[decId].startY,
-                            initialEndX: canvasDecorations[decId].endX,
-                            initialEndY: canvasDecorations[decId].endY,
+                            initialX: dec ? dec.x : 0,
+                            initialY: dec ? dec.y : 0,
+                            initialStartX: dec ? dec.startX : undefined,
+                            initialStartY: dec ? dec.startY : undefined,
+                            initialEndX: dec ? dec.endX : undefined,
+                            initialEndY: dec ? dec.endY : undefined,
                             hasMoved: false,
                             wasSelected: wasAlreadySelected,
                             clickedText: isTextContent
@@ -9119,10 +9241,15 @@
             }
 
             if (decDragInfo) {
+                const dec = canvasDecorations[decDragInfo.id];
+                const isArrow = dec && dec.type === 'arrow';
                 if (!touchHasMoved && decDragInfo.wasSelected && decDragInfo.clickedText && !editingDecorationId) {
                     startEditingDecoration(decDragInfo.id);
                 }
                 if (touchHasMoved) {
+                    if (isArrow) {
+                        renderDecorations();
+                    }
                     triggerAutoSave();
                     syncFromMap();
                 }
@@ -10476,6 +10603,7 @@
                         if (dec.rotation) attrs.push(`rot: ${dec.rotation}`);
                         if (dec.flipX && dec.flipX === -1) attrs.push(`flipX: -1`);
                         if (dec.flipY && dec.flipY === -1) attrs.push(`flipY: -1`);
+                        if (dec.curveFlip && dec.curveFlip === -1) attrs.push(`curveFlip: -1`);
                     } else {
                         if (dec.bg && dec.bg !== 'transparent') attrs.push(`bg: ${dec.bg}`);
                         if (dec.color && dec.color !== '#0f172a' && dec.color !== '#1e293b') attrs.push(`color: ${dec.color}`);
@@ -10813,6 +10941,7 @@
                             rotation: attrs.rotation || attrs.rot || 0,
                             flipX: attrs.flipX !== undefined ? attrs.flipX : 1,
                             flipY: attrs.flipY !== undefined ? attrs.flipY : 1,
+                            curveFlip: attrs.curveFlip !== undefined ? parseInt(attrs.curveFlip, 10) : 1,
                             opacity: attrs.opacity ?? 1,
                             layer,
                             zIndex
