@@ -240,6 +240,41 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        .arrow-endpoint-handle {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 40;
+            cursor: crosshair;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+            pointer-events: auto;
+        }
+        .arrow-endpoint-handle:hover {
+            transform: translate(-50%, -50%) scale(1.35);
+        }
+        .arrow-tail-handle {
+            background: #ffffff;
+            border: 2.5px solid #3b82f6;
+        }
+        .arrow-tip-handle {
+            background: #3b82f6;
+            border: 2.5px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.5);
+        }
+        .bubble-node.snap-target-hover {
+            outline: 2.5px dashed #3b82f6 !important;
+            outline-offset: 4px !important;
+            box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.25) !important;
+        }
+        #canvas-bg.drawing-arrow {
+            cursor: crosshair !important;
+        }
+        #canvas-bg.drawing-arrow * {
+            cursor: crosshair !important;
+        }
         .canvas-decoration.locked {
             pointer-events: none !important;
         }
@@ -791,24 +826,33 @@
                                 <span>⭕</span> Circle Frame
                             </button>
                             <div class="h-px bg-slate-100 my-1"></div>
-                            <div class="px-2.5 py-1 text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider">Arrows & Pointers</div>
-                            <button type="button" onclick="addDecoration('arrow-straight'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Straight directional pointer">
-                                <span class="text-blue-500 font-bold">➡️</span> Straight Arrow
+                            <div class="px-2.5 py-1 text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                                <span>Arrows & Pointers</span>
+                                <span class="text-[0.55rem] text-blue-500 font-semibold">Drag / Click</span>
+                            </div>
+                            <button type="button" onclick="startArrowDrawMode('straight'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center justify-between font-medium text-xs" title="Click & drag on canvas to draw straight arrow (snaps to bubbles)">
+                                <span class="flex items-center gap-2"><span class="text-blue-500 font-bold">➡️</span> Straight Arrow</span>
+                                <span class="text-[0.6rem] text-slate-400">Drag/Click</span>
                             </button>
-                            <button type="button" onclick="addDecoration('arrow-dashed'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Dashed process relation arrow">
-                                <span class="text-blue-500 font-bold">⇢</span> Dashed Arrow
+                            <button type="button" onclick="startArrowDrawMode('dashed'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center justify-between font-medium text-xs" title="Click & drag on canvas to draw dashed arrow (snaps to bubbles)">
+                                <span class="flex items-center gap-2"><span class="text-blue-500 font-bold">⇢</span> Dashed Arrow</span>
+                                <span class="text-[0.6rem] text-slate-400">Drag/Click</span>
                             </button>
-                            <button type="button" onclick="addDecoration('arrow-bidirectional'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Two-way feedback or mutual relation">
-                                <span class="text-blue-500 font-bold">↔️</span> Two-Way Arrow
+                            <button type="button" onclick="startArrowDrawMode('bidirectional'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center justify-between font-medium text-xs" title="Click & drag on canvas to draw two-way relation arrow">
+                                <span class="flex items-center gap-2"><span class="text-blue-500 font-bold">↔️</span> Two-Way Arrow</span>
+                                <span class="text-[0.6rem] text-slate-400">Drag/Click</span>
                             </button>
-                            <button type="button" onclick="addDecoration('arrow-curved'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Curved flowing connector">
-                                <span class="text-blue-500 font-bold">⤵️</span> Curved Flow
+                            <button type="button" onclick="startArrowDrawMode('curved'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center justify-between font-medium text-xs" title="Click & drag on canvas to draw curved flow connector">
+                                <span class="flex items-center gap-2"><span class="text-blue-500 font-bold">⤵️</span> Curved Flow</span>
+                                <span class="text-[0.6rem] text-slate-400">Drag/Click</span>
                             </button>
-                            <button type="button" onclick="addDecoration('arrow-elbow'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Orthogonal step connector">
-                                <span class="text-blue-500 font-bold">↳</span> Elbow Step
+                            <button type="button" onclick="startArrowDrawMode('elbow'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center justify-between font-medium text-xs" title="Click & drag on canvas to draw orthogonal step connector">
+                                <span class="flex items-center gap-2"><span class="text-blue-500 font-bold">↳</span> Elbow Step</span>
+                                <span class="text-[0.6rem] text-slate-400">Drag/Click</span>
                             </button>
-                            <button type="button" onclick="addDecoration('arrow-block'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Solid block chevron arrow">
-                                <span class="text-blue-500 font-bold">▶️</span> Block Arrow
+                            <button type="button" onclick="startArrowDrawMode('block'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center justify-between font-medium text-xs" title="Click & drag on canvas to draw solid block chevron arrow">
+                                <span class="flex items-center gap-2"><span class="text-blue-500 font-bold">▶️</span> Block Arrow</span>
+                                <span class="text-[0.6rem] text-slate-400">Drag/Click</span>
                             </button>
                         </div>
                     </div>
@@ -899,6 +943,20 @@
                 <div id="nodes-container" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 20;"></div>
                 <!-- Foreground Design Layer (In Front of Nodes) -->
                 <div id="canvas-decorations-front" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 25;"></div>
+
+                <!-- Ephemeral Live Arrow Drawing & Snapping Overlay -->
+                <svg id="arrow-drawing-overlay" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible hidden" style="z-index: 30; overflow: visible !important;">
+                    <g id="arrow-drawing-ghost"></g>
+                    <!-- Magnetic Snap Target Indicator Reticle -->
+                    <circle id="arrow-snap-indicator" cx="0" cy="0" r="7" fill="#3b82f6" stroke="#ffffff" stroke-width="2.5" class="hidden" style="filter: drop-shadow(0 2px 6px rgba(59,130,246,0.6));" />
+                </svg>
+            </div>
+
+            <!-- Floating Indicator for Arrow Draw Mode -->
+            <div id="arrow-draw-banner" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-xl backdrop-blur-sm flex items-center gap-3 z-50 hidden select-none transition-all">
+                <span class="flex items-center gap-1.5"><span class="text-blue-400">🎯</span> Drag on canvas to draw arrow • Snaps to bubbles</span>
+                <span class="text-slate-400 text-[0.65rem] hidden sm:inline">Hold Shift to snap angle</span>
+                <button type="button" onclick="cancelArrowDrawMode()" class="px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded text-[0.65rem] text-white transition-colors cursor-pointer">✕ Cancel (Esc)</button>
             </div>
             
             <!-- Canvas Shortcuts & Instructions Card -->
@@ -915,6 +973,7 @@
                     <p>🌟 <b>+ New Root:</b> Create independent tree</p>
                     <p>🖱️ <b>Drag Background:</b> Pan Map</p>
                     <p>📜 <b>Scroll Wheel:</b> Zoom In/Out (Tilt to Pan)</p>
+                    <p>🎯 <b>A / Shape:</b> Drag-to-draw snapping arrows</p>
                     <p>🤏 <b>Drag Bubble:</b> Move branch freely</p>
                     <p>✏️ <b>Double-Click:</b> Edit text inline</p>
                 </div>
@@ -6268,6 +6327,9 @@
             applyTransform();
             renderTree();
             renderDecorations();
+            if (typeof updateBoundArrows === 'function') {
+                updateBoundArrows();
+            }
             applyDesignLayerSettings();
             syncFromMap();
             updatePropertiesPanel();
@@ -6409,6 +6471,9 @@
                     }
                 }
             });
+            if (typeof updateBoundArrows === 'function') {
+                updateBoundArrows();
+            }
         }
 
         function selectNode(id) {
@@ -6683,9 +6748,11 @@
                         const isFront = dec.layer === 'front';
 
                         if (dec.type === 'arrow') {
+                            const bounds = computeArrowBounds(dec);
                             const styleIcon = getArrowStyleIcon(dec.arrowStyle);
                             const styleName = getArrowStyleName(dec.arrowStyle);
                             const currentStroke = dec.strokeWidth || 3;
+                            const isSnapped = !!(dec.startNodeId || dec.endNodeId);
                             contentHtml += `
                             <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
                                 <!-- Style Cycle Button -->
@@ -6716,6 +6783,13 @@
                                     🏷️ ${dec.title ? 'Edit Label' : '+ Label'}
                                 </button>
 
+                                ${isSnapped ? `
+                                <!-- Snapped to Bubble Indicator & Detach Button -->
+                                <button type="button" onclick="detachArrowFromNodes('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.62rem] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 flex items-center gap-1 transition-colors" title="Arrow is snapped to bubble(s). Click to detach.">
+                                    <span>🔗</span> Detach
+                                </button>
+                                ` : ''}
+
                                 <!-- Per-Element Level Ordering Controls -->
                                 <div class="flex items-center gap-1 bg-slate-100/90 border border-slate-200 rounded-full px-1.5 py-0.5 shadow-sm" title="Layer Level Controls">
                                     <button type="button" onclick="moveDecorationLevelBehind('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
@@ -6733,7 +6807,10 @@
                                 <button type="button" onclick="duplicateDecoration('${dec.id}')" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
                                 <button type="button" onclick="deleteDecoration('${dec.id}')" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
                             </div>
-                            <div class="decoration-resize-handle" title="Drag to resize"></div>`;
+                            <!-- Tail and Tip Handles for interactive redirecting & snapping -->
+                            <div class="arrow-endpoint-handle arrow-tail-handle" data-id="${dec.id}" data-handle="tail" style="left: ${bounds.localStartX}px; top: ${bounds.localStartY}px;" title="Drag tail ⚪ to re-position or snap to bubble"></div>
+                            <div class="arrow-endpoint-handle arrow-tip-handle" data-id="${dec.id}" data-handle="tip" style="left: ${bounds.localEndX}px; top: ${bounds.localEndY}px;" title="Drag arrowhead 🔵 to re-position or snap to bubble"></div>
+                            `;
                         } else {
                             contentHtml += `
                             <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
@@ -6788,12 +6865,23 @@
             el.style.zIndex = dec.zIndex || 1;
 
             if (dec.type === 'arrow') {
+                const bounds = computeArrowBounds(dec);
                 const svgWrap = el.querySelector('.arrow-svg-wrapper');
                 if (svgWrap) {
                     const temp = document.createElement('div');
                     temp.innerHTML = buildArrowSvgContent(dec);
                     const newWrap = temp.firstElementChild;
                     if (newWrap) svgWrap.replaceWith(newWrap);
+                }
+                const tailHandle = el.querySelector('.arrow-tail-handle');
+                if (tailHandle) {
+                    tailHandle.style.left = bounds.localStartX + 'px';
+                    tailHandle.style.top = bounds.localStartY + 'px';
+                }
+                const tipHandle = el.querySelector('.arrow-tip-handle');
+                if (tipHandle) {
+                    tipHandle.style.left = bounds.localEndX + 'px';
+                    tipHandle.style.top = bounds.localEndY + 'px';
                 }
             }
         }
@@ -7535,126 +7623,439 @@
             triggerAutoSave();
         }
 
+        // --- ARROW DRAG-TO-DRAW & BUBBLE SNAPPING ENGINE ---
+        let isArrowDrawingMode = false;
+        let activeArrowDrawStyle = 'straight';
+        let arrowDrawStart = null;
+        let arrowDrawCurrent = null;
+        let arrowHandleDragInfo = null;
+
+        function screenToCanvasCoords(clientX, clientY) {
+            const canvasRect = canvasBg.getBoundingClientRect();
+            const x = (clientX - canvasRect.left - panX) / zoom;
+            const y = (clientY - canvasRect.top - panY) / zoom;
+            return { x: Math.round(x), y: Math.round(y) };
+        }
+
+        function findNearestBubbleAnchor(canvasX, canvasY, snapThreshold = 32) {
+            let bestSnap = null;
+            let minDistance = snapThreshold;
+
+            Object.values(nodes).forEach(node => {
+                const el = node.el;
+                const w = el ? el.offsetWidth : 120;
+                const h = el ? el.offsetHeight : 40;
+                const halfW = w / 2;
+                const halfH = h / 2;
+
+                const anchors = [
+                    { name: 'left',   x: node.x - halfW, y: node.y },
+                    { name: 'right',  x: node.x + halfW, y: node.y },
+                    { name: 'top',    x: node.x,         y: node.y - halfH },
+                    { name: 'bottom', x: node.x,         y: node.y + halfH }
+                ];
+
+                anchors.forEach(a => {
+                    const dist = Math.hypot(canvasX - a.x, canvasY - a.y);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        bestSnap = {
+                            nodeId: node.id,
+                            anchor: a.name,
+                            x: Math.round(a.x),
+                            y: Math.round(a.y),
+                            nodeText: node.text || 'Idea'
+                        };
+                    }
+                });
+            });
+
+            return bestSnap;
+        }
+
+        function getBubbleAnchorCoords(nodeId, anchorName = 'auto', targetX = null, targetY = null) {
+            const node = nodes[nodeId];
+            if (!node) return null;
+            const el = node.el;
+            const w = el ? el.offsetWidth : 120;
+            const h = el ? el.offsetHeight : 40;
+            const halfW = w / 2;
+            const halfH = h / 2;
+
+            const anchors = {
+                left:   { x: Math.round(node.x - halfW), y: Math.round(node.y) },
+                right:  { x: Math.round(node.x + halfW), y: Math.round(node.y) },
+                top:    { x: Math.round(node.x),         y: Math.round(node.y - halfH) },
+                bottom: { x: Math.round(node.x),         y: Math.round(node.y + halfH) }
+            };
+
+            if (anchorName && anchorName !== 'auto' && anchors[anchorName]) {
+                return anchors[anchorName];
+            }
+
+            if (targetX !== null && targetY !== null) {
+                let bestAnchor = anchors.right;
+                let minDist = Infinity;
+                Object.values(anchors).forEach(a => {
+                    const d = Math.hypot(targetX - a.x, targetY - a.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        bestAnchor = a;
+                    }
+                });
+                return bestAnchor;
+            }
+
+            return anchors.right;
+        }
+
+        function showSnapIndicator(x, y, nodeId) {
+            const snapIndicator = document.getElementById('arrow-snap-indicator');
+            if (snapIndicator) {
+                snapIndicator.setAttribute('cx', x);
+                snapIndicator.setAttribute('cy', y);
+                snapIndicator.classList.remove('hidden');
+            }
+            document.querySelectorAll('.bubble-node.snap-target-hover').forEach(el => {
+                if (el.dataset.id !== nodeId) el.classList.remove('snap-target-hover');
+            });
+            const targetEl = document.querySelector(`.bubble-node[data-id="${nodeId}"]`);
+            if (targetEl) targetEl.classList.add('snap-target-hover');
+        }
+
+        function hideSnapIndicator() {
+            const snapIndicator = document.getElementById('arrow-snap-indicator');
+            if (snapIndicator) snapIndicator.classList.add('hidden');
+            document.querySelectorAll('.bubble-node.snap-target-hover').forEach(el => el.classList.remove('snap-target-hover'));
+        }
+
+        function startArrowDrawMode(style = 'straight') {
+            isArrowDrawingMode = true;
+            activeArrowDrawStyle = style;
+            deselectDecoration();
+
+            const banner = document.getElementById('arrow-draw-banner');
+            if (banner) banner.classList.remove('hidden');
+
+            const canvasBg = document.getElementById('canvas-bg');
+            if (canvasBg) canvasBg.classList.add('drawing-arrow');
+
+            setSaveStatus('saved', `🎯 Draw Mode: Drag on canvas to draw ${getArrowStyleName(style)}`);
+        }
+
+        function cancelArrowDrawMode() {
+            isArrowDrawingMode = false;
+            arrowDrawStart = null;
+            arrowDrawCurrent = null;
+
+            const banner = document.getElementById('arrow-draw-banner');
+            if (banner) banner.classList.add('hidden');
+
+            const canvasBg = document.getElementById('canvas-bg');
+            if (canvasBg) canvasBg.classList.remove('drawing-arrow');
+
+            const overlay = document.getElementById('arrow-drawing-overlay');
+            if (overlay) overlay.classList.add('hidden');
+
+            hideSnapIndicator();
+        }
+
+        function detachArrowFromNodes(id) {
+            const dec = canvasDecorations[id];
+            if (!dec) return;
+            dec.startNodeId = null;
+            dec.startAnchor = null;
+            dec.endNodeId = null;
+            dec.endAnchor = null;
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+            setSaveStatus('saved', '✓ Detached Arrow from Bubbles');
+        }
+
+        function computeArrowBounds(dec) {
+            if (dec.startX === undefined || dec.endX === undefined) {
+                dec.startX = dec.x + 10;
+                dec.startY = dec.y + (dec.height || 60) / 2;
+                dec.endX = dec.x + (dec.width || 200) - 10;
+                dec.endY = dec.y + (dec.height || 60) / 2;
+                if (dec.rotation === 90) {
+                    dec.endX = dec.startX;
+                    dec.endY = dec.startY + (dec.width || 200) - 20;
+                } else if (dec.rotation === 180) {
+                    dec.endX = dec.startX - (dec.width || 200) + 20;
+                } else if (dec.rotation === 270) {
+                    dec.endX = dec.startX;
+                    dec.endY = dec.startY - (dec.width || 200) + 20;
+                }
+            }
+            const sx = dec.startX;
+            const sy = dec.startY;
+            const ex = dec.endX;
+            const ey = dec.endY;
+            const pad = Math.max(26, (dec.strokeWidth || 3) * 4);
+            const minX = Math.min(sx, ex) - pad;
+            const minY = Math.min(sy, ey) - pad;
+            const maxX = Math.max(sx, ex) + pad;
+            const maxY = Math.max(sy, ey) + pad;
+
+            return {
+                x: Math.round(minX),
+                y: Math.round(minY),
+                width: Math.max(Math.round(maxX - minX), 40),
+                height: Math.max(Math.round(maxY - minY), 30),
+                localStartX: sx - minX,
+                localStartY: sy - minY,
+                localEndX: ex - minX,
+                localEndY: ey - minY
+            };
+        }
+
+        function updateBoundArrows() {
+            let hasChanges = false;
+            Object.values(canvasDecorations).forEach(dec => {
+                if (dec.type !== 'arrow') return;
+                let changed = false;
+                if (dec.startNodeId && nodes[dec.startNodeId]) {
+                    const coords = getBubbleAnchorCoords(dec.startNodeId, dec.startAnchor || 'auto', dec.endX, dec.endY);
+                    if (coords && (dec.startX !== coords.x || dec.startY !== coords.y)) {
+                        dec.startX = coords.x;
+                        dec.startY = coords.y;
+                        changed = true;
+                    }
+                }
+                if (dec.endNodeId && nodes[dec.endNodeId]) {
+                    const coords = getBubbleAnchorCoords(dec.endNodeId, dec.endAnchor || 'auto', dec.startX, dec.startY);
+                    if (coords && (dec.endX !== coords.x || dec.endY !== coords.y)) {
+                        dec.endX = coords.x;
+                        dec.endY = coords.y;
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    hasChanges = true;
+                    const bounds = computeArrowBounds(dec);
+                    dec.x = bounds.x;
+                    dec.y = bounds.y;
+                    dec.width = bounds.width;
+                    dec.height = bounds.height;
+                    updateDecorationElement(dec.id);
+                }
+            });
+            if (hasChanges) {
+                if (selectedDecorationId && canvasDecorations[selectedDecorationId] && canvasDecorations[selectedDecorationId].type === 'arrow') {
+                    updateDecorationElement(selectedDecorationId);
+                }
+            }
+        }
+
+        function commitDrawnArrow(startX, startY, endX, endY, startNodeId = null, startAnchor = null, endNodeId = null, endAnchor = null) {
+            const id = 'dec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            const order = getDecorationsInLayer('behind').length + 1;
+            const style = activeArrowDrawStyle || 'straight';
+
+            const dist = Math.hypot(endX - startX, endY - startY);
+            if (dist < 10) {
+                const defaultW = (style === 'bidirectional' ? 240 : 200);
+                endX = startX + defaultW;
+                endY = startY;
+            }
+
+            const dec = {
+                id,
+                type: 'arrow',
+                arrowStyle: style,
+                startX: Math.round(startX),
+                startY: Math.round(startY),
+                endX: Math.round(endX),
+                endY: Math.round(endY),
+                startNodeId: startNodeId || null,
+                startAnchor: startAnchor || (startNodeId ? 'auto' : null),
+                endNodeId: endNodeId || null,
+                endAnchor: endAnchor || (endNodeId ? 'auto' : null),
+                title: '',
+                color: '#3b82f6',
+                strokeWidth: 3,
+                rotation: 0,
+                flipX: 1,
+                flipY: 1,
+                opacity: 1,
+                layer: 'behind',
+                zIndex: order
+            };
+
+            const bounds = computeArrowBounds(dec);
+            dec.x = bounds.x;
+            dec.y = bounds.y;
+            dec.width = bounds.width;
+            dec.height = bounds.height;
+
+            canvasDecorations[id] = dec;
+            selectedDecorationId = id;
+
+            cancelArrowDrawMode();
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+            setSaveStatus('saved', `✓ Added ${getArrowStyleName(style)}`);
+        }
+
         function buildArrowSvgContent(dec) {
-            const w = Math.max(dec.width || 200, 30);
-            const h = Math.max(dec.height || 70, 20);
+            const bounds = computeArrowBounds(dec);
+            const w = bounds.width;
+            const h = bounds.height;
+            const lx1 = bounds.localStartX;
+            const ly1 = bounds.localStartY;
+            const lx2 = bounds.localEndX;
+            const ly2 = bounds.localEndY;
+
             const color = dec.color || '#3b82f6';
             const strokeWidth = dec.strokeWidth || 3;
             const style = dec.arrowStyle || 'straight';
-            const rot = dec.rotation || 0;
-            const flipX = dec.flipX || 1;
-            const flipY = dec.flipY || 1;
             const hasLabel = !!dec.title;
 
+            const dx = lx2 - lx1;
+            const dy = ly2 - ly1;
+            const dist = Math.hypot(dx, dy);
+            const angleRad = Math.atan2(dy, dx);
+            const angleDeg = angleRad * 180 / Math.PI;
+
             const headSize = Math.max(12, strokeWidth * 3.6);
-            const pad = Math.max(10, strokeWidth * 2);
 
             let innerSvg = '';
 
             if (style === 'straight' || style === 'dashed') {
                 const isDashed = style === 'dashed';
-                const startX = pad;
-                const endX = w - pad;
-                const midY = h / 2;
-                const lineEndX = Math.max(startX, endX - headSize * 0.75);
                 const dashAttr = isDashed ? `stroke-dasharray="${strokeWidth * 2.5}, ${strokeWidth * 1.8}"` : '';
+                const lineEndX = lx2 - Math.cos(angleRad) * Math.min(headSize * 0.75, dist * 0.6);
+                const lineEndY = ly2 - Math.sin(angleRad) * Math.min(headSize * 0.75, dist * 0.6);
 
                 innerSvg = `
-                    <line x1="${startX}" y1="${midY}" x2="${lineEndX}" y2="${midY}" 
+                    <line x1="${lx1}" y1="${ly1}" x2="${lineEndX}" y2="${lineEndY}" 
                           stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" ${dashAttr} />
-                    <polygon points="${endX},${midY} ${endX - headSize},${midY - headSize * 0.55} ${endX - headSize * 0.75},${midY} ${endX - headSize},${midY + headSize * 0.55}" 
-                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${angleDeg})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
                 `;
             } else if (style === 'bidirectional') {
-                const startX = pad;
-                const endX = w - pad;
-                const midY = h / 2;
-                const lineStartX = startX + headSize * 0.75;
-                const lineEndX = Math.max(lineStartX, endX - headSize * 0.75);
+                const lineStartX = lx1 + Math.cos(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
+                const lineStartY = ly1 + Math.sin(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
+                const lineEndX = lx2 - Math.cos(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
+                const lineEndY = ly2 - Math.sin(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
 
                 innerSvg = `
-                    <polygon points="${startX},${midY} ${startX + headSize},${midY - headSize * 0.55} ${startX + headSize * 0.75},${midY} ${startX + headSize},${midY + headSize * 0.55}" 
-                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
-                    <line x1="${lineStartX}" y1="${midY}" x2="${lineEndX}" y2="${midY}" 
+                    <g transform="translate(${lx1}, ${ly1}) rotate(${angleDeg + 180})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
+                    <line x1="${lineStartX}" y1="${lineStartY}" x2="${lineEndX}" y2="${lineEndY}" 
                           stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
-                    <polygon points="${endX},${midY} ${endX - headSize},${midY - headSize * 0.55} ${endX - headSize * 0.75},${midY} ${endX - headSize},${midY + headSize * 0.55}" 
-                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${angleDeg})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
                 `;
             } else if (style === 'curved') {
-                const startX = pad;
-                const startY = pad + 4;
-                const endX = w - pad;
-                const endY = h - pad - 4;
-                const targetX = Math.max(startX + 16, endX - headSize * 0.75);
+                const mx = (lx1 + lx2) / 2;
+                const my = (ly1 + ly2) / 2;
+                const norm = dist || 1;
+                const curveOffset = Math.min(70, Math.max(20, norm * 0.22));
+                const cx = mx - (dy / norm) * curveOffset;
+                const cy = my + (dx / norm) * curveOffset;
 
-                const cp1x = startX + (endX - startX) * 0.5;
-                const cp1y = startY;
-                const cp2x = startX + (endX - startX) * 0.45;
-                const cp2y = endY;
+                const tipAngle = Math.atan2(ly2 - cy, lx2 - cx) * 180 / Math.PI;
+                const tipRad = tipAngle * Math.PI / 180;
+                const targetEndX = lx2 - Math.cos(tipRad) * Math.min(headSize * 0.75, dist * 0.5);
+                const targetEndY = ly2 - Math.sin(tipRad) * Math.min(headSize * 0.75, dist * 0.5);
 
                 innerSvg = `
-                    <path d="M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetX} ${endY}" 
+                    <path d="M ${lx1} ${ly1} Q ${cx} ${cy} ${targetEndX} ${targetEndY}" 
                           fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
-                    <polygon points="${endX},${endY} ${endX - headSize},${endY - headSize * 0.55} ${endX - headSize * 0.75},${endY} ${endX - headSize},${endY + headSize * 0.55}" 
-                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${tipAngle})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
                 `;
             } else if (style === 'elbow') {
-                const startX = pad;
-                const startY = pad + 4;
-                const endX = w - pad;
-                const endY = h - pad - 4;
-                const midX = Math.round(startX + (endX - startX) * 0.45);
-                const r = Math.min(16, Math.max(4, Math.abs(midX - startX) * 0.4), Math.max(4, Math.abs(endY - startY) * 0.4));
-                const targetX = Math.max(midX + r, endX - headSize * 0.75);
+                let pathD = '';
+                let finalAngle = angleDeg;
+                const r = Math.min(16, Math.max(4, Math.abs(dx) * 0.3), Math.max(4, Math.abs(dy) * 0.3));
+
+                if (Math.abs(dx) >= Math.abs(dy)) {
+                    const midX = (lx1 + lx2) / 2;
+                    const signX = dx >= 0 ? 1 : -1;
+                    const signY = dy >= 0 ? 1 : -1;
+                    const targetEndX = lx2 - signX * Math.min(headSize * 0.75, Math.abs(dx) * 0.4);
+                    finalAngle = signX >= 0 ? 0 : 180;
+
+                    if (Math.abs(dy) < 12) {
+                        pathD = `M ${lx1} ${ly1} L ${targetEndX} ${ly2}`;
+                    } else {
+                        pathD = `M ${lx1} ${ly1} H ${midX - signX * r} Q ${midX} ${ly1} ${midX} ${ly1 + signY * r} V ${ly2 - signY * r} Q ${midX} ${ly2} ${midX + signX * r} ${ly2} H ${targetEndX}`;
+                    }
+                } else {
+                    const midY = (ly1 + ly2) / 2;
+                    const signX = dx >= 0 ? 1 : -1;
+                    const signY = dy >= 0 ? 1 : -1;
+                    const targetEndY = ly2 - signY * Math.min(headSize * 0.75, Math.abs(dy) * 0.4);
+                    finalAngle = signY >= 0 ? 90 : 270;
+
+                    if (Math.abs(dx) < 12) {
+                        pathD = `M ${lx1} ${ly1} V ${midY - signY * r} Q ${lx1} ${midY} ${lx1 + signX * r} ${midY} H ${lx2 - signX * r} Q ${lx2} ${midY} ${lx2} ${midY + signY * r} V ${targetEndY}`;
+                    }
+                }
 
                 innerSvg = `
-                    <path d="M ${startX} ${startY} H ${midX - r} Q ${midX} ${startY} ${midX} ${startY + r} V ${endY - r} Q ${midX} ${endY} ${midX + r} ${endY} H ${targetX}" 
-                          fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
-                    <polygon points="${endX},${endY} ${endX - headSize},${endY - headSize * 0.55} ${endX - headSize * 0.75},${endY} ${endX - headSize},${endY + headSize * 0.55}" 
-                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${finalAngle})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
                 `;
             } else if (style === 'block') {
-                const startX = pad;
-                const endX = w - pad;
-                const midY = h / 2;
-                const stemHeight = Math.max(12, Math.min(h * 0.45, 42));
-                const headWidth = Math.max(20, Math.min((endX - startX) * 0.38, 56));
-                const headHeight = Math.max(stemHeight + 14, Math.min(h - pad * 1.4, stemHeight * 2.2));
-                const headStartX = Math.max(startX + 16, endX - headWidth);
+                const stemHeight = Math.max(12, Math.min(strokeWidth * 4.5, 36));
+                const headWidth = Math.max(18, Math.min(dist * 0.35, 50));
+                const headHeight = Math.max(stemHeight + 14, stemHeight * 2.2);
+                const headStartX = Math.max(14, dist - headWidth);
 
-                const stemTop = midY - stemHeight / 2;
-                const stemBottom = midY + stemHeight / 2;
-                const headTop = midY - headHeight / 2;
-                const headBottom = midY + headHeight / 2;
+                const stemTop = -stemHeight / 2;
+                const stemBottom = stemHeight / 2;
+                const headTop = -headHeight / 2;
+                const headBottom = headHeight / 2;
 
                 const points = [
-                    `${startX},${stemTop}`,
+                    `0,${stemTop}`,
                     `${headStartX},${stemTop}`,
                     `${headStartX},${headTop}`,
-                    `${endX},${midY}`,
+                    `${dist},0`,
                     `${headStartX},${headBottom}`,
                     `${headStartX},${stemBottom}`,
-                    `${startX},${stemBottom}`
+                    `0,${stemBottom}`
                 ].join(' ');
 
                 innerSvg = `
-                    <polygon points="${points}" 
-                             fill="${color}" 
-                             stroke="rgba(0,0,0,0.12)" 
-                             stroke-width="1.5" 
-                             stroke-linejoin="round" />
+                    <g transform="translate(${lx1}, ${ly1}) rotate(${angleDeg})">
+                        <polygon points="${points}" 
+                                 fill="${color}" 
+                                 stroke="rgba(0,0,0,0.15)" 
+                                 stroke-width="1.5" 
+                                 stroke-linejoin="round" />
+                    </g>
                 `;
             }
+
+            const midX = (lx1 + lx2) / 2;
+            const midY = (ly1 + ly2) / 2;
 
             return `
                 <div class="arrow-svg-wrapper w-full h-full relative pointer-events-none select-none">
                     <svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="overflow-visible w-full h-full pointer-events-none">
-                        <g transform="translate(${w / 2}, ${h / 2}) rotate(${rot}) scale(${flipX}, ${flipY}) translate(${-w / 2}, ${-h / 2})">
-                            ${innerSvg}
-                        </g>
+                        ${innerSvg}
                     </svg>
                     ${hasLabel ? `
-                    <div class="arrow-label-badge absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm border border-slate-200 bg-white/95 text-slate-800 pointer-events-auto select-text cursor-text transition-transform hover:scale-105" 
+                    <div class="arrow-label-badge absolute px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm border border-slate-200 bg-white/95 text-slate-800 pointer-events-auto select-text cursor-text transition-transform hover:scale-105" 
+                         style="left: ${midX}px; top: ${midY}px; transform: translate(-50%, -50%);"
                          contenteditable="true" 
                          onmousedown="event.stopPropagation()"
                          onblur="updateDecorationTitle('${dec.id}', this.innerText)"
@@ -7662,6 +8063,149 @@
                     ` : ''}
                 </div>
             `;
+        }
+
+        function renderGhostArrow(sx, sy, ex, ey, style = 'straight', color = '#3b82f6', strokeWidth = 3) {
+            const overlay = document.getElementById('arrow-drawing-overlay');
+            const ghostGroup = document.getElementById('arrow-drawing-ghost');
+            if (!overlay || !ghostGroup) return;
+
+            overlay.classList.remove('hidden');
+
+            const lx1 = sx;
+            const ly1 = sy;
+            const lx2 = ex;
+            const ly2 = ey;
+
+            const dx = lx2 - lx1;
+            const dy = ly2 - ly1;
+            const dist = Math.hypot(dx, dy);
+            const angleRad = Math.atan2(dy, dx);
+            const angleDeg = angleRad * 180 / Math.PI;
+            const headSize = Math.max(12, strokeWidth * 3.6);
+
+            let ghostSvg = '';
+            if (style === 'straight' || style === 'dashed') {
+                const isDashed = style === 'dashed';
+                const dashAttr = isDashed ? `stroke-dasharray="${strokeWidth * 2.5}, ${strokeWidth * 1.8}"` : '';
+                const lineEndX = lx2 - Math.cos(angleRad) * Math.min(headSize * 0.75, dist * 0.6);
+                const lineEndY = ly2 - Math.sin(angleRad) * Math.min(headSize * 0.75, dist * 0.6);
+
+                ghostSvg = `
+                    <line x1="${lx1}" y1="${ly1}" x2="${lineEndX}" y2="${lineEndY}" 
+                          stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" ${dashAttr} />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${angleDeg})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
+                `;
+            } else if (style === 'bidirectional') {
+                const lineStartX = lx1 + Math.cos(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
+                const lineStartY = ly1 + Math.sin(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
+                const lineEndX = lx2 - Math.cos(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
+                const lineEndY = ly2 - Math.sin(angleRad) * Math.min(headSize * 0.75, dist * 0.35);
+
+                ghostSvg = `
+                    <g transform="translate(${lx1}, ${ly1}) rotate(${angleDeg + 180})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
+                    <line x1="${lineStartX}" y1="${lineStartY}" x2="${lineEndX}" y2="${lineEndY}" 
+                          stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${angleDeg})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
+                `;
+            } else if (style === 'curved') {
+                const mx = (lx1 + lx2) / 2;
+                const my = (ly1 + ly2) / 2;
+                const norm = dist || 1;
+                const curveOffset = Math.min(70, Math.max(20, norm * 0.22));
+                const cx = mx - (dy / norm) * curveOffset;
+                const cy = my + (dx / norm) * curveOffset;
+                const tipAngle = Math.atan2(ly2 - cy, lx2 - cx) * 180 / Math.PI;
+                const tipRad = tipAngle * Math.PI / 180;
+                const targetEndX = lx2 - Math.cos(tipRad) * Math.min(headSize * 0.75, dist * 0.5);
+                const targetEndY = ly2 - Math.sin(tipRad) * Math.min(headSize * 0.75, dist * 0.5);
+
+                ghostSvg = `
+                    <path d="M ${lx1} ${ly1} Q ${cx} ${cy} ${targetEndX} ${targetEndY}" 
+                          fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${tipAngle})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
+                `;
+            } else if (style === 'elbow') {
+                let pathD = '';
+                let finalAngle = angleDeg;
+                const r = Math.min(16, Math.max(4, Math.abs(dx) * 0.3), Math.max(4, Math.abs(dy) * 0.3));
+
+                if (Math.abs(dx) >= Math.abs(dy)) {
+                    const midX = (lx1 + lx2) / 2;
+                    const signX = dx >= 0 ? 1 : -1;
+                    const signY = dy >= 0 ? 1 : -1;
+                    const targetEndX = lx2 - signX * Math.min(headSize * 0.75, Math.abs(dx) * 0.4);
+                    finalAngle = signX >= 0 ? 0 : 180;
+
+                    if (Math.abs(dy) < 12) {
+                        pathD = `M ${lx1} ${ly1} L ${targetEndX} ${ly2}`;
+                    } else {
+                        pathD = `M ${lx1} ${ly1} H ${midX - signX * r} Q ${midX} ${ly1} ${midX} ${ly1 + signY * r} V ${ly2 - signY * r} Q ${midX} ${ly2} ${midX + signX * r} ${ly2} H ${targetEndX}`;
+                    }
+                } else {
+                    const midY = (ly1 + ly2) / 2;
+                    const signX = dx >= 0 ? 1 : -1;
+                    const signY = dy >= 0 ? 1 : -1;
+                    const targetEndY = ly2 - signY * Math.min(headSize * 0.75, Math.abs(dy) * 0.4);
+                    finalAngle = signY >= 0 ? 90 : 270;
+
+                    if (Math.abs(dx) < 12) {
+                        pathD = `M ${lx1} ${ly1} V ${midY - signY * r} Q ${lx1} ${midY} ${lx1 + signX * r} ${midY} H ${lx2 - signX * r} Q ${lx2} ${midY} ${lx2} ${midY + signY * r} V ${targetEndY}`;
+                    }
+                }
+
+                ghostSvg = `
+                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                    <g transform="translate(${lx2}, ${ly2}) rotate(${finalAngle})">
+                        <polygon points="0,0 -${headSize},-${headSize * 0.55} -${headSize * 0.75},0 -${headSize},${headSize * 0.55}" 
+                                 fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    </g>
+                `;
+            } else if (style === 'block') {
+                const stemHeight = Math.max(12, Math.min(strokeWidth * 4.5, 36));
+                const headWidth = Math.max(18, Math.min(dist * 0.35, 50));
+                const headHeight = Math.max(stemHeight + 14, stemHeight * 2.2);
+                const headStartX = Math.max(14, dist - headWidth);
+
+                const stemTop = -stemHeight / 2;
+                const stemBottom = stemHeight / 2;
+                const headTop = -headHeight / 2;
+                const headBottom = headHeight / 2;
+
+                const points = [
+                    `0,${stemTop}`,
+                    `${headStartX},${stemTop}`,
+                    `${headStartX},${headTop}`,
+                    `${dist},0`,
+                    `${headStartX},${headBottom}`,
+                    `${headStartX},${stemBottom}`,
+                    `0,${stemBottom}`
+                ].join(' ');
+
+                ghostSvg = `
+                    <g transform="translate(${lx1}, ${ly1}) rotate(${angleDeg})">
+                        <polygon points="${points}" 
+                                 fill="${color}" 
+                                 stroke="rgba(0,0,0,0.15)" 
+                                 stroke-width="1.5" 
+                                 stroke-linejoin="round" />
+                    </g>
+                `;
+            }
+
+            ghostGroup.innerHTML = ghostSvg;
         }
 
         // --- INLINE EDITING ENGINE ---
@@ -7803,9 +8347,58 @@
 
             if (isInlineEditing) return; // Don't start drag while editing
 
-            // 0. Check if clicking inside floating design toolbar or its dropdowns
-            if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar')) {
+            // 0. Check if clicking inside floating design toolbar or its dropdowns or drawing banner
+            if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar') || e.target.closest('#arrow-draw-banner')) {
                 return;
+            }
+
+            // A. Check if Arrow Draw Mode is Active!
+            if (isArrowDrawingMode) {
+                const pt = screenToCanvasCoords(e.clientX, e.clientY);
+                const snap = findNearestBubbleAnchor(pt.x, pt.y, 36);
+                const startX = snap ? snap.x : pt.x;
+                const startY = snap ? snap.y : pt.y;
+                arrowDrawStart = {
+                    x: startX,
+                    y: startY,
+                    nodeId: snap ? snap.nodeId : null,
+                    anchor: snap ? snap.anchor : null
+                };
+                arrowDrawCurrent = { ...arrowDrawStart };
+                renderGhostArrow(startX, startY, startX, startY, activeArrowDrawStyle, '#3b82f6', 3);
+                if (snap) {
+                    showSnapIndicator(snap.x, snap.y, snap.nodeId);
+                } else {
+                    hideSnapIndicator();
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            // B. Check if clicking on arrow endpoint handle (Tail or Tip)
+            if (isDesignSelectable) {
+                const endpointHandle = e.target.closest('.arrow-endpoint-handle');
+                if (endpointHandle) {
+                    const decId = endpointHandle.dataset.id;
+                    const handleType = endpointHandle.dataset.handle;
+                    const dec = canvasDecorations[decId];
+                    if (dec) {
+                        arrowHandleDragInfo = {
+                            id: decId,
+                            handle: handleType,
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            initialStartX: dec.startX,
+                            initialStartY: dec.startY,
+                            initialEndX: dec.endX,
+                            initialEndY: dec.endY
+                        };
+                        e.stopPropagation();
+                        e.preventDefault();
+                        return;
+                    }
+                }
             }
 
             // 1. Check if clicking on decoration resize handle
@@ -7860,7 +8453,7 @@
                 return;
             }
 
-            // 4. Check if clicking on a canvas decoration (shape, textbox, image)
+            // 4. Check if clicking on a canvas decoration (shape, textbox, image, arrow)
             if (isDesignSelectable) {
                 const decEl = e.target.closest('.canvas-decoration');
                 if (decEl) {
@@ -7889,6 +8482,10 @@
                         startY: e.clientY,
                         initialX: canvasDecorations[decId].x,
                         initialY: canvasDecorations[decId].y,
+                        initialStartX: canvasDecorations[decId].startX,
+                        initialStartY: canvasDecorations[decId].startY,
+                        initialEndX: canvasDecorations[decId].endX,
+                        initialEndY: canvasDecorations[decId].endY,
                         hasMoved: false,
                         wasSelected: wasAlreadySelected,
                         clickedText: isTextContent
@@ -7908,14 +8505,118 @@
         });
 
         window.addEventListener('mousemove', e => {
+            // A. Live Ghost Drawing in Arrow Draw Mode
+            if (arrowDrawStart) {
+                const pt = screenToCanvasCoords(e.clientX, e.clientY);
+                const snap = findNearestBubbleAnchor(pt.x, pt.y, 36);
+                let curX = snap ? snap.x : pt.x;
+                let curY = snap ? snap.y : pt.y;
+
+                if (!snap && e.shiftKey) {
+                    const dx = curX - arrowDrawStart.x;
+                    const dy = curY - arrowDrawStart.y;
+                    const dist = Math.hypot(dx, dy);
+                    const angle = Math.atan2(dy, dx);
+                    const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+                    curX = Math.round(arrowDrawStart.x + Math.cos(snapAngle) * dist);
+                    curY = Math.round(arrowDrawStart.y + Math.sin(snapAngle) * dist);
+                }
+
+                arrowDrawCurrent = {
+                    x: curX,
+                    y: curY,
+                    nodeId: snap ? snap.nodeId : null,
+                    anchor: snap ? snap.anchor : null
+                };
+
+                if (snap) {
+                    showSnapIndicator(snap.x, snap.y, snap.nodeId);
+                } else {
+                    hideSnapIndicator();
+                }
+
+                renderGhostArrow(arrowDrawStart.x, arrowDrawStart.y, curX, curY, activeArrowDrawStyle, '#3b82f6', 3);
+                return;
+            }
+
+            // B. Dragging Arrow Endpoint Handle (Tail or Tip)
+            if (arrowHandleDragInfo) {
+                const dec = canvasDecorations[arrowHandleDragInfo.id];
+                if (dec) {
+                    const pt = screenToCanvasCoords(e.clientX, e.clientY);
+                    const snap = findNearestBubbleAnchor(pt.x, pt.y, 36);
+                    let curX = snap ? snap.x : pt.x;
+                    let curY = snap ? snap.y : pt.y;
+
+                    if (!snap && e.shiftKey) {
+                        const origin = arrowHandleDragInfo.handle === 'tail' 
+                            ? { x: dec.endX, y: dec.endY } 
+                            : { x: dec.startX, y: dec.startY };
+                        const dx = curX - origin.x;
+                        const dy = curY - origin.y;
+                        const dist = Math.hypot(dx, dy);
+                        const angle = Math.atan2(dy, dx);
+                        const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+                        curX = Math.round(origin.x + Math.cos(snapAngle) * dist);
+                        curY = Math.round(origin.y + Math.sin(snapAngle) * dist);
+                    }
+
+                    if (arrowHandleDragInfo.handle === 'tail') {
+                        dec.startX = curX;
+                        dec.startY = curY;
+                        dec.startNodeId = snap ? snap.nodeId : null;
+                        dec.startAnchor = snap ? snap.anchor : null;
+                    } else {
+                        dec.endX = curX;
+                        dec.endY = curY;
+                        dec.endNodeId = snap ? snap.nodeId : null;
+                        dec.endAnchor = snap ? snap.anchor : null;
+                    }
+
+                    const bounds = computeArrowBounds(dec);
+                    dec.x = bounds.x;
+                    dec.y = bounds.y;
+                    dec.width = bounds.width;
+                    dec.height = bounds.height;
+                    updateDecorationElement(dec.id);
+
+                    if (snap) {
+                        showSnapIndicator(snap.x, snap.y, snap.nodeId);
+                    } else {
+                        hideSnapIndicator();
+                    }
+                }
+                return;
+            }
+
+            // C. Dragging Decoration Body
             if (decDragInfo) {
                 const dx = (e.clientX - decDragInfo.startX) / zoom;
                 const dy = (e.clientY - decDragInfo.startY) / zoom;
                 if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
                     decDragInfo.hasMoved = true;
                 }
-                canvasDecorations[decDragInfo.id].x = Math.round(decDragInfo.initialX + dx);
-                canvasDecorations[decDragInfo.id].y = Math.round(decDragInfo.initialY + dy);
+                const dec = canvasDecorations[decDragInfo.id];
+                if (dec && dec.type === 'arrow' && decDragInfo.initialStartX !== undefined) {
+                    dec.startX = Math.round(decDragInfo.initialStartX + dx);
+                    dec.startY = Math.round(decDragInfo.initialStartY + dy);
+                    dec.endX = Math.round(decDragInfo.initialEndX + dx);
+                    dec.endY = Math.round(decDragInfo.initialEndY + dy);
+                    if (decDragInfo.hasMoved) {
+                        dec.startNodeId = null;
+                        dec.startAnchor = null;
+                        dec.endNodeId = null;
+                        dec.endAnchor = null;
+                    }
+                    const bounds = computeArrowBounds(dec);
+                    dec.x = bounds.x;
+                    dec.y = bounds.y;
+                    dec.width = bounds.width;
+                    dec.height = bounds.height;
+                } else if (dec) {
+                    dec.x = Math.round(decDragInfo.initialX + dx);
+                    dec.y = Math.round(decDragInfo.initialY + dy);
+                }
                 updateDecorationElement(decDragInfo.id);
                 return;
             }
@@ -7955,12 +8656,34 @@
             if (e && (e.button === 3 || e.button === 4)) {
                 e.preventDefault();
             }
+            if (arrowDrawStart) {
+                const cur = arrowDrawCurrent || arrowDrawStart;
+                commitDrawnArrow(
+                    arrowDrawStart.x, arrowDrawStart.y,
+                    cur.x, cur.y,
+                    arrowDrawStart.nodeId, arrowDrawStart.anchor,
+                    cur.nodeId, cur.anchor
+                );
+                arrowDrawStart = null;
+                arrowDrawCurrent = null;
+                hideSnapIndicator();
+                return;
+            }
+            if (arrowHandleDragInfo) {
+                arrowHandleDragInfo = null;
+                hideSnapIndicator();
+                renderDecorations();
+                syncFromMap();
+                triggerAutoSave();
+                return;
+            }
             if (decDragInfo) {
                 if (!decDragInfo.hasMoved && decDragInfo.wasSelected && decDragInfo.clickedText && !editingDecorationId) {
                     startEditingDecoration(decDragInfo.id);
                 }
                 if (decDragInfo.hasMoved) {
                     triggerAutoSave();
+                    syncFromMap();
                 }
                 decDragInfo = null;
             }
@@ -8061,6 +8784,51 @@
                     return; // Allow virtual keyboard focus
                 }
 
+                // A0. Check Arrow Draw Mode for Touch
+                if (isArrowDrawingMode) {
+                    const pt = screenToCanvasCoords(touch.clientX, touch.clientY);
+                    const snap = findNearestBubbleAnchor(pt.x, pt.y, 36);
+                    const startX = snap ? snap.x : pt.x;
+                    const startY = snap ? snap.y : pt.y;
+                    arrowDrawStart = {
+                        x: startX,
+                        y: startY,
+                        nodeId: snap ? snap.nodeId : null,
+                        anchor: snap ? snap.anchor : null
+                    };
+                    arrowDrawCurrent = { ...arrowDrawStart };
+                    renderGhostArrow(startX, startY, startX, startY, activeArrowDrawStyle, '#3b82f6', 3);
+                    if (snap) showSnapIndicator(snap.x, snap.y, snap.nodeId);
+                    else hideSnapIndicator();
+                    e.preventDefault();
+                    return;
+                }
+
+                // A1. Check Arrow Endpoint Handle for Touch
+                if (isDesignSelectable) {
+                    const endpointHandle = e.target.closest('.arrow-endpoint-handle');
+                    if (endpointHandle) {
+                        const decId = endpointHandle.dataset.id;
+                        const handleType = endpointHandle.dataset.handle;
+                        const dec = canvasDecorations[decId];
+                        if (dec) {
+                            arrowHandleDragInfo = {
+                                id: decId,
+                                handle: handleType,
+                                startX: touch.clientX,
+                                startY: touch.clientY,
+                                initialStartX: dec.startX,
+                                initialStartY: dec.startY,
+                                initialEndX: dec.endX,
+                                initialEndY: dec.endY
+                            };
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                        }
+                    }
+                }
+
                 // A. Check if touching decoration resize handle
                 if (isDesignSelectable) {
                     const handleEl = e.target.closest('.decoration-resize-handle');
@@ -8142,6 +8910,10 @@
                             startY: touch.clientY,
                             initialX: canvasDecorations[decId].x,
                             initialY: canvasDecorations[decId].y,
+                            initialStartX: canvasDecorations[decId].startX,
+                            initialStartY: canvasDecorations[decId].startY,
+                            initialEndX: canvasDecorations[decId].endX,
+                            initialEndY: canvasDecorations[decId].endY,
                             hasMoved: false,
                             wasSelected: wasAlreadySelected,
                             clickedText: isTextContent
@@ -8197,12 +8969,80 @@
             if (e.touches.length === 1 && !isTouchPinching) {
                 const touch = e.touches[0];
 
+                if (arrowDrawStart) {
+                    touchHasMoved = true;
+                    const pt = screenToCanvasCoords(touch.clientX, touch.clientY);
+                    const snap = findNearestBubbleAnchor(pt.x, pt.y, 36);
+                    let curX = snap ? snap.x : pt.x;
+                    let curY = snap ? snap.y : pt.y;
+                    arrowDrawCurrent = {
+                        x: curX,
+                        y: curY,
+                        nodeId: snap ? snap.nodeId : null,
+                        anchor: snap ? snap.anchor : null
+                    };
+                    if (snap) showSnapIndicator(snap.x, snap.y, snap.nodeId);
+                    else hideSnapIndicator();
+                    renderGhostArrow(arrowDrawStart.x, arrowDrawStart.y, curX, curY, activeArrowDrawStyle, '#3b82f6', 3);
+                    e.preventDefault();
+                    return;
+                }
+
+                if (arrowHandleDragInfo) {
+                    touchHasMoved = true;
+                    const dec = canvasDecorations[arrowHandleDragInfo.id];
+                    if (dec) {
+                        const pt = screenToCanvasCoords(touch.clientX, touch.clientY);
+                        const snap = findNearestBubbleAnchor(pt.x, pt.y, 36);
+                        let curX = snap ? snap.x : pt.x;
+                        let curY = snap ? snap.y : pt.y;
+                        if (arrowHandleDragInfo.handle === 'tail') {
+                            dec.startX = curX;
+                            dec.startY = curY;
+                            dec.startNodeId = snap ? snap.nodeId : null;
+                            dec.startAnchor = snap ? snap.anchor : null;
+                        } else {
+                            dec.endX = curX;
+                            dec.endY = curY;
+                            dec.endNodeId = snap ? snap.nodeId : null;
+                            dec.endAnchor = snap ? snap.anchor : null;
+                        }
+                        const bounds = computeArrowBounds(dec);
+                        dec.x = bounds.x;
+                        dec.y = bounds.y;
+                        dec.width = bounds.width;
+                        dec.height = bounds.height;
+                        updateDecorationElement(dec.id);
+                        if (snap) showSnapIndicator(snap.x, snap.y, snap.nodeId);
+                        else hideSnapIndicator();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+
                 if (decDragInfo) {
                     touchHasMoved = true;
                     const dx = (touch.clientX - decDragInfo.startX) / zoom;
                     const dy = (touch.clientY - decDragInfo.startY) / zoom;
-                    canvasDecorations[decDragInfo.id].x = Math.round(decDragInfo.initialX + dx);
-                    canvasDecorations[decDragInfo.id].y = Math.round(decDragInfo.initialY + dy);
+                    const dec = canvasDecorations[decDragInfo.id];
+                    if (dec && dec.type === 'arrow' && decDragInfo.initialStartX !== undefined) {
+                        dec.startX = Math.round(decDragInfo.initialStartX + dx);
+                        dec.startY = Math.round(decDragInfo.initialStartY + dy);
+                        dec.endX = Math.round(decDragInfo.initialEndX + dx);
+                        dec.endY = Math.round(decDragInfo.initialEndY + dy);
+                        dec.startNodeId = null;
+                        dec.startAnchor = null;
+                        dec.endNodeId = null;
+                        dec.endAnchor = null;
+                        const bounds = computeArrowBounds(dec);
+                        dec.x = bounds.x;
+                        dec.y = bounds.y;
+                        dec.width = bounds.width;
+                        dec.height = bounds.height;
+                    } else if (dec) {
+                        dec.x = Math.round(decDragInfo.initialX + dx);
+                        dec.y = Math.round(decDragInfo.initialY + dy);
+                    }
                     updateDecorationElement(decDragInfo.id);
                     e.preventDefault();
                     return;
@@ -8255,12 +9095,36 @@
                 return;
             }
 
+            if (arrowDrawStart) {
+                const cur = arrowDrawCurrent || arrowDrawStart;
+                commitDrawnArrow(
+                    arrowDrawStart.x, arrowDrawStart.y,
+                    cur.x, cur.y,
+                    arrowDrawStart.nodeId, arrowDrawStart.anchor,
+                    cur.nodeId, cur.anchor
+                );
+                arrowDrawStart = null;
+                arrowDrawCurrent = null;
+                hideSnapIndicator();
+                return;
+            }
+
+            if (arrowHandleDragInfo) {
+                arrowHandleDragInfo = null;
+                hideSnapIndicator();
+                renderDecorations();
+                syncFromMap();
+                triggerAutoSave();
+                return;
+            }
+
             if (decDragInfo) {
                 if (!touchHasMoved && decDragInfo.wasSelected && decDragInfo.clickedText && !editingDecorationId) {
                     startEditingDecoration(decDragInfo.id);
                 }
                 if (touchHasMoved) {
                     triggerAutoSave();
+                    syncFromMap();
                 }
                 decDragInfo = null;
             }
@@ -8299,6 +9163,10 @@
 
         window.addEventListener('touchcancel', () => {
             isTouchPinching = false;
+            arrowDrawStart = null;
+            arrowDrawCurrent = null;
+            arrowHandleDragInfo = null;
+            hideSnapIndicator();
             dragInfo = null;
             decDragInfo = null;
             resizeInfo = null;
@@ -9032,6 +9900,21 @@
                 }
             }
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingDecorationId) return;
+
+            if (isArrowDrawingMode) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelArrowDrawMode();
+                    return;
+                }
+            }
+
+            if ((e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && !e.altKey && !selectedDecorationId) {
+                e.preventDefault();
+                startArrowDrawMode('straight');
+                return;
+            }
+
             if (selectedDecorationId && isDesignSelectable) {
                 if (e.key === 'Delete' || e.key === 'Backspace') {
                     deleteDecoration(selectedDecorationId);
@@ -9582,6 +10465,12 @@
                     attrs.push(`layer: ${dec.layer || 'behind'}`);
                     attrs.push(`z: ${dec.zIndex || 1}`);
                     if (dec.type === 'arrow') {
+                        if (dec.startX !== undefined) attrs.push(`startX: ${Math.round(dec.startX)}`);
+                        if (dec.startY !== undefined) attrs.push(`startY: ${Math.round(dec.startY)}`);
+                        if (dec.endX !== undefined) attrs.push(`endX: ${Math.round(dec.endX)}`);
+                        if (dec.endY !== undefined) attrs.push(`endY: ${Math.round(dec.endY)}`);
+                        if (dec.startNodeId) attrs.push(`from: ${dec.startNodeId}${dec.startAnchor ? ('.' + dec.startAnchor) : ''}`);
+                        if (dec.endNodeId) attrs.push(`to: ${dec.endNodeId}${dec.endAnchor ? ('.' + dec.endAnchor) : ''}`);
                         if (dec.color) attrs.push(`color: ${dec.color}`);
                         if (dec.strokeWidth && dec.strokeWidth !== 3) attrs.push(`stroke: ${dec.strokeWidth}`);
                         if (dec.rotation) attrs.push(`rot: ${dec.rotation}`);
@@ -9698,6 +10587,12 @@
                                 else if (k === 'rot') attrs.rotation = parseInt(v, 10);
                                 else if (k === 'flipx') attrs.flipX = parseInt(v, 10);
                                 else if (k === 'flipy') attrs.flipY = parseInt(v, 10);
+                                else if (k === 'startx') attrs.startX = parseInt(v, 10);
+                                else if (k === 'starty') attrs.startY = parseInt(v, 10);
+                                else if (k === 'endx') attrs.endX = parseInt(v, 10);
+                                else if (k === 'endy') attrs.endY = parseInt(v, 10);
+                                else if (k === 'from') attrs.from = v;
+                                else if (k === 'to') attrs.to = v;
                                 else if (k === 'border') {
                                     const bp = v.split(' ');
                                     attrs.borderStyle = bp[0];
@@ -9880,24 +10775,53 @@
                     } else if (kind.startsWith('arrow')) {
                         const arrowStyle = kind.replace('arrow-', '') || 'straight';
                         const isVerticalKind = (arrowStyle === 'curved' || arrowStyle === 'elbow');
+                        let fromNodeId = null, fromAnchor = null;
+                        if (attrs.from) {
+                            const p = attrs.from.split('.');
+                            fromNodeId = p[0];
+                            fromAnchor = p[1] || 'auto';
+                        }
+                        let toNodeId = null, toAnchor = null;
+                        if (attrs.to) {
+                            const p = attrs.to.split('.');
+                            toNodeId = p[0];
+                            toAnchor = p[1] || 'auto';
+                        }
+                        const sX = attrs.startX !== undefined ? parseInt(attrs.startX, 10) : (posX + 10);
+                        const sY = attrs.startY !== undefined ? parseInt(attrs.startY, 10) : (posY + (height || 60) / 2);
+                        const eX = attrs.endX !== undefined ? parseInt(attrs.endX, 10) : (posX + (width || 220) - 10);
+                        const eY = attrs.endY !== undefined ? parseInt(attrs.endY, 10) : (posY + (height || 60) / 2);
                         newDecorations[decId] = {
                             id: decId,
                             type: 'arrow',
                             arrowStyle: arrowStyle,
+                            startX: sX,
+                            startY: sY,
+                            endX: eX,
+                            endY: eY,
+                            startNodeId: fromNodeId,
+                            startAnchor: fromAnchor,
+                            endNodeId: toNodeId,
+                            endAnchor: toAnchor,
                             x: posX,
                             y: posY,
                             width: width || (arrowStyle === 'bidirectional' ? 240 : 220),
                             height: height || (isVerticalKind ? 130 : (arrowStyle === 'block' ? 80 : 60)),
                             title: label || '',
                             color: attrs.color || '#3b82f6',
-                            strokeWidth: attrs.strokeWidth || 3,
-                            rotation: attrs.rotation || 0,
+                            strokeWidth: attrs.strokeWidth || attrs.stroke || 3,
+                            rotation: attrs.rotation || attrs.rot || 0,
                             flipX: attrs.flipX !== undefined ? attrs.flipX : 1,
                             flipY: attrs.flipY !== undefined ? attrs.flipY : 1,
                             opacity: attrs.opacity ?? 1,
                             layer,
                             zIndex
                         };
+                        const bounds = computeArrowBounds(newDecorations[decId]);
+                        newDecorations[decId].x = bounds.x;
+                        newDecorations[decId].y = bounds.y;
+                        newDecorations[decId].width = bounds.width;
+                        newDecorations[decId].height = bounds.height;
                     }
                     return; // Handled as design element
                 }
@@ -10073,6 +10997,9 @@
 
             renderTree();
             renderDecorations();
+            if (typeof updateBoundArrows === 'function') {
+                updateBoundArrows();
+            }
             applyDesignLayerSettings();
             syncFromMap();
             updatePropertiesPanel();
