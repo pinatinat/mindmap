@@ -216,6 +216,30 @@
         .canvas-decoration[data-type="sticky"]:hover {
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
         }
+        .canvas-decoration[data-type="arrow"] {
+            box-shadow: none !important;
+            background: transparent !important;
+            border: none !important;
+            overflow: visible;
+        }
+        .canvas-decoration[data-type="arrow"]:hover {
+            box-shadow: none !important;
+            outline: 1.5px dashed rgba(59, 130, 246, 0.4) !important;
+            outline-offset: 4px;
+            border-radius: 6px;
+        }
+        .canvas-decoration[data-type="arrow"].selected {
+            outline: 2px dashed #3b82f6 !important;
+            outline-offset: 4px;
+            box-shadow: none !important;
+            border-radius: 6px;
+        }
+        .arrow-label-badge {
+            max-width: 85%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .canvas-decoration.locked {
             pointer-events: none !important;
         }
@@ -755,7 +779,8 @@
                         <button type="button" onclick="toggleDesignDropdown('shape', event)" id="btn-dropdown-shape" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none">
                             🔲 Shape <span class="text-[0.6rem] text-slate-400">▼</span>
                         </button>
-                        <div id="dropdown-menu-shape" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[155px] z-50">
+                        <div id="dropdown-menu-shape" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1 min-w-[170px] z-50">
+                            <div class="px-2.5 py-1 text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider">Containers & Frames</div>
                             <button type="button" onclick="addDecoration('zone'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                                 <span>🔲</span> Grouping Zone
                             </button>
@@ -764,6 +789,26 @@
                             </button>
                             <button type="button" onclick="addDecoration('circle'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs">
                                 <span>⭕</span> Circle Frame
+                            </button>
+                            <div class="h-px bg-slate-100 my-1"></div>
+                            <div class="px-2.5 py-1 text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider">Arrows & Pointers</div>
+                            <button type="button" onclick="addDecoration('arrow-straight'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Straight directional pointer">
+                                <span class="text-blue-500 font-bold">➡️</span> Straight Arrow
+                            </button>
+                            <button type="button" onclick="addDecoration('arrow-dashed'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Dashed process relation arrow">
+                                <span class="text-blue-500 font-bold">⇢</span> Dashed Arrow
+                            </button>
+                            <button type="button" onclick="addDecoration('arrow-bidirectional'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Two-way feedback or mutual relation">
+                                <span class="text-blue-500 font-bold">↔️</span> Two-Way Arrow
+                            </button>
+                            <button type="button" onclick="addDecoration('arrow-curved'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Curved flowing connector">
+                                <span class="text-blue-500 font-bold">⤵️</span> Curved Flow
+                            </button>
+                            <button type="button" onclick="addDecoration('arrow-elbow'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Orthogonal step connector">
+                                <span class="text-blue-500 font-bold">↳</span> Elbow Step
+                            </button>
+                            <button type="button" onclick="addDecoration('arrow-block'); closeDesignDropdowns();" class="text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 rounded-lg flex items-center gap-2 font-medium text-xs" title="Solid block chevron arrow">
+                                <span class="text-blue-500 font-bold">▶️</span> Block Arrow
                             </button>
                         </div>
                     </div>
@@ -6548,18 +6593,26 @@
                     el.style.top = dec.y + 'px';
                     el.style.width = dec.width + 'px';
                     el.style.height = dec.height + 'px';
-                    el.style.backgroundColor = dec.bg || 'transparent';
-                    el.style.border = (dec.borderStyle && dec.borderStyle !== 'none')
-                        ? `${dec.borderWidth || 2}px ${dec.borderStyle} ${dec.borderColor || '#3b82f6'}`
-                        : 'none';
-                    el.style.borderRadius = (dec.borderRadius !== undefined ? dec.borderRadius : 12) + 'px';
+                    if (dec.type === 'arrow') {
+                        el.style.backgroundColor = 'transparent';
+                        el.style.border = 'none';
+                        el.style.borderRadius = '4px';
+                    } else {
+                        el.style.backgroundColor = dec.bg || 'transparent';
+                        el.style.border = (dec.borderStyle && dec.borderStyle !== 'none')
+                            ? `${dec.borderWidth || 2}px ${dec.borderStyle} ${dec.borderColor || '#3b82f6'}`
+                            : 'none';
+                        el.style.borderRadius = (dec.borderRadius !== undefined ? dec.borderRadius : 12) + 'px';
+                    }
                     el.style.opacity = dec.opacity ?? 1;
                     el.style.zIndex = dec.zIndex || 1;
                     el.style.pointerEvents = isDesignSelectable ? 'auto' : 'none';
 
                     let contentHtml = '';
 
-                    if (dec.type === 'shape') {
+                    if (dec.type === 'arrow') {
+                        contentHtml += buildArrowSvgContent(dec);
+                    } else if (dec.type === 'shape') {
                         if (dec.shapeType === 'zone' || dec.title) {
                             contentHtml += `<div class="p-2.5">
                                 <span contenteditable="true" 
@@ -6628,39 +6681,94 @@
                     // Selected Mini-Toolbar & Resize Handle
                     if (isSelected && isDesignSelectable) {
                         const isFront = dec.layer === 'front';
-                        contentHtml += `
-                        <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
-                            ${dec.type === 'textbox' ? `
-                            <button type="button" onclick="startEditingDecoration('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Edit text (or double-click note)">
-                                <span>✏️</span> Edit
-                            </button>
-                            ` : ''}
-                            <input type="color" value="${(dec.bg && dec.bg.startsWith('#')) ? dec.bg : '#ffffff'}" onchange="setDecorationBg('${dec.id}', this.value)" class="w-5 h-5 rounded-full cursor-pointer" title="Background Color">
-                            <button type="button" onclick="cycleDecorationBorder('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-600 border" title="Toggle border style">Border</button>
-                            
-                            <!-- Per-Element Level Ordering Controls -->
-                            <div class="flex items-center gap-1 bg-slate-100/90 border border-slate-200 rounded-full px-1.5 py-0.5 shadow-sm" title="Layer Level Controls">
-                                <button type="button" onclick="moveDecorationLevelBehind('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
-                                <button type="button" onclick="toggleDecorationLayerNodeLevel('${dec.id}')" class="px-2 py-0.5 rounded-full text-[0.62rem] font-bold transition-colors ${isFront ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'}" title="Current level: ${isFront ? 'In Front of Nodes' : 'Behind Nodes'} (Click to switch directly)">
-                                    ${isFront ? '🥞 Front' : '🥞 Behind'} <span class="opacity-60 text-[0.58rem]">#${dec.zIndex || 1}</span>
+
+                        if (dec.type === 'arrow') {
+                            const styleIcon = getArrowStyleIcon(dec.arrowStyle);
+                            const styleName = getArrowStyleName(dec.arrowStyle);
+                            const currentStroke = dec.strokeWidth || 3;
+                            contentHtml += `
+                            <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+                                <!-- Style Cycle Button -->
+                                <button type="button" onclick="cycleArrowStyle('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Change arrow style (${styleName})">
+                                    <span>${styleIcon}</span> ${styleName}
                                 </button>
-                                <button type="button" onclick="moveDecorationLevelInFront('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level in front (Bring forward)">🔼</button>
-                            </div>
 
-                            ${dec.type === 'image' ? `
-                            <button type="button" onclick="promptImageGuideUrl('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border flex items-center gap-1" title="Change Image URL or File Location">
-                                <span>🔗</span> Link
-                            </button>
-                            ` : ''}
+                                <!-- Rotate 90 deg -->
+                                <button type="button" onclick="rotateArrow('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border flex items-center gap-1" title="Rotate 90° clockwise (${dec.rotation || 0}°)">
+                                    <span>↻</span> ${dec.rotation || 0}°
+                                </button>
 
-                            <div class="flex items-center gap-1 text-[0.65rem] text-slate-500 ml-1">
-                                <span>👻</span>
-                                <input type="range" min="0.1" max="1" step="0.05" value="${dec.opacity ?? 1}" oninput="setDecorationOpacity('${dec.id}', this.value)" class="w-14 h-1 cursor-pointer" title="Opacity">
+                                <!-- Flip Horizontal -->
+                                <button type="button" onclick="flipArrow('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border" title="Flip horizontal">
+                                    ⇄ Flip
+                                </button>
+
+                                <!-- Stroke thickness cycle -->
+                                <button type="button" onclick="cycleArrowStroke('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border" title="Cycle thickness (current: ${currentStroke}px)">
+                                    ━ ${currentStroke}px
+                                </button>
+
+                                <!-- Arrow Color -->
+                                <input type="color" value="${(dec.color && dec.color.startsWith('#')) ? dec.color : '#3b82f6'}" onchange="setDecorationArrowColor('${dec.id}', this.value)" class="w-5 h-5 rounded-full cursor-pointer" title="Arrow Color">
+
+                                <!-- Optional Label Badge -->
+                                <button type="button" onclick="promptArrowLabel('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] ${dec.title ? 'bg-amber-50 text-amber-700 border border-amber-200 font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border font-medium'}" title="Add or edit text label on arrow">
+                                    🏷️ ${dec.title ? 'Edit Label' : '+ Label'}
+                                </button>
+
+                                <!-- Per-Element Level Ordering Controls -->
+                                <div class="flex items-center gap-1 bg-slate-100/90 border border-slate-200 rounded-full px-1.5 py-0.5 shadow-sm" title="Layer Level Controls">
+                                    <button type="button" onclick="moveDecorationLevelBehind('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
+                                    <button type="button" onclick="toggleDecorationLayerNodeLevel('${dec.id}')" class="px-2 py-0.5 rounded-full text-[0.62rem] font-bold transition-colors ${isFront ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'}" title="Current level: ${isFront ? 'In Front of Nodes' : 'Behind Nodes'} (Click to switch directly)">
+                                        ${isFront ? '🥞 Front' : '🥞 Behind'} <span class="opacity-60 text-[0.58rem]">#${dec.zIndex || 1}</span>
+                                    </button>
+                                    <button type="button" onclick="moveDecorationLevelInFront('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level in front (Bring forward)">🔼</button>
+                                </div>
+
+                                <!-- Opacity -->
+                                <div class="flex items-center gap-1 text-[0.65rem] text-slate-500 ml-1">
+                                    <span>👻</span>
+                                    <input type="range" min="0.1" max="1" step="0.05" value="${dec.opacity ?? 1}" oninput="setDecorationOpacity('${dec.id}', this.value)" class="w-14 h-1 cursor-pointer" title="Opacity">
+                                </div>
+                                <button type="button" onclick="duplicateDecoration('${dec.id}')" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
+                                <button type="button" onclick="deleteDecoration('${dec.id}')" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
                             </div>
-                            <button type="button" onclick="duplicateDecoration('${dec.id}')" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
-                            <button type="button" onclick="deleteDecoration('${dec.id}')" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
-                        </div>
-                        <div class="decoration-resize-handle" title="Drag to resize"></div>`;
+                            <div class="decoration-resize-handle" title="Drag to resize"></div>`;
+                        } else {
+                            contentHtml += `
+                            <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+                                ${dec.type === 'textbox' ? `
+                                <button type="button" onclick="startEditingDecoration('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Edit text (or double-click note)">
+                                    <span>✏️</span> Edit
+                                </button>
+                                ` : ''}
+                                <input type="color" value="${(dec.bg && dec.bg.startsWith('#')) ? dec.bg : '#ffffff'}" onchange="setDecorationBg('${dec.id}', this.value)" class="w-5 h-5 rounded-full cursor-pointer" title="Background Color">
+                                <button type="button" onclick="cycleDecorationBorder('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-600 border" title="Toggle border style">Border</button>
+                                
+                                <!-- Per-Element Level Ordering Controls -->
+                                <div class="flex items-center gap-1 bg-slate-100/90 border border-slate-200 rounded-full px-1.5 py-0.5 shadow-sm" title="Layer Level Controls">
+                                    <button type="button" onclick="moveDecorationLevelBehind('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
+                                    <button type="button" onclick="toggleDecorationLayerNodeLevel('${dec.id}')" class="px-2 py-0.5 rounded-full text-[0.62rem] font-bold transition-colors ${isFront ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'}" title="Current level: ${isFront ? 'In Front of Nodes' : 'Behind Nodes'} (Click to switch directly)">
+                                        ${isFront ? '🥞 Front' : '🥞 Behind'} <span class="opacity-60 text-[0.58rem]">#${dec.zIndex || 1}</span>
+                                    </button>
+                                    <button type="button" onclick="moveDecorationLevelInFront('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level in front (Bring forward)">🔼</button>
+                                </div>
+
+                                ${dec.type === 'image' ? `
+                                <button type="button" onclick="promptImageGuideUrl('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border flex items-center gap-1" title="Change Image URL or File Location">
+                                    <span>🔗</span> Link
+                                </button>
+                                ` : ''}
+
+                                <div class="flex items-center gap-1 text-[0.65rem] text-slate-500 ml-1">
+                                    <span>👻</span>
+                                    <input type="range" min="0.1" max="1" step="0.05" value="${dec.opacity ?? 1}" oninput="setDecorationOpacity('${dec.id}', this.value)" class="w-14 h-1 cursor-pointer" title="Opacity">
+                                </div>
+                                <button type="button" onclick="duplicateDecoration('${dec.id}')" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
+                                <button type="button" onclick="deleteDecoration('${dec.id}')" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
+                            </div>
+                            <div class="decoration-resize-handle" title="Drag to resize"></div>`;
+                        }
                     }
 
                     el.innerHTML = contentHtml;
@@ -6678,6 +6786,16 @@
             el.style.width = dec.width + 'px';
             el.style.height = dec.height + 'px';
             el.style.zIndex = dec.zIndex || 1;
+
+            if (dec.type === 'arrow') {
+                const svgWrap = el.querySelector('.arrow-svg-wrapper');
+                if (svgWrap) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = buildArrowSvgContent(dec);
+                    const newWrap = temp.firstElementChild;
+                    if (newWrap) svgWrap.replaceWith(newWrap);
+                }
+            }
         }
 
         function toggleDesignSelection() {
@@ -7032,6 +7150,30 @@
                     layer: 'behind',
                     zIndex: order
                 };
+            } else if (kind.startsWith('arrow')) {
+                const arrowStyle = kind.replace('arrow-', '') || 'straight';
+                const isVerticalKind = (arrowStyle === 'curved' || arrowStyle === 'elbow');
+                const defaultW = arrowStyle === 'bidirectional' ? 240 : 220;
+                const defaultH = isVerticalKind ? 130 : (arrowStyle === 'block' ? 80 : 60);
+
+                canvasDecorations[id] = {
+                    id,
+                    type: 'arrow',
+                    arrowStyle: arrowStyle,
+                    x: centerX,
+                    y: centerY,
+                    width: defaultW,
+                    height: defaultH,
+                    title: '',
+                    color: '#3b82f6',
+                    strokeWidth: 3,
+                    rotation: 0,
+                    flipX: 1,
+                    flipY: 1,
+                    opacity: 1,
+                    layer: 'behind',
+                    zIndex: order
+                };
             }
 
             selectedDecorationId = id;
@@ -7294,6 +7436,234 @@
             }
         }
 
+        // --- ARROW DECORATION HELPERS & SVG RENDERER ---
+        function getArrowStyleIcon(style) {
+            switch (style) {
+                case 'dashed': return '⇢';
+                case 'bidirectional': return '↔️';
+                case 'curved': return '⤵️';
+                case 'elbow': return '↳';
+                case 'block': return '▶️';
+                default: return '➡️';
+            }
+        }
+
+        function getArrowStyleName(style) {
+            switch (style) {
+                case 'dashed': return 'Dashed';
+                case 'bidirectional': return 'Two-Way';
+                case 'curved': return 'Curved';
+                case 'elbow': return 'Elbow';
+                case 'block': return 'Block';
+                default: return 'Straight';
+            }
+        }
+
+        function cycleArrowStyle(id) {
+            const dec = canvasDecorations[id];
+            if (!dec) return;
+            const styles = ['straight', 'dashed', 'bidirectional', 'curved', 'elbow', 'block'];
+            const curIdx = styles.indexOf(dec.arrowStyle || 'straight');
+            const nextStyle = styles[(curIdx + 1) % styles.length];
+            dec.arrowStyle = nextStyle;
+
+            // Adjust height if transitioning to/from tall connectors
+            if ((nextStyle === 'curved' || nextStyle === 'elbow') && (!dec.height || dec.height < 100)) {
+                dec.height = 130;
+            } else if (nextStyle === 'block' && (!dec.height || dec.height < 70)) {
+                dec.height = 80;
+            }
+
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+        }
+
+        function rotateArrow(id) {
+            const dec = canvasDecorations[id];
+            if (!dec) return;
+            dec.rotation = ((dec.rotation || 0) + 90) % 360;
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+        }
+
+        function flipArrow(id) {
+            const dec = canvasDecorations[id];
+            if (!dec) return;
+            dec.flipX = (dec.flipX || 1) === 1 ? -1 : 1;
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+        }
+
+        function cycleArrowStroke(id) {
+            const dec = canvasDecorations[id];
+            if (!dec) return;
+            const strokes = [2, 3, 5, 8];
+            const cur = dec.strokeWidth || 3;
+            let idx = strokes.indexOf(cur);
+            if (idx === -1) idx = 1;
+            dec.strokeWidth = strokes[(idx + 1) % strokes.length];
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+        }
+
+        function setDecorationArrowColor(id, color) {
+            const dec = canvasDecorations[id];
+            if (!dec) return;
+            dec.color = color;
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+        }
+
+        async function promptArrowLabel(id) {
+            const dec = canvasDecorations[id];
+            if (!dec) return;
+            const res = await showPrompt({
+                title: 'Arrow Label',
+                icon: '🏷️',
+                message: 'Enter text label for this arrow (leave blank to remove):',
+                defaultValue: dec.title || ''
+            });
+            if (res === null) return;
+            dec.title = res.trim();
+            renderDecorations();
+            syncFromMap();
+            triggerAutoSave();
+        }
+
+        function buildArrowSvgContent(dec) {
+            const w = Math.max(dec.width || 200, 30);
+            const h = Math.max(dec.height || 70, 20);
+            const color = dec.color || '#3b82f6';
+            const strokeWidth = dec.strokeWidth || 3;
+            const style = dec.arrowStyle || 'straight';
+            const rot = dec.rotation || 0;
+            const flipX = dec.flipX || 1;
+            const flipY = dec.flipY || 1;
+            const hasLabel = !!dec.title;
+
+            const headSize = Math.max(12, strokeWidth * 3.6);
+            const pad = Math.max(10, strokeWidth * 2);
+
+            let innerSvg = '';
+
+            if (style === 'straight' || style === 'dashed') {
+                const isDashed = style === 'dashed';
+                const startX = pad;
+                const endX = w - pad;
+                const midY = h / 2;
+                const lineEndX = Math.max(startX, endX - headSize * 0.75);
+                const dashAttr = isDashed ? `stroke-dasharray="${strokeWidth * 2.5}, ${strokeWidth * 1.8}"` : '';
+
+                innerSvg = `
+                    <line x1="${startX}" y1="${midY}" x2="${lineEndX}" y2="${midY}" 
+                          stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" ${dashAttr} />
+                    <polygon points="${endX},${midY} ${endX - headSize},${midY - headSize * 0.55} ${endX - headSize * 0.75},${midY} ${endX - headSize},${midY + headSize * 0.55}" 
+                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                `;
+            } else if (style === 'bidirectional') {
+                const startX = pad;
+                const endX = w - pad;
+                const midY = h / 2;
+                const lineStartX = startX + headSize * 0.75;
+                const lineEndX = Math.max(lineStartX, endX - headSize * 0.75);
+
+                innerSvg = `
+                    <polygon points="${startX},${midY} ${startX + headSize},${midY - headSize * 0.55} ${startX + headSize * 0.75},${midY} ${startX + headSize},${midY + headSize * 0.55}" 
+                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                    <line x1="${lineStartX}" y1="${midY}" x2="${lineEndX}" y2="${midY}" 
+                          stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                    <polygon points="${endX},${midY} ${endX - headSize},${midY - headSize * 0.55} ${endX - headSize * 0.75},${midY} ${endX - headSize},${midY + headSize * 0.55}" 
+                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                `;
+            } else if (style === 'curved') {
+                const startX = pad;
+                const startY = pad + 4;
+                const endX = w - pad;
+                const endY = h - pad - 4;
+                const targetX = Math.max(startX + 16, endX - headSize * 0.75);
+
+                const cp1x = startX + (endX - startX) * 0.5;
+                const cp1y = startY;
+                const cp2x = startX + (endX - startX) * 0.45;
+                const cp2y = endY;
+
+                innerSvg = `
+                    <path d="M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetX} ${endY}" 
+                          fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                    <polygon points="${endX},${endY} ${endX - headSize},${endY - headSize * 0.55} ${endX - headSize * 0.75},${endY} ${endX - headSize},${endY + headSize * 0.55}" 
+                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                `;
+            } else if (style === 'elbow') {
+                const startX = pad;
+                const startY = pad + 4;
+                const endX = w - pad;
+                const endY = h - pad - 4;
+                const midX = Math.round(startX + (endX - startX) * 0.45);
+                const r = Math.min(16, Math.max(4, Math.abs(midX - startX) * 0.4), Math.max(4, Math.abs(endY - startY) * 0.4));
+                const targetX = Math.max(midX + r, endX - headSize * 0.75);
+
+                innerSvg = `
+                    <path d="M ${startX} ${startY} H ${midX - r} Q ${midX} ${startY} ${midX} ${startY + r} V ${endY - r} Q ${midX} ${endY} ${midX + r} ${endY} H ${targetX}" 
+                          fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                    <polygon points="${endX},${endY} ${endX - headSize},${endY - headSize * 0.55} ${endX - headSize * 0.75},${endY} ${endX - headSize},${endY + headSize * 0.55}" 
+                             fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round" />
+                `;
+            } else if (style === 'block') {
+                const startX = pad;
+                const endX = w - pad;
+                const midY = h / 2;
+                const stemHeight = Math.max(12, Math.min(h * 0.45, 42));
+                const headWidth = Math.max(20, Math.min((endX - startX) * 0.38, 56));
+                const headHeight = Math.max(stemHeight + 14, Math.min(h - pad * 1.4, stemHeight * 2.2));
+                const headStartX = Math.max(startX + 16, endX - headWidth);
+
+                const stemTop = midY - stemHeight / 2;
+                const stemBottom = midY + stemHeight / 2;
+                const headTop = midY - headHeight / 2;
+                const headBottom = midY + headHeight / 2;
+
+                const points = [
+                    `${startX},${stemTop}`,
+                    `${headStartX},${stemTop}`,
+                    `${headStartX},${headTop}`,
+                    `${endX},${midY}`,
+                    `${headStartX},${headBottom}`,
+                    `${headStartX},${stemBottom}`,
+                    `${startX},${stemBottom}`
+                ].join(' ');
+
+                innerSvg = `
+                    <polygon points="${points}" 
+                             fill="${color}" 
+                             stroke="rgba(0,0,0,0.12)" 
+                             stroke-width="1.5" 
+                             stroke-linejoin="round" />
+                `;
+            }
+
+            return `
+                <div class="arrow-svg-wrapper w-full h-full relative pointer-events-none select-none">
+                    <svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="overflow-visible w-full h-full pointer-events-none">
+                        <g transform="translate(${w / 2}, ${h / 2}) rotate(${rot}) scale(${flipX}, ${flipY}) translate(${-w / 2}, ${-h / 2})">
+                            ${innerSvg}
+                        </g>
+                    </svg>
+                    ${hasLabel ? `
+                    <div class="arrow-label-badge absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm border border-slate-200 bg-white/95 text-slate-800 pointer-events-auto select-text cursor-text transition-transform hover:scale-105" 
+                         contenteditable="true" 
+                         onmousedown="event.stopPropagation()"
+                         onblur="updateDecorationTitle('${dec.id}', this.innerText)"
+                         title="Click to edit arrow label">${escapeHtml(dec.title)}</div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
         // --- INLINE EDITING ENGINE ---
         function startInlineEdit(nodeEl, nodeId) {
             if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
@@ -7496,7 +7866,7 @@
                 if (decEl) {
                     const decId = decEl.dataset.id;
                     const isDragHandle = !!e.target.closest('.decoration-drag-handle');
-                    const isTextContent = !!e.target.closest('.decoration-text-content');
+                    const isTextContent = !!e.target.closest('.decoration-text-content, .arrow-label-badge');
                     const wasAlreadySelected = selectedDecorationId === decId;
 
                     // If actively editing this decoration and clicking inside the text, allow typing
@@ -7620,6 +7990,9 @@
                     const dec = canvasDecorations[decId];
                     if (dec && dec.type === 'textbox') {
                         startEditingDecoration(decId);
+                        return;
+                    } else if (dec && dec.type === 'arrow') {
+                        promptArrowLabel(decId);
                         return;
                     }
                 }
@@ -7748,7 +8121,7 @@
                     if (decEl) {
                         const decId = decEl.dataset.id;
                         const isDragHandle = !!e.target.closest('.decoration-drag-handle');
-                        const isTextContent = !!e.target.closest('.decoration-text-content');
+                        const isTextContent = !!e.target.closest('.decoration-text-content, .arrow-label-badge');
                         const wasAlreadySelected = selectedDecorationId === decId;
 
                         if (editingDecorationId === decId && isTextContent && !isDragHandle) {
@@ -8671,6 +9044,10 @@
                         startEditingDecoration(selectedDecorationId);
                         e.preventDefault();
                         return;
+                    } else if (dec && dec.type === 'arrow') {
+                        promptArrowLabel(selectedDecorationId);
+                        e.preventDefault();
+                        return;
                     }
                 }
                 if (e.key === 'Escape') {
@@ -9181,7 +9558,8 @@
                 });
 
                 sortedDecs.forEach(dec => {
-                    const kind = dec.type === 'shape' ? (dec.shapeType || 'zone')
+                    const kind = dec.type === 'arrow' ? (`arrow-${dec.arrowStyle || 'straight'}`)
+                               : dec.type === 'shape' ? (dec.shapeType || 'zone')
                                : dec.type === 'image' ? 'image'
                                : (dec.bg && dec.bg !== 'transparent' ? 'sticky' : 'text');
                     
@@ -9203,17 +9581,25 @@
                     const attrs = [];
                     attrs.push(`layer: ${dec.layer || 'behind'}`);
                     attrs.push(`z: ${dec.zIndex || 1}`);
-                    if (dec.bg && dec.bg !== 'transparent') attrs.push(`bg: ${dec.bg}`);
-                    if (dec.color && dec.color !== '#0f172a' && dec.color !== '#1e293b') attrs.push(`color: ${dec.color}`);
-                    if (dec.fontSize && dec.fontSize !== 14 && dec.fontSize !== 20 && dec.fontSize !== 22) attrs.push(`size: ${dec.fontSize}`);
-                    if (dec.borderStyle && dec.borderStyle !== 'none') {
-                        attrs.push(`border: ${dec.borderStyle} ${dec.borderColor || '#3b82f6'}`);
+                    if (dec.type === 'arrow') {
+                        if (dec.color) attrs.push(`color: ${dec.color}`);
+                        if (dec.strokeWidth && dec.strokeWidth !== 3) attrs.push(`stroke: ${dec.strokeWidth}`);
+                        if (dec.rotation) attrs.push(`rot: ${dec.rotation}`);
+                        if (dec.flipX && dec.flipX === -1) attrs.push(`flipX: -1`);
+                        if (dec.flipY && dec.flipY === -1) attrs.push(`flipY: -1`);
+                    } else {
+                        if (dec.bg && dec.bg !== 'transparent') attrs.push(`bg: ${dec.bg}`);
+                        if (dec.color && dec.color !== '#0f172a' && dec.color !== '#1e293b') attrs.push(`color: ${dec.color}`);
+                        if (dec.fontSize && dec.fontSize !== 14 && dec.fontSize !== 20 && dec.fontSize !== 22) attrs.push(`size: ${dec.fontSize}`);
+                        if (dec.borderStyle && dec.borderStyle !== 'none') {
+                            attrs.push(`border: ${dec.borderStyle} ${dec.borderColor || '#3b82f6'}`);
+                        }
+                        if (dec.borderRadius !== undefined && dec.shapeType !== 'circle') {
+                            attrs.push(`radius: ${dec.borderRadius}`);
+                        }
                     }
                     if (typeof dec.opacity === 'number' && dec.opacity < 1) {
                         attrs.push(`opacity: ${dec.opacity}`);
-                    }
-                    if (dec.borderRadius !== undefined && dec.shapeType !== 'circle') {
-                        attrs.push(`radius: ${dec.borderRadius}`);
                     }
 
                     const attrStr = attrs.length ? ` {${attrs.join(', ')}}` : '';
@@ -9285,8 +9671,8 @@
                     return;
                 }
 
-                // Check for Design Element directive: @zone, @card, @circle, @text, @sticky, @image
-                const decMatch = trimmed.match(/^(?:[-*+]\s+)?@(zone|card|circle|text|textbox|sticky|image)\b(.*)/i);
+                // Check for Design Element directive: @zone, @card, @circle, @text, @sticky, @image, @arrow-*
+                const decMatch = trimmed.match(/^(?:[-*+]\s+)?@(zone|card|circle|text|textbox|sticky|image|arrow(?:-[a-z]+)?)\b(.*)/i);
                 if (decMatch) {
                     hasExplicitDecorations = true;
                     const kind = decMatch[1].toLowerCase();
@@ -9308,6 +9694,10 @@
                                 else if (k === 'size') attrs.fontSize = parseInt(v, 10);
                                 else if (k === 'opacity') attrs.opacity = parseFloat(v);
                                 else if (k === 'radius') attrs.borderRadius = parseInt(v, 10);
+                                else if (k === 'stroke') attrs.strokeWidth = parseInt(v, 10);
+                                else if (k === 'rot') attrs.rotation = parseInt(v, 10);
+                                else if (k === 'flipx') attrs.flipX = parseInt(v, 10);
+                                else if (k === 'flipy') attrs.flipY = parseInt(v, 10);
                                 else if (k === 'border') {
                                     const bp = v.split(' ');
                                     attrs.borderStyle = bp[0];
@@ -9487,6 +9877,27 @@
                             layer,
                             zIndex
                         };
+                    } else if (kind.startsWith('arrow')) {
+                        const arrowStyle = kind.replace('arrow-', '') || 'straight';
+                        const isVerticalKind = (arrowStyle === 'curved' || arrowStyle === 'elbow');
+                        newDecorations[decId] = {
+                            id: decId,
+                            type: 'arrow',
+                            arrowStyle: arrowStyle,
+                            x: posX,
+                            y: posY,
+                            width: width || (arrowStyle === 'bidirectional' ? 240 : 220),
+                            height: height || (isVerticalKind ? 130 : (arrowStyle === 'block' ? 80 : 60)),
+                            title: label || '',
+                            color: attrs.color || '#3b82f6',
+                            strokeWidth: attrs.strokeWidth || 3,
+                            rotation: attrs.rotation || 0,
+                            flipX: attrs.flipX !== undefined ? attrs.flipX : 1,
+                            flipY: attrs.flipY !== undefined ? attrs.flipY : 1,
+                            opacity: attrs.opacity ?? 1,
+                            layer,
+                            zIndex
+                        };
                     }
                     return; // Handled as design element
                 }
@@ -9654,7 +10065,7 @@
                 selectedNodeId = 'n_0';
             }
 
-            if (hasExplicitDecorations || raw.includes('# Design Elements') || /@(zone|card|circle|text|textbox|sticky|image)\b/i.test(raw)) {
+            if (hasExplicitDecorations || raw.includes('# Design Elements') || /@(zone|card|circle|text|textbox|sticky|image|arrow(?:-[a-z]+)?)\b/i.test(raw)) {
                 canvasDecorations = newDecorations;
                 normalizeLayerZIndices('behind');
                 normalizeLayerZIndices('front');
