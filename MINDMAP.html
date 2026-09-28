@@ -717,7 +717,7 @@
         <!-- INFINITE CANVAS -->
         <main id="canvas-bg" class="flex-1 relative overflow-hidden z-10">
             <!-- Floating Canvas Design Toolbar with Smooth Collapse Effect -->
-            <div id="floating-canvas-design-toolbar" class="floating-canvas-toolbar absolute top-2 right-2 sm:top-3 sm:right-3 z-30 transition-all duration-200 select-none" style="touch-action: manipulation; -webkit-user-select: none;">
+            <div id="floating-canvas-design-toolbar" class="floating-canvas-toolbar absolute top-2 right-2 sm:top-3 sm:right-3 z-30 transition-all duration-200 select-none overflow-visible" style="touch-action: manipulation; -webkit-user-select: none;">
                 <!-- Collapsed Mini Pill (Visible when collapsed) -->
                 <button type="button" id="btn-design-toolbar-expand" onclick="toggleDesignToolbarCollapse(false)" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 shadow-md hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all active:scale-95 cursor-pointer" title="Expand Design Toolbar (Shapes, Cards, Zones, Canvas Theme)">
                     <span>🎨 Design</span>
@@ -725,7 +725,7 @@
                 </button>
 
                 <!-- Expanded Toolbar Content (Hidden when collapsed) -->
-                <div id="design-toolbar-expanded-content" class="flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar whitespace-nowrap">
+                <div id="design-toolbar-expanded-content" class="flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium overflow-visible select-none">
                     <span class="text-slate-400 font-bold uppercase tracking-wider text-[0.62rem] mr-0.5 hidden sm:inline">Design</span>
                     
                     <!-- Selection Lock Toggle -->
@@ -2253,12 +2253,27 @@
 
         function toggleMobileOverflowMenu(show) {
             const menu = document.getElementById('mobile-overflow-menu');
+            const btn = document.getElementById('btn-mobile-overflow');
             if (!menu) return;
             const isHidden = menu.classList.contains('hidden');
             const shouldShow = (typeof show === 'boolean') ? show : isHidden;
             if (shouldShow) {
                 menu.classList.remove('hidden');
                 menu.classList.add('flex');
+                if (btn) {
+                    const rect = btn.getBoundingClientRect();
+                    menu.style.position = 'fixed';
+                    menu.style.top = `${Math.round(rect.bottom + 6)}px`;
+                    const menuWidth = menu.offsetWidth || 180;
+                    let left = Math.round(rect.right - menuWidth);
+                    if (left < 10) left = 10;
+                    if (left + menuWidth > window.innerWidth - 10) {
+                        left = window.innerWidth - menuWidth - 10;
+                    }
+                    menu.style.left = `${left}px`;
+                    menu.style.right = 'auto';
+                    menu.style.zIndex = '9999';
+                }
             } else {
                 menu.classList.add('hidden');
                 menu.classList.remove('flex');
@@ -6861,13 +6876,26 @@
                     if (isHidden) {
                         menu.classList.remove('hidden');
                         menu.classList.add('flex');
+                        // Ensure dropdown doesn't clip past left viewport edge on narrow viewports
+                        const menuRect = menu.getBoundingClientRect();
+                        if (menuRect.left < 8) {
+                            menu.style.right = 'auto';
+                            menu.style.left = '0';
+                        } else {
+                            menu.style.right = '0';
+                            menu.style.left = 'auto';
+                        }
                     } else {
                         menu.classList.add('hidden');
                         menu.classList.remove('flex');
+                        menu.style.right = '';
+                        menu.style.left = '';
                     }
                 } else {
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
+                    menu.style.right = '';
+                    menu.style.left = '';
                 }
             });
         }
@@ -6878,6 +6906,8 @@
                 if (menu) {
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
+                    menu.style.right = '';
+                    menu.style.left = '';
                 }
             });
         }
