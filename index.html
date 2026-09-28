@@ -1535,7 +1535,7 @@
 
                 <!-- Payment Methods Badges -->
                 <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
-                    <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Supported Payment Methods (via PayMongo)</span>
+                    <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Supported Payment Methods</span>
                     <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
                         <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💙 GCash</span>
                         <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💚 Maya</span>
@@ -1554,8 +1554,8 @@
                 </div>
 
                 <!-- CTA Button -->
-                <button type="button" onclick="handlePayMongoUpgradeClick()" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <span>⚡ Pay ₱299 with PayMongo</span>
+                <button type="button" onclick="handleProUpgradeClick()" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>⚡ Upgrade to Lifetime Pro — ₱299</span>
                     <span>➔</span>
                 </button>
 
@@ -3168,8 +3168,9 @@
         let currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
         let isUserLifetimePro = false;
 
-        // PayMongo Payment Link for Lifetime Pro (Update this link once your PayMongo merchant account is approved)
-        const PAYMONGO_PRO_PAYMENT_LINK = 'https://paymongo.page/l/omnimind-lifetime-pro';
+        // Payment Link for Lifetime Pro (Update this link once your payment provider checkout link is ready)
+        const PRO_PAYMENT_LINK = 'https://paymongo.page/l/omnimind-lifetime-pro';
+        const PAYMONGO_PRO_PAYMENT_LINK = PRO_PAYMENT_LINK; // backward compatibility
 
         // Master activation codes for manual fulfillment / testing
         const PRO_ACTIVATION_CODES = ['OMNIPRO50', 'LIFETIMEPRO2026', 'VIPMINDMAP'];
@@ -3271,7 +3272,7 @@
             if (modal) modal.classList.add('hidden');
         }
 
-        async function handlePayMongoUpgradeClick() {
+        async function handleProUpgradeClick() {
             // Check if user is signed in first
             if (!currentCloudUser) {
                 const proceed = await showConfirm({
@@ -3289,14 +3290,14 @@
             }
 
             // Check if link is still placeholder
-            const isPlaceholder = PAYMONGO_PRO_PAYMENT_LINK.includes('your-custom-link') || PAYMONGO_PRO_PAYMENT_LINK.includes('omnimind-lifetime-pro');
+            const isPlaceholder = !PRO_PAYMENT_LINK || PRO_PAYMENT_LINK.includes('your-custom-link') || PRO_PAYMENT_LINK.includes('omnimind-lifetime-pro') || PRO_PAYMENT_LINK.includes('placeholder');
             if (isPlaceholder) {
                 const choice = await showConfirm({
-                    title: 'PayMongo Merchant Notice',
+                    title: 'Payment Checkout Notice',
                     icon: '⚡',
-                    message: "PayMongo Merchant Verification Notice:\n\nYour PayMongo account is currently undergoing approval. Once approved, your live payment link will open directly.\n\nIn the meantime, you can activate Lifetime Pro immediately for testing using the activation code 'OMNIPRO50'.\n\nWould you like to enter the activation code now?",
+                    message: "Payment Checkout Notice:\n\nOur online checkout is currently being updated for our payment provider.\n\nIf you have already paid or have an activation code, click below to activate your Lifetime Pro pass immediately.",
                     confirmText: 'Enter Activation Code',
-                    cancelText: 'Later'
+                    cancelText: 'Close'
                 });
                 if (choice) {
                     await promptActivationCode();
@@ -3307,18 +3308,19 @@
             // Build dynamic checkout URL with user reference
             const userId = currentCloudUser ? currentCloudUser.uid : 'guest';
             const userEmail = (currentCloudUser && currentCloudUser.email) ? currentCloudUser.email : '';
-            const separator = PAYMONGO_PRO_PAYMENT_LINK.includes('?') ? '&' : '?';
-            const checkoutUrl = `${PAYMONGO_PRO_PAYMENT_LINK}${separator}client_reference_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(userEmail)}`;
+            const separator = PRO_PAYMENT_LINK.includes('?') ? '&' : '?';
+            const checkoutUrl = `${PRO_PAYMENT_LINK}${separator}client_reference_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(userEmail)}`;
 
             window.open(checkoutUrl, '_blank');
         }
+        const handlePayMongoUpgradeClick = handleProUpgradeClick; // backward compatibility alias
 
         async function promptActivationCode() {
             const code = await showPrompt({
                 title: 'Lifetime Pro Activation',
                 icon: '⭐',
-                message: 'Enter Lifetime Pro Activation Code:\n(For instant testing, use: OMNIPRO50)',
-                placeholder: 'OMNIPRO50',
+                message: 'Enter your Lifetime Pro Activation Code:',
+                placeholder: 'Enter activation code',
                 defaultValue: '',
                 confirmText: 'Activate Pro'
             });
