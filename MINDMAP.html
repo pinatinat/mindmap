@@ -700,7 +700,7 @@
             <div id="panel-code" class="p-4 flex flex-col h-full hidden">
                 <div class="flex justify-between items-center mb-2">
                     <label class="block text-xs font-bold text-slate-700 uppercase">Markdown Map (List Mode)</label>
-                    <button onclick="syncFromMap()" class="text-xs text-blue-600 hover:underline">Sync from visual</button>
+                    <button onclick="syncFromMap(true)" class="text-xs text-blue-600 hover:underline">Sync from visual</button>
                 </div>
                 <textarea id="code_input" class="flex-1 w-full border rounded-xl p-3 text-sm font-mono focus:outline-blue-500 resize-none mb-3 bg-slate-50" placeholder="# Root One&#10;## Branch A&#10;- Detail 1&#10;&#10;# Root Two&#10;- Item 1"></textarea>
                 <button onclick="runCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white w-full py-2.5 rounded-full font-bold shadow-sm">▶ Render Code</button>
@@ -710,11 +710,11 @@
             <div id="panel-advcode" class="p-4 flex flex-col h-full hidden">
                 <div class="flex justify-between items-center mb-1">
                     <label class="block text-xs font-bold text-slate-700 uppercase">Advanced Code</label>
-                    <button onclick="syncFromMap()" class="text-xs text-blue-600 hover:underline">Sync from visual</button>
+                    <button onclick="syncFromMap(true)" class="text-xs text-blue-600 hover:underline">Sync from visual</button>
                 </div>
                 <p class="text-[0.68rem] text-slate-400 mb-2 leading-tight">Controls bubble hierarchy, locations <code>@(x, y)</code>, and design elements. <span class="text-indigo-600 font-semibold">Auto-renders on paste / Ctrl+Enter</span></p>
                 <textarea id="advcode_input" oninput="scheduleLiveAdvRender()" onpaste="scheduleLiveAdvRender(true)" class="flex-1 w-full border rounded-xl p-3 text-xs font-mono focus:outline-indigo-500 resize-none mb-3 bg-slate-50 leading-relaxed text-slate-700" placeholder="# Root Idea @ (200, 250)&#10;  - Branch A @ (500, 180) [Tag]&#10;    - Detail @ (800, 180)&#10;  - Branch B @ (500, 320)&#10;&#10;# Second Root @ (200, 550)&#10;  - Sub-concept @ (500, 550)&#10;&#10;---&#10;# Design Elements&#10;@zone &quot;Grouping Zone&quot; @ (150, 120, 380, 250) {layer: behind, z: 1, bg: rgba(239, 246, 255, 0.45), border: dashed #3b82f6}&#10;@sticky &quot;📌 Guide Note&quot; @ (550, 450, 220, 180) {layer: front, z: 1, bg: #fef08a}&#10;@card &quot;Section Card&quot; @ (600, 100, 320, 200) {layer: behind, z: 2}"></textarea>
-                <button onclick="runAdvCode(true)" id="btn_run_adv" class="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-2.5 rounded-full font-bold text-sm shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5">
+                <button type="button" onpointerdown="armAdvCodeRender(event)" onclick="runAdvCodeFromButton()" id="btn_run_adv" class="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-2.5 rounded-full font-bold text-sm shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5">
                     <span>▶</span> Render Advanced Code <span class="text-[0.65rem] opacity-75 font-normal">(Ctrl+Enter)</span>
                 </button>
             </div>
@@ -2187,6 +2187,13 @@
         let selectedNodeId = 'root';
         let saveTimeout = null;
         let isInlineEditing = false; // Track whether a bubble is being edited inline
+
+        // Advanced Code editor: unrendered text must survive canvas-to-code sync.
+        let advRenderDebounceTimer = null;
+        let advRenderWantsFit = false;
+        let advCodeDirty = false;
+        let advCodeRenderLock = false;
+        let advCodeArmedValue = null;
 
         // Background Design Layer State (Shapes, Textboxes, Image Guides)
         let canvasDecorations = {};
@@ -8747,6 +8754,10 @@
         });
 
         window.addEventListener('mouseup', e => {
+            // A press that slides off the Render button must not keep a stale editor snapshot.
+            if (!(e.target && e.target.closest && e.target.closest('#btn_run_adv'))) {
+                advCodeArmedValue = null;
+            }
             if (e && (e.button === 3 || e.button === 4)) {
                 e.preventDefault();
             }
@@ -10475,7 +10486,7 @@
         }
 
         // --- 5. CODE SYNC ENGINE (Multi-Root & Advanced Code with Locations) ---
-        function syncFromMap() {
+        function syncFromMap(force = false) {
             const roots = getRoots();
 
             // 1. Basic Code (List Mode)
@@ -10493,7 +10504,7 @@
                 traverse(root.id, 0);
             });
             const codeEl = document.getElementById('code_input');
-            if (codeEl && document.activeElement !== codeEl) {
+            if (codeEl && (force || document.activeElement !== codeEl)) {
                 codeEl.value = txt.trim();
             }
 
@@ -10609,17 +10620,33 @@
             }
 
             const advCodeEl = document.getElementById('advcode_input');
-            if (advCodeEl && document.activeElement !== advCodeEl) {
+            // Canvas drags call this on every mouseup. That used to replace unrendered
+            // editor text (including a click on Render, which blurs the textarea first).
+            const advEditInProgress = advCodeDirty || advCodeRenderLock || advRenderDebounceTimer;
+            if (advCodeEl && (force || (!advEditInProgress && document.activeElement !== advCodeEl))) {
                 advCodeEl.value = advTxt.trim();
             }
+            if (force) advCodeDirty = false;
         }
 
         function runAdvCode(autoFit = true) {
+            const advInputEl = document.getElementById('advcode_input');
+            let sourceText = null;
             try {
-                const advInputEl = document.getElementById('advcode_input');
                 if (!advInputEl) return;
-                const raw = advInputEl.value.trim();
-                if (!raw) return;
+                sourceText = advInputEl.value;
+                const raw = sourceText.trim();
+                if (!raw) {
+                    sourceText = null;
+                    return;
+                }
+
+                if (advRenderDebounceTimer) {
+                    clearTimeout(advRenderDebounceTimer);
+                    advRenderDebounceTimer = null;
+                }
+                advRenderWantsFit = false;
+                advCodeRenderLock = true;
 
                 // Optional JSON format support
                 if (raw.startsWith('{') || raw.startsWith('[')) {
@@ -10641,6 +10668,7 @@
                             renderTree();
                             renderDecorations();
                             applyDesignLayerSettings();
+                            advCodeDirty = false;
                             syncFromMap();
                             updatePropertiesPanel();
                             if (autoFit) fitView();
@@ -10666,8 +10694,9 @@
             nonEmptyLines.forEach((line, idx) => {
                 const trimmed = line.trim();
 
-                // Ignore markdown dividers or design section headers
-                if (trimmed === '---' || /^#+\s*Design\b/i.test(trimmed)) {
+                // Ignore markdown dividers and the design-section header only.
+                // Headings whose titles merely start with "Design" are real roots.
+                if (trimmed === '---' || /^#+\s*Design Elements\s*$/i.test(trimmed)) {
                     return;
                 }
 
@@ -10691,6 +10720,7 @@
                                 else if (k === 'z') attrs.zIndex = parseInt(v, 10) || 1;
                                 else if (k === 'bg') attrs.bg = v;
                                 else if (k === 'color') attrs.color = v;
+                                else if (k === 'fg') attrs.fg = v;
                                 else if (k === 'size') attrs.fontSize = parseInt(v, 10);
                                 else if (k === 'opacity') attrs.opacity = parseFloat(v);
                                 else if (k === 'radius') attrs.borderRadius = parseInt(v, 10);
@@ -10812,7 +10842,7 @@
                             text: label || 'Section Title',
                             fontSize: attrs.fontSize || 22,
                             fontWeight: 'bold',
-                            color: attrs.color || '#0f172a',
+                            color: attrs.color || attrs.fg || '#0f172a',
                             bg: attrs.bg || 'transparent',
                             borderColor: attrs.borderColor || 'transparent',
                             borderStyle: attrs.borderStyle || 'none',
@@ -10833,7 +10863,7 @@
                             text: label || '📌 Guide Note',
                             fontSize: attrs.fontSize || 14,
                             fontWeight: 'normal',
-                            color: attrs.color || '#78350f',
+                            color: attrs.color || attrs.fg || '#78350f',
                             bg: attrs.bg || '#fef08a',
                             borderColor: attrs.borderColor || '#fde047',
                             borderStyle: attrs.borderStyle || 'solid',
@@ -11113,6 +11143,7 @@
                 updateBoundArrows();
             }
             applyDesignLayerSettings();
+            advCodeDirty = false;
             syncFromMap();
             updatePropertiesPanel();
             if (autoFit) {
@@ -11123,6 +11154,11 @@
         } catch (err) {
             console.error('Error in runAdvCode:', err);
             alert('Failed to parse Advanced Code: ' + (err.message || err));
+        } finally {
+            advCodeRenderLock = false;
+            if (advInputEl && sourceText !== null && advInputEl.value !== sourceText) {
+                advInputEl.value = sourceText;
+            }
         }
     }
 
@@ -11202,21 +11238,38 @@
         }
 
         // Live rendering & keyboard listener for Advanced Code
-        let advRenderDebounceTimer = null;
         function scheduleLiveAdvRender(immediate = false) {
+            advCodeDirty = true;
+            if (immediate) advRenderWantsFit = true;
             if (advRenderDebounceTimer) {
                 clearTimeout(advRenderDebounceTimer);
                 advRenderDebounceTimer = null;
             }
-            if (immediate) {
-                setTimeout(() => {
-                    runAdvCode(true);
-                }, 60);
-            } else {
-                advRenderDebounceTimer = setTimeout(() => {
-                    runAdvCode(false);
-                }, 600);
+            // Paste fires before the textarea value updates, then input fires again.
+            // Keep the fast path across that second call so we render the inserted text.
+            const delay = advRenderWantsFit ? 40 : 600;
+            advRenderDebounceTimer = setTimeout(() => {
+                advRenderDebounceTimer = null;
+                const fit = advRenderWantsFit;
+                advRenderWantsFit = false;
+                runAdvCode(fit);
+            }, delay);
+        }
+
+        // Snapshot the editor on pointerdown, before mouseup's syncFromMap can overwrite it.
+        function armAdvCodeRender(e) {
+            if (e && typeof e.button === 'number' && e.button !== 0) return;
+            const el = document.getElementById('advcode_input');
+            advCodeArmedValue = el ? el.value : null;
+        }
+
+        function runAdvCodeFromButton() {
+            const el = document.getElementById('advcode_input');
+            if (el && advCodeArmedValue !== null) {
+                if (el.value !== advCodeArmedValue) el.value = advCodeArmedValue;
+                advCodeArmedValue = null;
             }
+            runAdvCode(true);
         }
 
         document.addEventListener('keydown', (e) => {
