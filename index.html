@@ -105,11 +105,13 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Keep the top bar inside the viewport so it scrolls instead of clipping. */
+        /* Keep the top bar inside the viewport so it scrolls instead of clipping.
+           overflow-anchor stops Fit from shifting the bar when the zoom label resizes. */
         body > header {
             min-width: 0;
             max-width: 100%;
             width: 100%;
+            overflow-anchor: none;
         }
 
         /* Design toolbar stays inside the canvas and scrolls from its left edge. */
@@ -135,6 +137,7 @@
             -webkit-overflow-scrolling: touch;
             touch-action: pan-x;
             scroll-padding-inline: 8px;
+            overflow-anchor: none;
         }
 
         /* Infinite SVG Canvas & Smooth Bezier Edge Lines */
@@ -315,6 +318,60 @@
             .collapse-toggle.edge-left { right: calc(100% + (20px * var(--collapse-hit, 1) - 22px)); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
             .collapse-toggle.edge-bottom { top: calc(100% + (20px * var(--collapse-hit, 1) - 22px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
             .collapse-toggle.edge-top { bottom: calc(100% + (20px * var(--collapse-hit, 1) - 22px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+        }
+        /* Phone: the painted circle scales with the map, floored near 16px on screen,
+           and sits a few pixels outside the node. The 44px target is anchored on the
+           children side so the extra hit area reaches back over the node instead of
+           covering the next label. iPad and wider keep the constant-size control above. */
+        @media (pointer: coarse) and (max-width: 640px) {
+            .collapse-toggle,
+            .collapse-toggle.is-collapsed {
+                min-width: 0;
+                min-height: 0;
+                padding: 0;
+                /* Only the ::before is the target, so it stays 44px on screen
+                   while the painted circle scales with zoom. */
+                pointer-events: none;
+            }
+            .collapse-toggle-face {
+                transform: scale(var(--collapse-face, 1));
+            }
+            .collapse-toggle.edge-right .collapse-toggle-face { transform-origin: left center; }
+            .collapse-toggle.edge-left .collapse-toggle-face { transform-origin: right center; }
+            .collapse-toggle.edge-bottom .collapse-toggle-face { transform-origin: center top; }
+            .collapse-toggle.edge-top .collapse-toggle-face { transform-origin: center bottom; }
+            .collapse-toggle.edge-right { left: calc(100% + 3px * var(--collapse-hit, 1)); top: 50%; transform: translateY(-50%); }
+            .collapse-toggle.edge-left { right: calc(100% + 3px * var(--collapse-hit, 1)); top: 50%; transform: translateY(-50%); }
+            .collapse-toggle.edge-bottom { left: 50%; top: calc(100% + 3px * var(--collapse-hit, 1)); transform: translateX(-50%); }
+            .collapse-toggle.edge-top { left: 50%; bottom: calc(100% + 3px * var(--collapse-hit, 1)); transform: translateX(-50%); }
+            .collapse-toggle::before {
+                content: '';
+                position: absolute;
+                width: 44px;
+                height: 44px;
+                pointer-events: auto;
+                transform: scale(var(--collapse-hit, 1));
+            }
+            .collapse-toggle.edge-right::before {
+                left: calc(100% * var(--collapse-face, 1) - 44px);
+                top: calc(50% - 22px);
+                transform-origin: right center;
+            }
+            .collapse-toggle.edge-left::before {
+                left: calc((1 - var(--collapse-face, 1)) * 100%);
+                top: calc(50% - 22px);
+                transform-origin: left center;
+            }
+            .collapse-toggle.edge-bottom::before {
+                left: calc(50% - 22px);
+                top: calc(100% * var(--collapse-face, 1) - 44px);
+                transform-origin: center bottom;
+            }
+            .collapse-toggle.edge-top::before {
+                left: calc(50% - 22px);
+                top: calc((1 - var(--collapse-face, 1)) * 100%);
+                transform-origin: center top;
+            }
         }
         #guide-tips-touch { display: none; }
         @media (pointer: coarse) {
@@ -615,7 +672,7 @@
 
         <!-- CANVAS TOOLS & EXPORT -->
         <div class="flex items-center gap-1 shrink-0">
-            <button type="button" onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🎯 Fit</button>
+            <button type="button" onpointerdown="rememberToolbarScroll()" onmousedown="keepToolbarScroll(event)" onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🎯 Fit</button>
             <button type="button" onclick="zoomBy(1/1.1)" title="Zoom out (viewport center)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-bold shrink-0">−</button>
             <button type="button" onclick="zoomTo(1)" title="Reset zoom to 100% (viewport center)" class="zoom-readout bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-semibold tabular-nums shrink-0">100%</button>
             <button type="button" onclick="zoomBy(1.1)" title="Zoom in (viewport center)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-bold shrink-0">+</button>
@@ -1046,7 +1103,7 @@
                     </button>
 
                     <!-- Fit View Button -->
-                    <button type="button" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
+                    <button type="button" onpointerdown="rememberToolbarScroll()" onmousedown="keepToolbarScroll(event)" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
                         <span>🎯</span> Fit
                     </button>
                     <button type="button" onclick="zoomBy(1/1.1)" class="px-2 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-bold transition-colors shrink-0" title="Zoom out (viewport center)">−</button>
@@ -10140,10 +10197,19 @@
             const layer = document.getElementById('pan-zoom-container');
             layer.style.transformOrigin = '0 0';
             layer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-            // Cancel the canvas scale so controls stay a constant size on screen:
-            // ~18px desktop face, ~28px touch face, and a >=44px touch target.
-            const hit = (zoom > 0) ? ((44.5 / 44) / zoom) : 1;
-            layer.style.setProperty('--collapse-hit', hit.toFixed(4));
+            const z = (zoom > 0) ? zoom : 1;
+            const phoneCoarse = window.matchMedia('(pointer: coarse) and (max-width: 640px)').matches;
+            if (phoneCoarse) {
+                // 28px layout face × faceScale × zoom = max(16px, 28px × zoom) on screen.
+                // Hit scale cancels zoom so the 44px target stays 44px on screen.
+                const faceScale = Math.max(16 / (28 * z), 1);
+                layer.style.setProperty('--collapse-face', faceScale.toFixed(4));
+                layer.style.setProperty('--collapse-hit', (1 / z).toFixed(4));
+            } else {
+                // Desktop face stays ~18px and the touch face stays ~28px, both constant on screen.
+                layer.style.setProperty('--collapse-face', '1');
+                layer.style.setProperty('--collapse-hit', ((44.5 / 44) / z).toFixed(4));
+            }
             const label = Math.round(zoom * 100) + '%';
             document.querySelectorAll('.zoom-readout').forEach(el => { el.textContent = label; });
         }
@@ -10194,14 +10260,70 @@
             return { x: node.x - w / 2, y: node.y - h / 2, w, h };
         }
 
+        let pendingToolbarScroll = null;
+        let pendingToolbarScrollTimer = null;
+
+        function captureToolbarScroll() {
+            const header = document.querySelector('body > header');
+            const designScroller = document.getElementById('design-toolbar-expanded-content');
+            return {
+                header: header ? header.scrollLeft : 0,
+                design: designScroller ? designScroller.scrollLeft : 0
+            };
+        }
+
+        function rememberToolbarScroll() {
+            pendingToolbarScroll = captureToolbarScroll();
+            clearTimeout(pendingToolbarScrollTimer);
+            pendingToolbarScrollTimer = setTimeout(() => { pendingToolbarScroll = null; }, 600);
+        }
+
+        function keepToolbarScroll(e) {
+            if (e && e.cancelable) e.preventDefault();
+            if (!pendingToolbarScroll) rememberToolbarScroll();
+        }
+
+        function restoreToolbarScroll(saved) {
+            const header = document.querySelector('body > header');
+            const designScroller = document.getElementById('design-toolbar-expanded-content');
+            if (header && header.scrollLeft !== saved.header) header.scrollLeft = saved.header;
+            if (designScroller && designScroller.scrollLeft !== saved.design) designScroller.scrollLeft = saved.design;
+        }
+
+        function holdToolbarScroll(saved) {
+            restoreToolbarScroll(saved);
+            const header = document.querySelector('body > header');
+            const designScroller = document.getElementById('design-toolbar-expanded-content');
+            const onScroll = () => restoreToolbarScroll(saved);
+            if (header) header.addEventListener('scroll', onScroll);
+            if (designScroller) designScroller.addEventListener('scroll', onScroll);
+            setTimeout(() => {
+                if (header) header.removeEventListener('scroll', onScroll);
+                if (designScroller) designScroller.removeEventListener('scroll', onScroll);
+                restoreToolbarScroll(saved);
+            }, 400);
+        }
+
         function fitView() {
+            const savedScroll = pendingToolbarScroll || captureToolbarScroll();
+            pendingToolbarScroll = null;
+            clearTimeout(pendingToolbarScrollTimer);
+            const restoreScroll = () => restoreToolbarScroll(savedScroll);
+
             const allItems = [];
             Object.values(nodes).forEach(n => {
                 const box = visibleNodeBounds(n);
                 if (box) allItems.push(box);
             });
             // Empty frames, stickies, and other decorations are not part of the fit.
-            if (allItems.length === 0) return;
+            if (allItems.length === 0) {
+                restoreScroll();
+                return;
+            }
+
+            // Close the docked guide before measuring so the extra space it frees
+            // is part of the centered view instead of a gap left under the map.
+            noteControlsGuideUsed();
 
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             allItems.forEach(item => {
@@ -10214,24 +10336,35 @@
             const canvasRect = mapViewportRect();
             const cW = (canvasRect && canvasRect.width > 50) ? canvasRect.width : (window.innerWidth ? window.innerWidth - 320 : 1000);
             const cH = (canvasRect && canvasRect.height > 50) ? canvasRect.height : (window.innerHeight ? window.innerHeight - 60 : 700);
-            const padding = 56;
-            const contentW = Math.max(maxX - minX + padding * 2, 120);
-            const contentH = Math.max(maxY - minY + padding * 2, 80);
+            const pad = 16;
+            let topInset = pad;
+            const toolbar = document.getElementById('floating-canvas-design-toolbar');
+            if (toolbar && canvasRect) {
+                const tb = toolbar.getBoundingClientRect();
+                if (tb.height > 0 && tb.bottom > canvasRect.top) {
+                    topInset = Math.max(pad, tb.bottom - canvasRect.top + 8);
+                }
+            }
+            topInset = Math.min(topInset, cH * 0.4);
+            const bottomInset = pad;
+            const contentW = Math.max(maxX - minX, 40);
+            const contentH = Math.max(maxY - minY, 40);
+            const availW = Math.max(80, cW - pad * 2);
+            const availH = Math.max(80, cH - topInset - bottomInset);
 
-            const scaleX = cW / contentW;
-            const scaleY = cH / contentH;
-            zoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.25), 1.25);
+            zoom = Math.min(Math.max(Math.min(availW / contentW, availH / contentH), 0.25), 1.25);
 
             const contentCenterX = (minX + maxX) / 2;
             const contentCenterY = (minY + maxY) / 2;
+            const bandCenterY = topInset + (cH - topInset - bottomInset) / 2;
 
             panX = Math.round(cW / 2 - contentCenterX * zoom);
-            panY = Math.round(cH / 2 - contentCenterY * zoom);
+            panY = Math.round(bandCenterY - contentCenterY * zoom);
 
             applyTransform();
             triggerAutoSave();
-            noteControlsGuideUsed();
             setSaveStatus('saved', '✓ View Fitted to Content');
+            holdToolbarScroll(savedScroll);
         }
 
         // --- 3. LOGIC UTILS & 4-DIRECTIONAL LAYOUT ENGINE ---
