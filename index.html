@@ -175,6 +175,110 @@
         .bubble-node {
             pointer-events: auto;
         }
+        .bubble-node:hover,
+        .bubble-node.is-branch-collapsed {
+            z-index: 30;
+        }
+        .collapse-toggle {
+            position: absolute;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            border: 1.5px solid #94a3b8;
+            background: #ffffff;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+            pointer-events: auto;
+            user-select: none;
+            touch-action: manipulation;
+            box-sizing: border-box;
+        }
+        .collapse-toggle.is-collapsed {
+            background: #1e293b;
+            color: #ffffff;
+            border-color: #1e293b;
+            min-width: 28px;
+        }
+        .collapse-toggle.edge-right { left: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
+        .collapse-toggle.edge-left { right: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
+        .collapse-toggle.edge-bottom { left: 50%; top: calc(100% - 8px); transform: translateX(-50%); }
+        .collapse-toggle.edge-top { left: 50%; bottom: calc(100% - 8px); transform: translateX(-50%); }
+        @media (hover: hover) and (pointer: fine) {
+            .collapse-toggle:not(.is-collapsed) {
+                opacity: 0;
+                pointer-events: none;
+            }
+            .bubble-node:hover .collapse-toggle,
+            .bubble-node:focus-within .collapse-toggle,
+            .collapse-toggle.is-collapsed {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+        @media (hover: none), (pointer: coarse) {
+            .collapse-toggle,
+            .collapse-toggle.is-collapsed {
+                opacity: 1;
+                pointer-events: auto;
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                min-height: 44px;
+                padding: 0;
+                font-size: 14px;
+                -webkit-appearance: none;
+                appearance: none;
+            }
+            /* Counter the canvas scale so the finger target stays 44px on screen when zoomed out. */
+            .collapse-toggle.edge-right { left: calc(100% - 22px); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-left { right: calc(100% - 22px); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-bottom { top: calc(100% - 22px); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-top { bottom: calc(100% - 22px); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+        }
+        .bubble-node.fold-in { animation: omni-fold-in 180ms ease-out; }
+        .bubble-node.fold-out { animation: omni-fold-out 160ms ease-in forwards; pointer-events: none; }
+        path.edge.fold-in { animation: omni-edge-in 180ms ease-out; }
+        path.edge.fold-out { animation: omni-edge-out 160ms ease-in forwards; }
+        @keyframes omni-fold-in {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.55); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes omni-fold-out {
+            from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            to { opacity: 0; transform: translate(-50%, -50%) scale(0.45); }
+        }
+        @keyframes omni-edge-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes omni-edge-out { to { opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+            .bubble-node.fold-in, .bubble-node.fold-out, path.edge.fold-in, path.edge.fold-out { animation: none !important; }
+        }
+        .pro-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.55rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #7c3aed;
+            background: #f3e8ff;
+            border: 1px solid #e9d5ff;
+            border-radius: 999px;
+            padding: 0 4px;
+            line-height: 1.45;
+        }
+        @media (hover: none), (pointer: coarse) {
+            .branch-action { min-height: 44px; }
+        }
 
         /* Bubbles with images: switch to vertical card layout */
         .bubble-node.has-attachment {
@@ -428,6 +532,20 @@
                 <button type="button" onclick="transposeBranchOrMap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
                     <span>🔄</span> Transpose Layout (4-Way)
                 </button>
+                <div class="h-px bg-slate-100 my-1"></div>
+                <button type="button" onclick="collapseAllNodes()" class="branch-action text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-between gap-2">
+                    <span>⊟ Collapse all</span><span class="pro-badge">Pro</span>
+                </button>
+                <button type="button" onclick="expandAllNodes()" class="branch-action text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-between gap-2">
+                    <span>⊞ Expand all</span><span class="pro-badge">Pro</span>
+                </button>
+                <div class="px-3 py-1 text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">Show up to level <span class="pro-badge">Pro</span></div>
+                <div class="grid grid-cols-4 gap-1 px-2 pb-1">
+                    <button type="button" onclick="showUpToLevel(1)" class="branch-action px-2 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold">1</button>
+                    <button type="button" onclick="showUpToLevel(2)" class="branch-action px-2 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold">2</button>
+                    <button type="button" onclick="showUpToLevel(3)" class="branch-action px-2 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold">3</button>
+                    <button type="button" onclick="showUpToLevel(4)" class="branch-action px-2 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold">4</button>
+                </div>
                 <button type="button" onclick="toggleCanvasGuide()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
                     <span>💡</span> Toggle Canvas Guide
                 </button>
@@ -486,6 +604,30 @@
                 <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
                     <p class="text-[0.65rem] font-bold text-blue-500 uppercase tracking-wider mb-1">Selected Node</p>
                     <p id="prop-node-label" class="text-sm text-slate-700 font-medium truncate">—</p>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-bold text-slate-700 uppercase">Find node</label>
+                        <span id="node-find-status" class="text-[0.65rem] text-slate-400"></span>
+                    </div>
+                    <input type="text" id="node-find-input" onkeydown="if(event.key==='Enter'){event.preventDefault(); findAndSelectNode(this.value);}" placeholder="Search text, Enter for next" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-bold text-slate-700 uppercase">Branches</label>
+                        <span class="pro-badge">Pro</span>
+                    </div>
+                    <div class="flex gap-1.5 mb-1.5">
+                        <button type="button" onclick="collapseAllNodes()" class="branch-action flex-1 bg-slate-100 hover:bg-slate-200 py-2 px-2 rounded-lg text-[0.7rem] font-bold border border-slate-200 text-slate-700">Collapse all</button>
+                        <button type="button" onclick="expandAllNodes()" class="branch-action flex-1 bg-slate-100 hover:bg-slate-200 py-2 px-2 rounded-lg text-[0.7rem] font-bold border border-slate-200 text-slate-700">Expand all</button>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[0.68rem] font-semibold text-slate-600 shrink-0">Show up to level</span>
+                        <input id="fold-level-input" data-fold-level type="number" min="1" max="30" value="2" onkeydown="if(event.key==='Enter'){event.preventDefault(); showUpToLevel(this.value);}" class="w-14 border border-slate-300 rounded-lg px-2 py-1.5 text-xs">
+                        <button type="button" onclick="showUpToLevel(document.getElementById('fold-level-input').value)" class="branch-action bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[0.7rem] font-bold">Apply</button>
+                    </div>
                 </div>
 
                 <!-- Node Text -->
@@ -723,9 +865,10 @@
 
             <!-- TAB: Advanced Code Editor (With Locations) -->
             <div id="panel-advcode" class="p-4 flex flex-col h-full hidden">
-                <div class="flex justify-between items-center mb-1">
-                    <label class="block text-xs font-bold text-slate-700 uppercase">Advanced Code</label>
-                    <button onclick="syncFromMap(true)" class="text-xs text-blue-600 hover:underline">Sync from visual</button>
+                <div class="flex justify-between items-center mb-1 gap-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase shrink-0">Advanced Code</label>
+                    <span id="adv-render-hint" class="text-[0.68rem] font-semibold text-slate-400 text-right flex-1" aria-live="polite"></span>
+                    <button onclick="syncFromMap(true)" class="text-xs text-blue-600 hover:underline shrink-0">Sync from visual</button>
                 </div>
                 <p class="text-[0.68rem] text-slate-400 mb-2 leading-tight">Controls bubble hierarchy, locations <code>@(x, y)</code>, and design elements. <span class="text-indigo-600 font-semibold">Auto-renders on paste / Ctrl+Enter</span></p>
                 <textarea id="advcode_input" oninput="scheduleLiveAdvRender()" onpaste="scheduleLiveAdvRender(true)" class="flex-1 w-full border rounded-xl p-3 text-xs font-mono focus:outline-indigo-500 resize-none mb-3 bg-slate-50 leading-relaxed text-slate-700" placeholder="# Root Idea @ (200, 250)&#10;  - Branch A @ (500, 180) [Tag]&#10;    - Detail @ (800, 180)&#10;  - Branch B @ (500, 320)&#10;&#10;# Second Root @ (200, 550)&#10;  - Sub-concept @ (500, 550)&#10;&#10;---&#10;# Design Elements&#10;@zone &quot;Grouping Zone&quot; @ (150, 120, 380, 250) {layer: behind, z: 1, bg: rgba(239, 246, 255, 0.45), border: dashed #3b82f6}&#10;@sticky &quot;📌 Guide Note&quot; @ (550, 450, 220, 180) {layer: front, z: 1, bg: #fef08a}&#10;@card &quot;Section Card&quot; @ (600, 100, 320, 200) {layer: behind, z: 2}"></textarea>
@@ -805,6 +948,25 @@
                     <button type="button" onclick="transposeBranchOrMap()" id="btn-toggle-transpose" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Transpose layout: toggle branch or map orientation across 4 directions (Right, Tree, Left, Up)">
                         <span>🔄</span> <span class="hidden sm:inline">Transpose</span>
                     </button>
+
+                    <div class="relative shrink-0">
+                        <button type="button" onclick="toggleDesignDropdown('fold', event)" id="btn-dropdown-fold" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors cursor-pointer select-none" title="Collapse all, expand all, or show up to a level">
+                            <span>⊟</span> <span class="hidden md:inline">Fold</span> <span class="pro-badge">Pro</span> <span class="text-[0.6rem] text-slate-400">▼</span>
+                        </button>
+                        <div id="dropdown-menu-fold" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 min-w-[210px] z-50">
+                            <button type="button" onclick="collapseAllNodes(); closeDesignDropdowns();" class="branch-action text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-lg flex items-center justify-between gap-2 font-semibold text-xs">
+                                <span>⊟ Collapse all</span><span class="pro-badge">Pro</span>
+                            </button>
+                            <button type="button" onclick="expandAllNodes(); closeDesignDropdowns();" class="branch-action text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-lg flex items-center justify-between gap-2 font-semibold text-xs">
+                                <span>⊞ Expand all</span><span class="pro-badge">Pro</span>
+                            </button>
+                            <div class="px-3 pt-1.5 pb-1 text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">Show up to level <span class="pro-badge">Pro</span></div>
+                            <div class="flex items-center gap-1 px-2 pb-1.5">
+                                <input id="fold-level-input-toolbar" data-fold-level type="number" min="1" max="30" value="2" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault(); showUpToLevel(this.value); closeDesignDropdowns();}" class="w-14 border border-slate-300 rounded-lg px-2 py-1.5 text-xs">
+                                <button type="button" onclick="showUpToLevel(document.getElementById('fold-level-input-toolbar').value); closeDesignDropdowns();" class="branch-action flex-1 bg-slate-800 hover:bg-slate-900 text-white px-2 py-1.5 rounded-lg text-[0.7rem] font-bold">Apply</button>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="h-4 w-px bg-slate-200 mx-0.5 shrink-0"></div>
 
@@ -979,6 +1141,7 @@
                     <p>🎯 <b>A / Shape:</b> Drag-to-draw snapping arrows</p>
                     <p>🤏 <b>Drag Bubble:</b> Move branch freely</p>
                     <p>✏️ <b>Double-Click:</b> Edit text inline</p>
+                    <p>➕ <b>+ / − on a bubble:</b> Collapse or expand its children</p>
                 </div>
             </div>
 
@@ -5830,6 +5993,7 @@
             // Scope: entire mind map (auto-crop)
             const allItems = [];
             Object.values(nodes).forEach(n => {
+                if (isNodeConcealed(n)) return;
                 if (typeof n.x === 'number' && typeof n.y === 'number') {
                     const el = n.el || document.querySelector(`.bubble-node[data-id="${n.id}"]`);
                     const w = el ? el.offsetWidth : 160;
@@ -5995,6 +6159,13 @@
 
             svgStr += `  <style>
                 .bubble-node { position: absolute; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); border-radius: 9999px; padding: 0.625rem 1.25rem; white-space: nowrap; font-family: ui-sans-serif, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; }
+                .collapse-toggle { position: absolute; display: flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; border: 1.5px solid #94a3b8; background: #fff; color: #334155; font-size: 11px; font-weight: 800; line-height: 1; box-sizing: border-box; }
+                .collapse-toggle:not(.is-collapsed) { display: none; }
+                .collapse-toggle.is-collapsed { background: #1e293b; color: #fff; border-color: #1e293b; }
+                .collapse-toggle.edge-right { left: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
+                .collapse-toggle.edge-left { right: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
+                .collapse-toggle.edge-bottom { left: 50%; top: calc(100% - 8px); transform: translateX(-50%); }
+                .collapse-toggle.edge-top { left: 50%; bottom: calc(100% - 8px); transform: translateX(-50%); }
                 .bubble-node.has-attachment { flex-direction: column; border-radius: 1rem !important; white-space: normal !important; padding: 8px 12px; }
                 .bubble-img { max-width: 180px; max-height: 120px; border-radius: 0.5rem; object-fit: cover; margin-bottom: 6px; }
                 .canvas-decoration { position: absolute; box-sizing: border-box; font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -6387,14 +6558,288 @@
         }
 
         // --- 1. RENDERING PIPELINE ---
+        // Central Pro gate for branch actions. Returns true until a later billing check is added.
+        // PayMongo and lifetime-pro code stay as they are and are not consulted here.
+        function isPro() {
+            return true;
+        }
+
+        let foldRevealIds = null;
+        let foldOutTimer = null;
+        let foldGeneration = 0;
+        let deleteConfirmBusy = false;
+        let nodeFindQuery = '';
+        let nodeFindIndex = 0;
+
+        function collapseMotionMs() {
+            try {
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+            } catch (e) {}
+            return 170;
+        }
+
+        function guardMapEditable() {
+            if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
+                if (typeof showCollabViewOnlyNotice === 'function') showCollabViewOnlyNotice();
+                return false;
+            }
+            return true;
+        }
+
+        function requireCollapsePro() {
+            if (isPro()) return true;
+            showUiToast('Collapse all, Expand all, and Show up to level are Pro features.', 'info', 2600);
+            return false;
+        }
+
+        function getDirectChildren(id) {
+            return Object.values(nodes).filter(n => n.parentId === id);
+        }
+
+        function isNodeConcealed(nodeOrId) {
+            const start = typeof nodeOrId === 'string' ? nodes[nodeOrId] : nodeOrId;
+            if (!start) return false;
+            let pid = start.parentId;
+            const seen = new Set();
+            while (pid && nodes[pid] && !seen.has(pid)) {
+                if (nodes[pid].collapsed) return true;
+                seen.add(pid);
+                pid = nodes[pid].parentId;
+            }
+            return false;
+        }
+
+        function nodeTreeDepth(id) {
+            let depth = 1;
+            let pid = nodes[id] ? nodes[id].parentId : null;
+            const seen = new Set();
+            while (pid && nodes[pid] && !seen.has(pid)) {
+                seen.add(pid);
+                depth += 1;
+                pid = nodes[pid].parentId;
+            }
+            return depth;
+        }
+
+        function getCollapseEdge(node) {
+            const children = getDirectChildren(node.id);
+            let right = 0, left = 0, down = 0, up = 0;
+            children.forEach(c => {
+                const dx = (c.x || 0) - (node.x || 0);
+                const dy = (c.y || 0) - (node.y || 0);
+                if (Math.abs(dy) > Math.abs(dx)) {
+                    if (dy >= 0) down += 1;
+                    else up += 1;
+                } else if (dx >= 0) right += 1;
+                else left += 1;
+            });
+            const ranked = [['right', right], ['left', left], ['bottom', down], ['top', up]];
+            ranked.sort((a, b) => b[1] - a[1]);
+            return ranked[0][1] > 0 ? ranked[0][0] : 'right';
+        }
+
+        function captureConcealedIds() {
+            const set = new Set();
+            Object.values(nodes).forEach(n => {
+                if (isNodeConcealed(n)) set.add(n.id);
+            });
+            return set;
+        }
+
+        function markNewlyRevealed(before) {
+            const reveal = new Set();
+            before.forEach(id => {
+                if (nodes[id] && !isNodeConcealed(nodes[id])) reveal.add(id);
+            });
+            foldRevealIds = reveal;
+        }
+
+        function retargetSelectionIfConcealed() {
+            if (!selectedNodeId || !nodes[selectedNodeId] || !isNodeConcealed(selectedNodeId)) return;
+            let pid = nodes[selectedNodeId].parentId;
+            const seen = new Set();
+            while (pid && nodes[pid] && isNodeConcealed(pid) && !seen.has(pid)) {
+                seen.add(pid);
+                pid = nodes[pid].parentId;
+            }
+            if (pid && nodes[pid]) selectedNodeId = pid;
+        }
+
+        function finishCollapseChange() {
+            retargetSelectionIfConcealed();
+            renderTree();
+            updatePropertiesPanel();
+            syncFromMap();
+            triggerAutoSave();
+        }
+
+        function cancelFoldOut() {
+            foldGeneration += 1;
+            if (foldOutTimer) {
+                clearTimeout(foldOutTimer);
+                foldOutTimer = null;
+            }
+        }
+
+        function playFoldOut(ids, done) {
+            if (foldOutTimer) {
+                clearTimeout(foldOutTimer);
+                foldOutTimer = null;
+            }
+            const gen = ++foldGeneration;
+            const ms = collapseMotionMs();
+            if (ms > 0) {
+                ids.forEach(id => {
+                    const n = nodes[id];
+                    if (!n) return;
+                    if (n.el) n.el.classList.add('fold-out');
+                    if (n.edgeEl) n.edgeEl.classList.add('fold-out');
+                });
+            }
+            foldOutTimer = setTimeout(() => {
+                if (gen !== foldGeneration) return;
+                foldOutTimer = null;
+                done();
+            }, ms);
+        }
+
+        function expandAncestorsOf(id) {
+            if (!id || !nodes[id]) return false;
+            let changed = false;
+            let pid = nodes[id].parentId;
+            const seen = new Set();
+            while (pid && nodes[pid] && !seen.has(pid)) {
+                seen.add(pid);
+                if (nodes[pid].collapsed) {
+                    delete nodes[pid].collapsed;
+                    changed = true;
+                }
+                pid = nodes[pid].parentId;
+            }
+            return changed;
+        }
+
+        function toggleNodeCollapsed(id) {
+            if (!guardMapEditable()) return;
+            const node = nodes[id];
+            if (!node || !getDirectChildren(id).length) return;
+            selectedNodeId = id;
+            if (node.collapsed) {
+                cancelFoldOut();
+                const before = captureConcealedIds();
+                delete node.collapsed;
+                markNewlyRevealed(before);
+                finishCollapseChange();
+                return;
+            }
+            const hiding = getDescendants(id).filter(dId => nodes[dId] && !isNodeConcealed(nodes[dId]));
+            playFoldOut(hiding, () => {
+                if (!nodes[id]) return;
+                nodes[id].collapsed = true;
+                finishCollapseChange();
+            });
+        }
+
+        function collapseAllNodes() {
+            if (!requireCollapsePro()) return;
+            if (!guardMapEditable()) return;
+            const hiding = Object.values(nodes).filter(n => n.parentId && !isNodeConcealed(n)).map(n => n.id);
+            playFoldOut(hiding, () => {
+                Object.values(nodes).forEach(n => {
+                    if (getDirectChildren(n.id).length) n.collapsed = true;
+                    else delete n.collapsed;
+                });
+                finishCollapseChange();
+            });
+        }
+
+        function expandAllNodes() {
+            if (!requireCollapsePro()) return;
+            if (!guardMapEditable()) return;
+            cancelFoldOut();
+            const before = captureConcealedIds();
+            let changed = false;
+            Object.values(nodes).forEach(n => {
+                if (n.collapsed) {
+                    delete n.collapsed;
+                    changed = true;
+                }
+            });
+            if (!changed) return;
+            markNewlyRevealed(before);
+            finishCollapseChange();
+        }
+
+        function showUpToLevel(levelRaw) {
+            if (!requireCollapsePro()) return;
+            if (!guardMapEditable()) return;
+            let level = parseInt(levelRaw, 10);
+            if (!Number.isFinite(level)) level = 1;
+            level = Math.max(1, Math.min(30, level));
+            document.querySelectorAll('[data-fold-level]').forEach(el => { el.value = String(level); });
+            const before = captureConcealedIds();
+            const hiding = [];
+            Object.values(nodes).forEach(n => {
+                const hasKids = getDirectChildren(n.id).length > 0;
+                if (!(hasKids && nodeTreeDepth(n.id) >= level)) return;
+                if (isNodeConcealed(n)) return;
+                getDescendants(n.id).forEach(dId => {
+                    if (nodes[dId] && !isNodeConcealed(nodes[dId])) hiding.push(dId);
+                });
+            });
+            const apply = () => {
+                Object.values(nodes).forEach(n => {
+                    const hasKids = getDirectChildren(n.id).length > 0;
+                    if (hasKids && nodeTreeDepth(n.id) >= level) n.collapsed = true;
+                    else delete n.collapsed;
+                });
+                markNewlyRevealed(before);
+                finishCollapseChange();
+            };
+            if (hiding.length) playFoldOut(hiding, apply);
+            else apply();
+        }
+
+        function attachCollapseToggle(el, node) {
+            const children = getDirectChildren(node.id);
+            if (!children.length) return;
+            const collapsed = !!node.collapsed;
+            const count = collapsed ? getDescendants(node.id).length : 0;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'collapse-toggle edge-' + getCollapseEdge(node) + (collapsed ? ' is-collapsed' : '');
+            btn.textContent = collapsed ? ('+' + count) : '−';
+            btn.title = collapsed ? ('Expand ' + count + ' hidden') : 'Collapse children';
+            btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            btn.setAttribute('aria-label', btn.title);
+            const stop = (e) => e.stopPropagation();
+            btn.addEventListener('mousedown', stop);
+            btn.addEventListener('pointerdown', stop);
+            btn.addEventListener('touchstart', stop, { passive: true });
+            btn.addEventListener('dblclick', stop);
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                toggleNodeCollapsed(node.id);
+            });
+            el.appendChild(btn);
+        }
+
         function renderTree() {
             const container = document.getElementById('nodes-container');
             const svg = document.getElementById('edges-svg');
             
             container.innerHTML = '';
             svg.innerHTML = '';
+            const reveal = foldRevealIds;
+            foldRevealIds = null;
 
             Object.values(nodes).forEach(node => {
+                if (isNodeConcealed(node)) {
+                    node.el = null;
+                    node.edgeEl = null;
+                    return;
+                }
                 // Render HTML Bubble
                 const el = document.createElement('div');
                 el.dataset.id = node.id;
@@ -6411,7 +6856,7 @@
                     bubbleShapeClass = 'rounded-full px-5 py-2.5 whitespace-nowrap';
                 }
 
-                el.className = `bubble-node absolute shadow-md cursor-grab select-none transition-shadow hover:shadow-lg flex items-center justify-center border-2 bg-white ${bubbleShapeClass} ${node.id === selectedNodeId ? 'border-blue-500 ring-4 ring-blue-200' : 'border-transparent'}`;
+                el.className = `bubble-node absolute shadow-md cursor-grab select-none transition-shadow hover:shadow-lg flex items-center justify-center border-2 bg-white ${bubbleShapeClass} ${node.collapsed ? 'is-branch-collapsed' : ''} ${reveal && reveal.has(node.id) ? 'fold-in' : ''} ${node.id === selectedNodeId ? 'border-blue-500 ring-4 ring-blue-200' : 'border-transparent'}`;
                 
                 el.style.left = node.x + 'px';
                 el.style.top = node.y + 'px';
@@ -6447,6 +6892,7 @@
                 html += '</div>';
 
                 el.innerHTML = html;
+                attachCollapseToggle(el, node);
                 
                 container.appendChild(el);
                 node.el = el;
@@ -6454,7 +6900,7 @@
                 // Render SVG Edge if has parent
                 if (node.parentId && nodes[node.parentId]) {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    path.setAttribute('class', 'edge');
+                    path.setAttribute('class', 'edge' + ((reveal && reveal.has(node.id)) ? ' fold-in' : ''));
                     path.setAttribute('stroke', getEdgeStrokeColor());
                     path.setAttribute('stroke-width', '3');
                     path.setAttribute('fill', 'none');
@@ -6488,8 +6934,43 @@
             }
         }
 
+        function findAndSelectNode(raw) {
+            const q = (raw || '').trim().toLowerCase();
+            const status = document.getElementById('node-find-status');
+            if (!q) {
+                if (status) status.textContent = '';
+                return;
+            }
+            if (q !== nodeFindQuery) {
+                nodeFindQuery = q;
+                nodeFindIndex = 0;
+            }
+            const matches = Object.values(nodes).filter(n => (n.text || '').toLowerCase().includes(q));
+            if (!matches.length) {
+                if (status) status.textContent = 'No match';
+                showUiToast('No node matches that search.', 'info', 1600);
+                return;
+            }
+            const hit = matches[nodeFindIndex % matches.length];
+            if (status) status.textContent = ((nodeFindIndex % matches.length) + 1) + ' of ' + matches.length;
+            nodeFindIndex += 1;
+            selectNode(hit.id);
+        }
+
         function selectNode(id) {
             deselectDecoration();
+            if (id && nodes[id] && isNodeConcealed(id)) {
+                cancelFoldOut();
+                const before = captureConcealedIds();
+                expandAncestorsOf(id);
+                markNewlyRevealed(before);
+                selectedNodeId = id;
+                renderTree();
+                updatePropertiesPanel();
+                syncFromMap();
+                triggerAutoSave();
+                return;
+            }
             selectedNodeId = id;
             document.querySelectorAll('.bubble-node').forEach(el => {
                 if (el.dataset.id === id) {
@@ -7085,7 +7566,7 @@
             if (ev && ev.stopPropagation) {
                 ev.stopPropagation();
             }
-            const types = ['shape', 'text', 'image', 'canvas'];
+            const types = ['shape', 'text', 'image', 'canvas', 'fold'];
             types.forEach(t => {
                 const menu = document.getElementById(`dropdown-menu-${t}`);
                 if (!menu) return;
@@ -7119,7 +7600,7 @@
         }
 
         function closeDesignDropdowns() {
-            ['shape', 'text', 'image', 'canvas'].forEach(t => {
+            ['shape', 'text', 'image', 'canvas', 'fold'].forEach(t => {
                 const menu = document.getElementById(`dropdown-menu-${t}`);
                 if (menu) {
                     menu.classList.add('hidden');
@@ -7132,7 +7613,7 @@
 
         // Close design dropdowns on click outside or Escape
         window.addEventListener('click', e => {
-            const dropdownIds = ['shape', 'text', 'image', 'canvas'];
+            const dropdownIds = ['shape', 'text', 'image', 'canvas', 'fold'];
             const clickedInside = dropdownIds.some(t => {
                 const btn = document.getElementById(`btn-dropdown-${t}`);
                 const menu = document.getElementById(`dropdown-menu-${t}`);
@@ -8618,6 +9099,8 @@
                 return;
             }
 
+            if (e.target.closest('.collapse-toggle')) return;
+
             // 3. Check if clicking inside a bubble node
             const nodeEl = e.target.closest('.bubble-node');
             if (nodeEl) {
@@ -8913,6 +9396,7 @@
             if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar')) {
                 return;
             }
+            if (e.target.closest('.collapse-toggle')) return;
             if (isDesignSelectable) {
                 const decEl = e.target.closest('.canvas-decoration');
                 if (decEl) {
@@ -8985,6 +9469,7 @@
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
                 touchHasMoved = false;
+                if (e.target.closest('.collapse-toggle')) return;
 
                 // Check if touching inside inline edit input or contenteditable
                 if (e.target.isContentEditable || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
@@ -9441,6 +9926,10 @@
             const layer = document.getElementById('pan-zoom-container');
             layer.style.transformOrigin = '0 0';
             layer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            // Layout size is 44px. When the canvas is zoomed out, grow the control
+            // by 1/zoom (plus half a pixel) so the on-screen tap target stays >= 44px.
+            const hit = (zoom > 0 && zoom < 1) ? ((44.5 / 44) / zoom) : 1;
+            layer.style.setProperty('--collapse-hit', hit.toFixed(4));
             const label = Math.round(zoom * 100) + '%';
             document.querySelectorAll('.zoom-readout').forEach(el => { el.textContent = label; });
         }
@@ -9448,6 +9937,7 @@
         function fitView() {
             const allItems = [];
             Object.values(nodes).forEach(n => {
+                if (isNodeConcealed(n)) return;
                 if (typeof n.x === 'number' && typeof n.y === 'number') {
                     allItems.push({ x: n.x - 100, y: n.y - 40, w: 200, h: 80 });
                 }
@@ -10070,6 +10560,10 @@
                 return;
             }
             if(!selectedNodeId || !nodes[selectedNodeId]) return;
+            if (nodes[selectedNodeId].collapsed) {
+                cancelFoldOut();
+                delete nodes[selectedNodeId].collapsed;
+            }
             const id = 'n_' + Date.now();
             const pos = getNewChildPosition(selectedNodeId);
             nodes[id] = { id, parentId: selectedNodeId, text: 'New Bubble', x: pos.x, y: pos.y };
@@ -10110,12 +10604,13 @@
             if (newEl) startInlineEdit(newEl, id);
         }
 
-        function deleteNode() {
+        async function deleteNode() {
             if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
                 showCollabViewOnlyNotice();
                 return;
             }
             if(!selectedNodeId || !nodes[selectedNodeId]) return;
+            cancelFoldOut();
             const selected = nodes[selectedNodeId];
 
             if (!selected.parentId) {
@@ -10125,7 +10620,27 @@
             }
 
             const descendants = getDescendants(selectedNodeId);
-            descendants.forEach(dId => delete nodes[dId]);
+            const hiddenCount = descendants.filter(dId => isNodeConcealed(dId)).length;
+            if ((selected.collapsed && descendants.length > 0) || hiddenCount > 0) {
+                if (deleteConfirmBusy) return;
+                deleteConfirmBusy = true;
+                const noun = (selected.collapsed ? descendants.length : hiddenCount);
+                let ok = false;
+                try {
+                    ok = await showConfirm({
+                        title: 'Delete collapsed branch?',
+                        message: `“${selected.text}” will also remove ${noun} hidden node${noun === 1 ? '' : 's'}.`,
+                        confirmText: 'Delete branch',
+                        cancelText: 'Cancel',
+                        isDanger: true
+                    });
+                } finally {
+                    deleteConfirmBusy = false;
+                }
+                if (!ok || !nodes[selectedNodeId]) return;
+            }
+            const toRemove = getDescendants(selectedNodeId);
+            toRemove.forEach(dId => delete nodes[dId]);
             const parentId = selected.parentId;
             delete nodes[selectedNodeId];
 
@@ -10629,8 +11144,9 @@
             function traverse(nId, depth) {
                 const node = nodes[nId];
                 if (!node) return;
-                if (depth === 0) txt += `# ${node.flag||''}${node.text}${node.tag ? ' ['+node.tag+']' : ''}\n`;
-                else txt += `${'  '.repeat(depth-1)}- ${node.flag||''}${node.text}${node.tag ? ' ['+node.tag+']' : ''}\n`;
+                const collapseMark = node.collapsed ? ' {collapsed}' : '';
+                if (depth === 0) txt += `# ${node.flag||''}${node.text}${node.tag ? ' ['+node.tag+']' : ''}${collapseMark}\n`;
+                else txt += `${'  '.repeat(depth-1)}- ${node.flag||''}${node.text}${node.tag ? ' ['+node.tag+']' : ''}${collapseMark}\n`;
                 
                 Object.values(nodes).filter(n => n.parentId === nId).forEach(c => traverse(c.id, depth + 1));
             }
@@ -10659,6 +11175,7 @@
                 if (node.size && node.size !== 16 && !(depth === 0 && node.size === 20)) extraAttrs.push(`size: ${node.size}`);
                 if (node.weight === 'bold' && depth !== 0) extraAttrs.push(`bold`);
                 if (node.style === 'italic') extraAttrs.push(`italic`);
+                if (node.collapsed) extraAttrs.push(`collapsed`);
                 if (node.wrap) {
                     if (node.maxWidth && node.maxWidth !== 240) {
                         extraAttrs.push(`wrap: ${node.maxWidth}`);
@@ -10773,6 +11290,7 @@
                 const raw = sourceText.trim();
                 if (!raw) {
                     sourceText = null;
+                    setAdvRenderHint('');
                     return;
                 }
 
@@ -10809,6 +11327,7 @@
                             if (autoFit) fitView();
                             triggerAutoSave();
                             setSaveStatus('saved', '✓ Advanced Code Rendered');
+                            setAdvRenderHint('done');
                             return;
                         }
                     } catch (e) {
@@ -10818,7 +11337,10 @@
 
             const lines = raw.split('\n');
             const nonEmptyLines = lines.filter(l => l.trim());
-            if (!nonEmptyLines.length) return;
+            if (!nonEmptyLines.length) {
+                setAdvRenderHint('');
+                return;
+            }
 
             const parsedList = [];
             let currentStack = [];
@@ -11138,6 +11660,9 @@
                         else if (key === 'maxwidth') {
                             attrs.maxWidth = parseInt(val, 10);
                         }
+                        else if (key === 'collapsed') {
+                            attrs.collapsed = !(val && /^(false|no|0)$/i.test(val));
+                        }
                     });
                     topic = topic.replace(styleMatch[0], '').trim();
                 }
@@ -11286,8 +11811,10 @@
             }
             triggerAutoSave();
             setSaveStatus('saved', '✓ Advanced Code Rendered');
+            setAdvRenderHint('done');
         } catch (err) {
             console.error('Error in runAdvCode:', err);
+            setAdvRenderHint('error');
             alert('Failed to parse Advanced Code: ' + (err.message || err));
         } finally {
             advCodeRenderLock = false;
@@ -11329,15 +11856,32 @@
                     if (match) { depth = Math.floor(match[1].length / 2) + 1; topic = match[2]; }
                 }
 
-                // Extract tags from markdown like: Topic [tag]
+                // Extract a trailing {collapsed} flag and tags like: Topic [tag] {collapsed}
                 let tag = '';
-                topic = topic.replace(/\[(.*?)\]$/, (m, g) => { tag = g; return ''; }).trim();
+                let collapsed = false;
+                let plainGuard = 0;
+                while (plainGuard++ < 4) {
+                    const collapsedMatch = topic.match(/\s*\{\s*collapsed\s*\}\s*$/i);
+                    if (collapsedMatch) {
+                        collapsed = true;
+                        topic = topic.slice(0, collapsedMatch.index).trim();
+                        continue;
+                    }
+                    const tagMatch = topic.match(/\[(.*?)\]\s*$/);
+                    if (tagMatch) {
+                        tag = tagMatch[1];
+                        topic = topic.slice(0, tagMatch.index).trim();
+                        continue;
+                    }
+                    break;
+                }
 
                 const id = 'n_' + idx;
 
                 if (depth === 0) {
                     // Every depth-0 line (single #) starts a new root tree
                     nodes[id] = { id, parentId: null, text: topic, tag: tag, size: 20, weight: 'bold' };
+                    if (collapsed) nodes[id].collapsed = true;
                     currentStack = [{ depth: 0, id }];
                     rootIds.push(id);
                     return;
@@ -11354,6 +11898,7 @@
                 while (currentStack.length > 1 && currentStack[currentStack.length - 1].depth >= depth) currentStack.pop();
                 
                 nodes[id] = { id, parentId: currentStack[currentStack.length - 1].id, text: topic, tag: tag };
+                if (collapsed) nodes[id].collapsed = true;
                 currentStack.push({ depth, id });
             });
 
@@ -11372,6 +11917,23 @@
             triggerAutoSave();
         }
 
+        function setAdvRenderHint(state) {
+            const el = document.getElementById('adv-render-hint');
+            if (!el) return;
+            if (state === 'pending') {
+                el.textContent = 'Rendering…';
+                el.className = 'text-[0.68rem] font-semibold text-amber-600 text-right flex-1';
+            } else if (state === 'done') {
+                el.textContent = 'Rendered ✓';
+                el.className = 'text-[0.68rem] font-semibold text-emerald-600 text-right flex-1';
+            } else if (state === 'error') {
+                el.textContent = 'Could not render';
+                el.className = 'text-[0.68rem] font-semibold text-red-600 text-right flex-1';
+            } else {
+                el.textContent = '';
+            }
+        }
+
         // Live rendering & keyboard listener for Advanced Code
         function scheduleLiveAdvRender(immediate = false) {
             advCodeDirty = true;
@@ -11382,7 +11944,8 @@
             }
             // Paste fires before the textarea value updates, then input fires again.
             // Keep the fast path across that second call so we render the inserted text.
-            const delay = advRenderWantsFit ? 40 : 600;
+            const delay = advRenderWantsFit ? 40 : 500;
+            setAdvRenderHint('pending');
             advRenderDebounceTimer = setTimeout(() => {
                 advRenderDebounceTimer = null;
                 const fit = advRenderWantsFit;
