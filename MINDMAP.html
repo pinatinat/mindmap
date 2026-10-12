@@ -230,15 +230,20 @@
             .collapse-toggle.is-collapsed {
                 opacity: 1;
                 pointer-events: auto;
+                width: 44px;
+                height: 44px;
                 min-width: 44px;
                 min-height: 44px;
-                height: auto;
+                padding: 0;
                 font-size: 14px;
+                -webkit-appearance: none;
+                appearance: none;
             }
-            .collapse-toggle.edge-right { left: calc(100% - 22px); }
-            .collapse-toggle.edge-left { right: calc(100% - 22px); }
-            .collapse-toggle.edge-bottom { top: calc(100% - 22px); }
-            .collapse-toggle.edge-top { bottom: calc(100% - 22px); }
+            /* Counter the canvas scale so the finger target stays 44px on screen when zoomed out. */
+            .collapse-toggle.edge-right { left: calc(100% - 22px); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-left { right: calc(100% - 22px); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-bottom { top: calc(100% - 22px); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-top { bottom: calc(100% - 22px); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
         }
         .bubble-node.fold-in { animation: omni-fold-in 180ms ease-out; }
         .bubble-node.fold-out { animation: omni-fold-out 160ms ease-in forwards; pointer-events: none; }
@@ -9921,6 +9926,10 @@
             const layer = document.getElementById('pan-zoom-container');
             layer.style.transformOrigin = '0 0';
             layer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            // Layout size is 44px. When the canvas is zoomed out, grow the control
+            // by 1/zoom (plus half a pixel) so the on-screen tap target stays >= 44px.
+            const hit = (zoom > 0 && zoom < 1) ? ((44.5 / 44) / zoom) : 1;
+            layer.style.setProperty('--collapse-hit', hit.toFixed(4));
             const label = Math.round(zoom * 100) + '%';
             document.querySelectorAll('.zoom-readout').forEach(el => { el.textContent = label; });
         }
