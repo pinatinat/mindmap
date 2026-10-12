@@ -29,12 +29,24 @@
             background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
             background-size: 40px 40px;
             cursor: grab;
-            touch-action: none;
             overscroll-behavior: none;
             -webkit-user-select: none;
             user-select: none;
         }
         #canvas-bg:active { cursor: grabbing; }
+        /* Browser pan/zoom is blocked only on the canvas gesture surface.
+           The design toolbar, guide, header, and sidebar are not inside it,
+           so they keep their own scrolling and taps. */
+        #canvas-gesture-layer {
+            touch-action: none;
+            overscroll-behavior: none;
+        }
+        #floating-canvas-design-toolbar,
+        #canvas-instructions-card,
+        #btn-show-canvas-guide,
+        #arrow-draw-banner {
+            touch-action: manipulation;
+        }
 
         /* Mobile off-canvas drawer & backdrop */
         @media (max-width: 768px) {
@@ -386,6 +398,9 @@
         <!-- CANVAS TOOLS & EXPORT -->
         <div class="flex items-center gap-1 shrink-0">
             <button type="button" onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🎯 Fit</button>
+            <button type="button" onclick="zoomBy(1/1.1)" title="Zoom out (viewport center)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-bold shrink-0">−</button>
+            <button type="button" onclick="zoomTo(1)" title="Reset zoom to 100% (viewport center)" class="zoom-readout bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-semibold tabular-nums shrink-0">100%</button>
+            <button type="button" onclick="zoomBy(1.1)" title="Zoom in (viewport center)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-bold shrink-0">+</button>
             <button type="button" onclick="openExportImageModal()" title="Export mind map as PNG, JPEG, or SVG image" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🖼️ Export</button>
             <button type="button" onclick="exportJSON()" title="Export JSON file to your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">💾 JSON</button>
             <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
@@ -777,6 +792,9 @@
                     <button type="button" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
                         <span>🎯</span> Fit
                     </button>
+                    <button type="button" onclick="zoomBy(1/1.1)" class="px-2 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-bold transition-colors shrink-0" title="Zoom out (viewport center)">−</button>
+                    <button type="button" onclick="zoomTo(1)" class="zoom-readout px-2 py-1 rounded-full hover:bg-slate-100 text-slate-600 font-semibold tabular-nums transition-colors shrink-0" title="Reset zoom to 100% (viewport center)">100%</button>
+                    <button type="button" onclick="zoomBy(1.1)" class="px-2 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-bold transition-colors shrink-0" title="Zoom in (viewport center)">+</button>
 
                     <!-- Text Wrap All Toggle Button -->
                     <button type="button" onclick="toggleAllNodesWrap()" id="btn-toggle-all-wrap" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Toggle text wrapping across all nodes on canvas">
@@ -914,8 +932,10 @@
                 </div>
             </div>
 
-            <!-- This container handles Panning and Zooming -->
-            <div id="pan-zoom-container" class="absolute top-0 left-0 w-full h-full transform-gpu origin-top-left">
+            <!-- Gesture surface covers the canvas only. Toolbar and guide sit above it. -->
+            <div id="canvas-gesture-layer" class="absolute inset-0 z-0">
+            <!-- This container handles Panning and Zooming. Origin is the top-left so pan/zoom math matches screenToCanvasCoords. -->
+            <div id="pan-zoom-container" class="absolute top-0 left-0 w-full h-full transform-gpu origin-top-left" style="transform-origin: 0 0;">
                 <!-- Background Design Layer (Behind Nodes) -->
                 <div id="canvas-decorations-back" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 5;"></div>
                 <!-- SVG Layer for connection edges (Infinite 2D plane with overflow visible) -->
@@ -931,6 +951,7 @@
                     <!-- Magnetic Snap Target Indicator Reticle -->
                     <circle id="arrow-snap-indicator" cx="0" cy="0" r="7" fill="#3b82f6" stroke="#ffffff" stroke-width="2.5" class="hidden" style="filter: drop-shadow(0 2px 6px rgba(59,130,246,0.6));" />
                 </svg>
+            </div>
             </div>
 
             <!-- Floating Indicator for Arrow Draw Mode -->
@@ -953,7 +974,8 @@
                 <div class="space-y-1 text-[0.72rem] leading-snug">
                     <p>🌟 <b>+ New Root:</b> Create independent tree</p>
                     <p>🖱️ <b>Drag Background:</b> Pan Map</p>
-                    <p>📜 <b>Scroll Wheel:</b> Zoom In/Out (Tilt to Pan)</p>
+                    <p>📜 <b>Mouse Wheel:</b> Zoom toward cursor</p>
+                    <p>🤏 <b>Trackpad / Touch:</b> Pinch zooms, scroll or drag pans</p>
                     <p>🎯 <b>A / Shape:</b> Drag-to-draw snapping arrows</p>
                     <p>🤏 <b>Drag Bubble:</b> Move branch freely</p>
                     <p>✏️ <b>Double-Click:</b> Edit text inline</p>
@@ -8399,32 +8421,106 @@
         }
 
         // --- 2. INTERACTION ENGINE (Pan, Zoom, Drag) ---
+        const MIN_ZOOM = 0.2;
+        const MAX_ZOOM = 3;
         const canvasBg = document.getElementById('canvas-bg');
+        const canvasGestureLayer = document.getElementById('canvas-gesture-layer') || canvasBg;
+        let wheelGesture = { mode: null, at: 0 };
 
-        canvasBg.addEventListener('wheel', e => {
+        function wheelPixels(delta, deltaMode) {
+            if (deltaMode === 1) return delta * 25;
+            if (deltaMode === 2) return delta * 400;
+            return delta;
+        }
+
+        // Trackpad two-finger scroll vs a notched mouse wheel.
+        // Pinch-to-zoom is a separate case: browsers set ctrlKey on that wheel event.
+        function isTrackpadPanEvent(e) {
+            if (e.ctrlKey || e.deltaMode !== 0) return false;
+            const absX = Math.abs(e.deltaX);
+            const absY = Math.abs(e.deltaY);
+            const maxAbs = Math.max(absX, absY);
+            const minAbs = Math.min(absX, absY);
+            if (maxAbs === 0) return false;
+            const fracX = Math.abs(e.deltaX - Math.trunc(e.deltaX));
+            const fracY = Math.abs(e.deltaY - Math.trunc(e.deltaY));
+            if (fracX > 0.01 || fracY > 0.01) return true;
+            if (minAbs > 0.5 && minAbs / maxAbs > 0.2) return true;
+            return maxAbs < 50;
+        }
+
+        function classifyWheel(e) {
+            const now = performance.now();
+            if (e.ctrlKey) {
+                wheelGesture = { mode: 'zoom', at: now };
+                return 'zoom';
+            }
+            // Once a gesture looks like a trackpad pan, keep panning through the burst.
+            if ((wheelGesture.mode === 'pan' || wheelGesture.mode === 'pan-x') && (now - wheelGesture.at) < 80) {
+                wheelGesture.at = now;
+                return wheelGesture.mode;
+            }
+            let mode = 'zoom';
+            if (e.shiftKey) mode = 'pan-x';
+            else if (isTrackpadPanEvent(e)) mode = 'pan';
+            else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) mode = 'pan-x';
+            wheelGesture = { mode, at: now };
+            return mode;
+        }
+
+        function zoomFactorForWheel(pixelDeltaY, discreteStep) {
+            let d = pixelDeltaY;
+            if (discreteStep && d !== 0 && Math.abs(d) < 80) d = Math.sign(d) * 100;
+            const factor = Math.exp(-d * 0.00105);
+            if (!isFinite(factor) || factor <= 0) return 1;
+            return Math.min(1.45, Math.max(0.69, factor));
+        }
+
+        function isCanvasChromeTarget(target) {
+            if (!target || !target.closest) return false;
+            return !!target.closest('#floating-canvas-design-toolbar, .floating-canvas-toolbar, #canvas-instructions-card, #btn-show-canvas-guide, #arrow-draw-banner, input, textarea, [contenteditable="true"]');
+        }
+
+        canvasGestureLayer.addEventListener('wheel', e => {
+            if (isCanvasChromeTarget(e.target)) return;
             e.preventDefault();
 
-            // 1. Wheel tilt left/right (deltaX) or Shift + scroll: Pan horizontally
-            if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-                const step = (e.deltaMode === 1) ? e.deltaX * 25 : e.deltaX;
+            const mode = classifyWheel(e);
+            const dx = wheelPixels(e.deltaX, e.deltaMode);
+            const dy = wheelPixels(e.deltaY, e.deltaMode);
+
+            if (mode === 'pan') {
+                panX -= dx;
+                panY -= dy;
+                applyTransform();
+                triggerAutoSave();
+                return;
+            }
+            if (mode === 'pan-x') {
+                const step = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+                if (step === 0) return;
                 panX -= step;
                 applyTransform();
                 triggerAutoSave();
-            } else if (e.shiftKey && e.deltaY !== 0) {
-                const step = (e.deltaMode === 1) ? e.deltaY * 25 : e.deltaY;
-                panX -= step;
-                applyTransform();
-                triggerAutoSave();
-            } else if (e.deltaY !== 0) {
-                // 2. Vertical scroll: Zoom in/out
-                const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                zoom = Math.min(Math.max(zoom * delta, 0.2), 3);
-                applyTransform();
+                return;
+            }
+
+            const delta = dy !== 0 ? dy : dx;
+            if (delta === 0) return;
+            const rect = canvasBg.getBoundingClientRect();
+            const pivotX = e.clientX - rect.left;
+            const pivotY = e.clientY - rect.top;
+            if (zoomAt(zoom * zoomFactorForWheel(delta, !e.ctrlKey), pivotX, pivotY)) {
                 triggerAutoSave();
             }
         }, { passive: false });
 
-        canvasBg.addEventListener('mousedown', e => {
+        // Stop the browser from turning a canvas pinch into a page zoom (Safari).
+        ['gesturestart', 'gesturechange', 'gestureend'].forEach(evtName => {
+            canvasGestureLayer.addEventListener(evtName, e => e.preventDefault(), { passive: false });
+        });
+
+        canvasGestureLayer.addEventListener('mousedown', e => {
             // Support mice whose drivers map wheel tilt as button 3 (tilt left) or 4 (tilt right)
             if (e.button === 3) {
                 e.preventDefault();
@@ -8852,7 +8948,7 @@
         let lastTouchTapNodeId = null;
         let touchHasMoved = false;
 
-        canvasBg.addEventListener('touchstart', e => {
+        canvasGestureLayer.addEventListener('touchstart', e => {
             // 0. Check if touching inside floating design toolbar or any of its dropdown menus
             if (e.target.closest('#floating-canvas-design-toolbar') || e.target.closest('.floating-canvas-toolbar')) {
                 return; // Do NOT preventDefault! Allow click events to fire naturally on iPad/mobile
@@ -9065,16 +9161,18 @@
 
                 if (touchStartDist > 5) {
                     const scaleFactor = currentDist / touchStartDist;
-                    const targetZoom = Math.min(Math.max(touchStartZoom * scaleFactor, 0.2), 3);
-
+                    const targetZoom = Math.min(Math.max(touchStartZoom * scaleFactor, MIN_ZOOM), MAX_ZOOM);
                     const canvasRect = canvasBg.getBoundingClientRect();
-                    const pivotX = touchPinchCenter.x - canvasRect.left;
-                    const pivotY = touchPinchCenter.y - canvasRect.top;
-
-                    panX = Math.round(pivotX - (pivotX - touchStartPanX) * (targetZoom / touchStartZoom));
-                    panY = Math.round(pivotY - (pivotY - touchStartPanY) * (targetZoom / touchStartZoom));
+                    const startX = touchPinchCenter.x - canvasRect.left;
+                    const startY = touchPinchCenter.y - canvasRect.top;
+                    const curX = ((t1.clientX + t2.clientX) / 2) - canvasRect.left;
+                    const curY = ((t1.clientY + t2.clientY) / 2) - canvasRect.top;
+                    const canvasX = (startX - touchStartPanX) / touchStartZoom;
+                    const canvasY = (startY - touchStartPanY) / touchStartZoom;
+                    // Keep the canvas point that was under the pinch start under the live midpoint.
+                    panX = curX - canvasX * targetZoom;
+                    panY = curY - canvasY * targetZoom;
                     zoom = targetZoom;
-
                     applyTransform();
                 }
                 e.preventDefault();
@@ -9306,8 +9404,45 @@
             });
         }
 
+        function clampZoom(value) {
+            return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+        }
+
+        // Keep the canvas point under (pivotX, pivotY) — canvas-local pixels — fixed.
+        // Toolbar buttons omit a pointer and pass the viewport center instead.
+        function zoomAt(nextZoom, pivotX, pivotY) {
+            const z = clampZoom(nextZoom);
+            if (!isFinite(z) || Math.abs(z - zoom) < 1e-8) return false;
+            const canvasX = (pivotX - panX) / zoom;
+            const canvasY = (pivotY - panY) / zoom;
+            panX = pivotX - canvasX * z;
+            panY = pivotY - canvasY * z;
+            zoom = z;
+            applyTransform();
+            return true;
+        }
+
+        function viewportCenterPivot() {
+            const rect = canvasBg.getBoundingClientRect();
+            return { x: rect.width / 2, y: rect.height / 2 };
+        }
+
+        function zoomBy(factor) {
+            const pivot = viewportCenterPivot();
+            if (zoomAt(zoom * factor, pivot.x, pivot.y)) triggerAutoSave();
+        }
+
+        function zoomTo(level) {
+            const pivot = viewportCenterPivot();
+            if (zoomAt(level, pivot.x, pivot.y)) triggerAutoSave();
+        }
+
         function applyTransform() {
-            document.getElementById('pan-zoom-container').style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            const layer = document.getElementById('pan-zoom-container');
+            layer.style.transformOrigin = '0 0';
+            layer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            const label = Math.round(zoom * 100) + '%';
+            document.querySelectorAll('.zoom-readout').forEach(el => { el.textContent = label; });
         }
 
         function fitView() {
