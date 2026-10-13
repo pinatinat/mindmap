@@ -105,6 +105,41 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* Keep the top bar inside the viewport so it scrolls instead of clipping.
+           overflow-anchor stops Fit from shifting the bar when the zoom label resizes. */
+        body > header {
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+            overflow-anchor: none;
+        }
+
+        /* Design toolbar stays inside the canvas and scrolls from its left edge. */
+        #floating-canvas-design-toolbar {
+            left: 8px;
+            right: 8px;
+            width: auto;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+        @media (min-width: 640px) {
+            #floating-canvas-design-toolbar { left: 12px; right: 12px; }
+        }
+        #floating-canvas-design-toolbar > * { pointer-events: auto; }
+        #design-toolbar-expanded-content {
+            min-width: 0;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            scroll-padding-inline: 8px;
+            overflow-anchor: none;
+        }
+
         /* Infinite SVG Canvas & Smooth Bezier Edge Lines */
         #edges-svg {
             overflow: visible !important;
@@ -179,40 +214,69 @@
         .bubble-node.is-branch-collapsed {
             z-index: 30;
         }
+        /* Desktop face is ~18px and high contrast. --collapse-hit cancels canvas zoom
+           so the control stays that size on screen instead of shrinking to a faint speck. */
         .collapse-toggle {
             position: absolute;
-            z-index: 5;
+            z-index: 6;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 22px;
-            height: 22px;
-            padding: 0 6px;
-            border-radius: 999px;
-            border: 1.5px solid #94a3b8;
-            background: #ffffff;
-            color: #334155;
-            font-size: 11px;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -0.02em;
+            width: auto;
+            height: auto;
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            color: inherit;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
             pointer-events: auto;
             user-select: none;
             touch-action: manipulation;
             box-sizing: border-box;
+            line-height: 1;
+            -webkit-appearance: none;
+            appearance: none;
         }
-        .collapse-toggle.is-collapsed {
-            background: #1e293b;
+        .collapse-toggle-face {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            padding: 0;
+            border-radius: 999px;
+            border: 2px solid #0f172a;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.45);
+            pointer-events: none;
+        }
+        .collapse-toggle.is-collapsed .collapse-toggle-face {
+            width: auto;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            background: #0f172a;
             color: #ffffff;
-            border-color: #1e293b;
-            min-width: 28px;
+            border-color: #0f172a;
+            font-size: 11px;
         }
-        .collapse-toggle.edge-right { left: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
-        .collapse-toggle.edge-left { right: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
-        .collapse-toggle.edge-bottom { left: 50%; top: calc(100% - 8px); transform: translateX(-50%); }
-        .collapse-toggle.edge-top { left: 50%; bottom: calc(100% - 8px); transform: translateX(-50%); }
+        /* Sit just outside the node, on the side that holds its children.
+           --collapse-hit cancels canvas zoom, so the offset grows when the map
+           is zoomed out and the fixed-size circle cannot crawl back over the label. */
+        .collapse-toggle.edge-right { left: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); top: 50%; transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+        .collapse-toggle.edge-left { right: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); top: 50%; transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+        .collapse-toggle.edge-bottom { left: 50%; top: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+        .collapse-toggle.edge-top { left: 50%; bottom: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
         @media (hover: hover) and (pointer: fine) {
             .collapse-toggle:not(.is-collapsed) {
                 opacity: 0;
@@ -225,25 +289,132 @@
                 pointer-events: auto;
             }
         }
-        @media (hover: none), (pointer: coarse) {
+        @media (pointer: coarse) {
+            /* 8px of transparent padding around a 28px face makes a 44px tap target.
+               The face itself starts just outside the node so it never covers the label. */
             .collapse-toggle,
             .collapse-toggle.is-collapsed {
                 opacity: 1;
                 pointer-events: auto;
-                width: 44px;
-                height: 44px;
                 min-width: 44px;
                 min-height: 44px;
-                padding: 0;
-                font-size: 14px;
-                -webkit-appearance: none;
-                appearance: none;
+                padding: 8px;
             }
-            /* Counter the canvas scale so the finger target stays 44px on screen when zoomed out. */
-            .collapse-toggle.edge-right { left: calc(100% - 22px); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
-            .collapse-toggle.edge-left { right: calc(100% - 22px); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
-            .collapse-toggle.edge-bottom { top: calc(100% - 22px); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
-            .collapse-toggle.edge-top { bottom: calc(100% - 22px); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle-face {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+                font-size: 16px;
+                border-width: 2px;
+            }
+            .collapse-toggle.is-collapsed .collapse-toggle-face {
+                width: auto;
+                min-width: 28px;
+                height: 28px;
+                padding: 0 8px;
+                font-size: 13px;
+            }
+            .collapse-toggle.edge-right { left: calc(100% + (20px * var(--collapse-hit, 1) - 22px)); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-left { right: calc(100% + (20px * var(--collapse-hit, 1) - 22px)); transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-bottom { top: calc(100% + (20px * var(--collapse-hit, 1) - 22px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+            .collapse-toggle.edge-top { bottom: calc(100% + (20px * var(--collapse-hit, 1) - 22px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+        }
+        /* Phone: the painted circle scales with the map, floored near 16px on screen,
+           and sits a few pixels outside the node. The 44px target is anchored on the
+           children side so the extra hit area reaches back over the node instead of
+           covering the next label. iPad and wider keep the constant-size control above. */
+        @media (pointer: coarse) and (max-width: 640px) {
+            .collapse-toggle,
+            .collapse-toggle.is-collapsed {
+                min-width: 0;
+                min-height: 0;
+                padding: 0;
+                /* Only the ::before is the target, so it stays 44px on screen
+                   while the painted circle scales with zoom. */
+                pointer-events: none;
+            }
+            .collapse-toggle-face {
+                transform: scale(var(--collapse-face, 1));
+            }
+            .collapse-toggle.edge-right .collapse-toggle-face { transform-origin: left center; }
+            .collapse-toggle.edge-left .collapse-toggle-face { transform-origin: right center; }
+            .collapse-toggle.edge-bottom .collapse-toggle-face { transform-origin: center top; }
+            .collapse-toggle.edge-top .collapse-toggle-face { transform-origin: center bottom; }
+            .collapse-toggle.edge-right { left: calc(100% + 3px * var(--collapse-hit, 1)); top: 50%; transform: translateY(-50%); }
+            .collapse-toggle.edge-left { right: calc(100% + 3px * var(--collapse-hit, 1)); top: 50%; transform: translateY(-50%); }
+            .collapse-toggle.edge-bottom { left: 50%; top: calc(100% + 3px * var(--collapse-hit, 1)); transform: translateX(-50%); }
+            .collapse-toggle.edge-top { left: 50%; bottom: calc(100% + 3px * var(--collapse-hit, 1)); transform: translateX(-50%); }
+            .collapse-toggle::before {
+                content: '';
+                position: absolute;
+                width: 44px;
+                height: 44px;
+                pointer-events: auto;
+                transform: scale(var(--collapse-hit, 1));
+            }
+            .collapse-toggle.edge-right::before {
+                left: calc(100% * var(--collapse-face, 1) - 44px);
+                top: calc(50% - 22px);
+                transform-origin: right center;
+            }
+            .collapse-toggle.edge-left::before {
+                left: calc((1 - var(--collapse-face, 1)) * 100%);
+                top: calc(50% - 22px);
+                transform-origin: left center;
+            }
+            .collapse-toggle.edge-bottom::before {
+                left: calc(50% - 22px);
+                top: calc(100% * var(--collapse-face, 1) - 44px);
+                transform-origin: center bottom;
+            }
+            .collapse-toggle.edge-top::before {
+                left: calc(50% - 22px);
+                top: calc((1 - var(--collapse-face, 1)) * 100%);
+                transform-origin: center top;
+            }
+        }
+        #guide-tips-touch { display: none; }
+        @media (pointer: coarse) {
+            #guide-tips-pointer { display: none !important; }
+            #guide-tips-touch { display: block !important; }
+        }
+        /* On phone and tablet the guide docks under the map instead of covering it. */
+        @media (max-width: 1200px) {
+            #canvas-bg.guide-docked #canvas-gesture-layer {
+                bottom: var(--guide-reserve, 0px);
+            }
+            #canvas-bg.guide-docked #canvas-instructions-card {
+                position: absolute !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                top: auto !important;
+                max-width: none !important;
+                width: auto !important;
+                margin: 0 !important;
+                border-radius: 14px 14px 0 0 !important;
+                max-height: 34vh;
+                overflow: auto;
+                z-index: 28;
+                padding-bottom: max(10px, env(safe-area-inset-bottom));
+            }
+            #canvas-bg.guide-docked #guide-tips-pointer {
+                display: flex !important;
+                flex-wrap: wrap;
+                column-gap: 14px;
+                row-gap: 4px;
+            }
+            #canvas-bg.guide-docked #guide-tips-pointer p,
+            #canvas-bg.guide-docked #guide-tips-touch p { margin: 0; }
+        }
+        @media (max-width: 1200px) and (pointer: coarse) {
+            #canvas-bg.guide-docked #guide-tips-pointer { display: none !important; }
+            #canvas-bg.guide-docked #guide-tips-touch {
+                display: flex !important;
+                flex-wrap: wrap;
+                column-gap: 14px;
+                row-gap: 4px;
+            }
         }
         .bubble-node.fold-in { animation: omni-fold-in 180ms ease-out; }
         .bubble-node.fold-out { animation: omni-fold-out 160ms ease-in forwards; pointer-events: none; }
@@ -439,7 +610,7 @@
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
 
     <!-- TOP NAVIGATION (Horizontally Scrollable on Mobile/Tablet with Momentum Scrolling) -->
-    <header class="bg-white border-b border-slate-200 px-2 sm:px-3 py-1.5 z-30 shadow-sm relative flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap select-none" style="touch-action: pan-x; -webkit-overflow-scrolling: touch;">
+    <header class="bg-white border-b border-slate-200 px-2 sm:px-3 py-1.5 z-30 shadow-sm relative flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap select-none min-w-0 w-full max-w-full" style="touch-action: pan-x; -webkit-overflow-scrolling: touch;">
         <!-- Mobile Sidebar Drawer Toggle Button -->
         <button type="button" id="btn-mobile-sidebar-toggle" onclick="toggleMobileSidebar()" class="md:hidden flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-base leading-none transition-colors border border-slate-200 shrink-0" title="Toggle Sidebar (Style, Code, Adv)">
             ☰
@@ -501,7 +672,7 @@
 
         <!-- CANVAS TOOLS & EXPORT -->
         <div class="flex items-center gap-1 shrink-0">
-            <button type="button" onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🎯 Fit</button>
+            <button type="button" onpointerdown="rememberToolbarScroll()" onmousedown="keepToolbarScroll(event)" onclick="fitView()" title="Fit all content on screen" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🎯 Fit</button>
             <button type="button" onclick="zoomBy(1/1.1)" title="Zoom out (viewport center)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-bold shrink-0">−</button>
             <button type="button" onclick="zoomTo(1)" title="Reset zoom to 100% (viewport center)" class="zoom-readout bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-semibold tabular-nums shrink-0">100%</button>
             <button type="button" onclick="zoomBy(1.1)" title="Zoom in (viewport center)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-bold shrink-0">+</button>
@@ -915,7 +1086,7 @@
         <!-- INFINITE CANVAS -->
         <main id="canvas-bg" class="flex-1 relative overflow-hidden z-10">
             <!-- Floating Canvas Design Toolbar with Smooth Collapse Effect -->
-            <div id="floating-canvas-design-toolbar" class="floating-canvas-toolbar absolute top-2 right-2 sm:top-3 sm:right-3 z-30 transition-all duration-200 select-none overflow-visible" style="touch-action: manipulation; -webkit-user-select: none;">
+            <div id="floating-canvas-design-toolbar" class="floating-canvas-toolbar absolute top-2 sm:top-3 z-30 transition-all duration-200 select-none" style="-webkit-user-select: none;">
                 <!-- Collapsed Mini Pill (Visible when collapsed) -->
                 <button type="button" id="btn-design-toolbar-expand" onclick="toggleDesignToolbarCollapse(false)" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 shadow-md hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all active:scale-95 cursor-pointer" title="Expand Design Toolbar (Shapes, Cards, Zones, Canvas Theme)">
                     <span>🎨 Design</span>
@@ -923,7 +1094,7 @@
                 </button>
 
                 <!-- Expanded Toolbar Content (Hidden when collapsed) -->
-                <div id="design-toolbar-expanded-content" class="flex items-center gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-md px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium overflow-visible select-none">
+                <div id="design-toolbar-expanded-content" class="flex flex-nowrap items-center gap-1 sm:gap-1.5 bg-white/95 border border-slate-200 shadow-md px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium select-none no-scrollbar">
                     <span class="text-slate-400 font-bold uppercase tracking-wider text-[0.62rem] mr-0.5 hidden sm:inline">Design</span>
                     
                     <!-- Selection Lock Toggle -->
@@ -932,7 +1103,7 @@
                     </button>
 
                     <!-- Fit View Button -->
-                    <button type="button" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
+                    <button type="button" onpointerdown="rememberToolbarScroll()" onmousedown="keepToolbarScroll(event)" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
                         <span>🎯</span> Fit
                     </button>
                     <button type="button" onclick="zoomBy(1/1.1)" class="px-2 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-bold transition-colors shrink-0" title="Zoom out (viewport center)">−</button>
@@ -1080,9 +1251,6 @@
                     </div>
 
                     <div class="h-4 w-px bg-slate-200 mx-0.5 shrink-0"></div>
-                    <button type="button" onclick="openExportImageModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 shrink-0" title="Export as PNG, JPEG, or SVG image">
-                        <span>🖼️</span> Export
-                    </button>
                     <button type="button" onclick="toggleCanvasGuide()" id="btn-design-toggle-guide" class="flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-colors hover:bg-slate-100 text-slate-700 shrink-0" title="Toggle canvas controls & shortcuts guide">
                         <span>💡</span> <span class="hidden sm:inline">Guide</span>
                     </button>
@@ -1133,15 +1301,22 @@
                         <span class="text-xs font-bold leading-none">✕</span>
                     </button>
                 </div>
-                <div class="space-y-1 text-[0.72rem] leading-snug">
+                <div id="guide-tips-pointer" class="guide-tips space-y-1 text-[0.72rem] leading-snug">
                     <p>🌟 <b>+ New Root:</b> Create independent tree</p>
                     <p>🖱️ <b>Drag Background:</b> Pan Map</p>
                     <p>📜 <b>Mouse Wheel:</b> Zoom toward cursor</p>
-                    <p>🤏 <b>Trackpad / Touch:</b> Pinch zooms, scroll or drag pans</p>
+                    <p>🤏 <b>Trackpad:</b> Pinch zooms, scroll or drag pans</p>
                     <p>🎯 <b>A / Shape:</b> Drag-to-draw snapping arrows</p>
                     <p>🤏 <b>Drag Bubble:</b> Move branch freely</p>
                     <p>✏️ <b>Double-Click:</b> Edit text inline</p>
                     <p>➕ <b>+ / − on a bubble:</b> Collapse or expand its children</p>
+                </div>
+                <div id="guide-tips-touch" class="guide-tips space-y-1 text-[0.72rem] leading-snug">
+                    <p>🤏 <b>Pinch</b> to zoom</p>
+                    <p>☝️ <b>One-finger drag</b> to pan</p>
+                    <p>⭕ <b>Tap the circle</b> to fold or unfold</p>
+                    <p>✏️ <b>Double-tap</b> a bubble to edit text</p>
+                    <p>🌟 <b>+ New Root</b> creates an independent tree</p>
                 </div>
             </div>
 
@@ -2483,19 +2658,23 @@
                 if (expandedContent) {
                     expandedContent.classList.remove('hidden');
                     expandedContent.classList.add('flex');
+                    expandedContent.scrollLeft = 0;
                 }
             }
             try { localStorage.setItem('omnimind_design_toolbar_collapsed', isDesignToolbarCollapsed ? '1' : '0'); } catch (e) {}
         }
 
-        // Canvas Instructions Guide Visibility State
+        // Canvas Instructions Guide Visibility State.
+        // After the first real use (pan, zoom, or fold) the guide dismisses itself
+        // and that choice is remembered in localStorage.
         let isCanvasGuideHidden = false;
         try {
+            const guideSeen = localStorage.getItem('omnimind_controls_guide_seen');
             const savedGuidePref = localStorage.getItem('omnimind_canvas_guide_hidden');
-            if (savedGuidePref !== null) {
-                isCanvasGuideHidden = (savedGuidePref === '1');
-            } else if (window.innerWidth < 768) {
+            if (guideSeen === '1') {
                 isCanvasGuideHidden = true;
+            } else if (savedGuidePref !== null) {
+                isCanvasGuideHidden = (savedGuidePref === '1');
             }
         } catch (e) {}
 
@@ -2526,7 +2705,32 @@
             try {
                 localStorage.setItem('omnimind_canvas_guide_hidden', isCanvasGuideHidden ? '1' : '0');
             } catch (e) {}
+            syncGuideDock();
         }
+
+        function noteControlsGuideUsed() {
+            if (isCanvasGuideHidden) return;
+            try { localStorage.setItem('omnimind_controls_guide_seen', '1'); } catch (e) {}
+            toggleCanvasGuide(false);
+        }
+
+        function syncGuideDock() {
+            const canvas = document.getElementById('canvas-bg');
+            const card = document.getElementById('canvas-instructions-card');
+            if (!canvas || !card) return;
+            const small = window.matchMedia('(max-width: 1200px)').matches;
+            const open = small && !card.classList.contains('hidden');
+            canvas.classList.toggle('guide-docked', open);
+            if (!open) {
+                canvas.style.removeProperty('--guide-reserve');
+                return;
+            }
+            requestAnimationFrame(() => {
+                const h = Math.ceil(card.getBoundingClientRect().height);
+                canvas.style.setProperty('--guide-reserve', Math.max(0, h) + 'px');
+            });
+        }
+        window.addEventListener('resize', () => syncGuideDock());
 
         function toggleMobileOverflowMenu(show) {
             const menu = document.getElementById('mobile-overflow-menu');
@@ -5977,7 +6181,7 @@
 
         function calculateExportBounds(scope, includeDesign) {
             if (scope === 'viewport') {
-                const canvasRect = canvasBg ? canvasBg.getBoundingClientRect() : { width: 1200, height: 800 };
+                const canvasRect = mapViewportRect();
                 const w = (canvasRect.width > 50) ? canvasRect.width : 1200;
                 const h = (canvasRect.height > 50) ? canvasRect.height : 800;
                 const x = -panX / zoom;
@@ -6159,13 +6363,14 @@
 
             svgStr += `  <style>
                 .bubble-node { position: absolute; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); border-radius: 9999px; padding: 0.625rem 1.25rem; white-space: nowrap; font-family: ui-sans-serif, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; }
-                .collapse-toggle { position: absolute; display: flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; border: 1.5px solid #94a3b8; background: #fff; color: #334155; font-size: 11px; font-weight: 800; line-height: 1; box-sizing: border-box; }
+                .collapse-toggle { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: transparent; }
+                .collapse-toggle-face { display: flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; border: 2px solid #0f172a; background: #fff; color: #0f172a; font-size: 12px; font-weight: 800; line-height: 1; box-sizing: border-box; }
                 .collapse-toggle:not(.is-collapsed) { display: none; }
-                .collapse-toggle.is-collapsed { background: #1e293b; color: #fff; border-color: #1e293b; }
-                .collapse-toggle.edge-right { left: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
-                .collapse-toggle.edge-left { right: calc(100% - 8px); top: 50%; transform: translateY(-50%); }
-                .collapse-toggle.edge-bottom { left: 50%; top: calc(100% - 8px); transform: translateX(-50%); }
-                .collapse-toggle.edge-top { left: 50%; bottom: calc(100% - 8px); transform: translateX(-50%); }
+                .collapse-toggle.is-collapsed .collapse-toggle-face { background: #0f172a; color: #fff; border-color: #0f172a; }
+                .collapse-toggle.edge-right { left: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
+                .collapse-toggle.edge-left { right: calc(100% + 4px); top: 50%; transform: translateY(-50%); }
+                .collapse-toggle.edge-bottom { left: 50%; top: calc(100% + 4px); transform: translateX(-50%); }
+                .collapse-toggle.edge-top { left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); }
                 .bubble-node.has-attachment { flex-direction: column; border-radius: 1rem !important; white-space: normal !important; padding: 8px 12px; }
                 .bubble-img { max-width: 180px; max-height: 120px; border-radius: 0.5rem; object-fit: cover; margin-bottom: 6px; }
                 .canvas-decoration { position: absolute; box-sizing: border-box; font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -6671,6 +6876,7 @@
             updatePropertiesPanel();
             syncFromMap();
             triggerAutoSave();
+            if (typeof noteControlsGuideUsed === 'function') noteControlsGuideUsed();
         }
 
         function cancelFoldOut() {
@@ -6808,7 +7014,10 @@
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'collapse-toggle edge-' + getCollapseEdge(node) + (collapsed ? ' is-collapsed' : '');
-            btn.textContent = collapsed ? ('+' + count) : '−';
+            const face = document.createElement('span');
+            face.className = 'collapse-toggle-face';
+            face.textContent = collapsed ? ('+' + count) : '−';
+            btn.appendChild(face);
             btn.title = collapsed ? ('Expand ' + count + ' hidden') : 'Collapse children';
             btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
             btn.setAttribute('aria-label', btn.title);
@@ -7554,6 +7763,7 @@
             if (!skipSave) {
                 triggerAutoSave();
             }
+            if (typeof syncGuideDock === 'function') syncGuideDock();
         }
 
         function setCanvasGridStyle(style) {
@@ -7561,6 +7771,46 @@
         }
 
         // --- DESIGN TOOLBAR DROPDOWNS (Shape, Text, Image Guide, Canvas) ---
+        function resetDesignMenu(menu) {
+            if (!menu) return;
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.bottom = '';
+            menu.style.zIndex = '';
+            menu.style.visibility = '';
+            menu.style.margin = '';
+        }
+
+        function positionDesignMenu(menu, type) {
+            const btn = document.getElementById('btn-dropdown-' + type);
+            if (!btn || !menu) return;
+            // Fixed positioning escapes the toolbar's horizontal scroller.
+            menu.style.position = 'fixed';
+            menu.style.right = 'auto';
+            menu.style.bottom = 'auto';
+            menu.style.margin = '0';
+            menu.style.zIndex = '80';
+            menu.style.visibility = 'hidden';
+            menu.style.left = '0px';
+            menu.style.top = '0px';
+            const mw = menu.offsetWidth || 200;
+            const mh = menu.offsetHeight || 160;
+            const rect = btn.getBoundingClientRect();
+            let viewLeft = Math.round(rect.right - mw);
+            if (viewLeft < 8) viewLeft = 8;
+            if (viewLeft + mw > window.innerWidth - 8) viewLeft = Math.max(8, window.innerWidth - mw - 8);
+            let viewTop = Math.round(rect.bottom + 6);
+            if (viewTop + mh > window.innerHeight - 8) viewTop = Math.max(8, Math.round(rect.top - mh - 6));
+            // A filter or transform ancestor makes fixed coordinates relative to that box.
+            const host = menu.offsetParent;
+            const hostRect = host ? host.getBoundingClientRect() : { left: 0, top: 0 };
+            menu.style.left = Math.round(viewLeft - hostRect.left) + 'px';
+            menu.style.top = Math.round(viewTop - hostRect.top) + 'px';
+            menu.style.visibility = 'visible';
+        }
+
         function toggleDesignDropdown(type, event) {
             const ev = event || window.event;
             if (ev && ev.stopPropagation) {
@@ -7575,26 +7825,16 @@
                     if (isHidden) {
                         menu.classList.remove('hidden');
                         menu.classList.add('flex');
-                        // Ensure dropdown doesn't clip past left viewport edge on narrow viewports
-                        const menuRect = menu.getBoundingClientRect();
-                        if (menuRect.left < 8) {
-                            menu.style.right = 'auto';
-                            menu.style.left = '0';
-                        } else {
-                            menu.style.right = '0';
-                            menu.style.left = 'auto';
-                        }
+                        positionDesignMenu(menu, t);
                     } else {
                         menu.classList.add('hidden');
                         menu.classList.remove('flex');
-                        menu.style.right = '';
-                        menu.style.left = '';
+                        resetDesignMenu(menu);
                     }
                 } else {
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
-                    menu.style.right = '';
-                    menu.style.left = '';
+                    resetDesignMenu(menu);
                 }
             });
         }
@@ -7605,8 +7845,7 @@
                 if (menu) {
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
-                    menu.style.right = '';
-                    menu.style.left = '';
+                    resetDesignMenu(menu);
                 }
             });
         }
@@ -7625,7 +7864,7 @@
         });
 
         function addDecoration(kind) {
-            const canvasRect = canvasBg.getBoundingClientRect();
+            const canvasRect = mapViewportRect();
             const centerX = Math.round((canvasRect.width / 2 - panX) / zoom - 160);
             const centerY = Math.round((canvasRect.height / 2 - panY) / zoom - 100);
             const id = 'dec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -7820,7 +8059,7 @@
                 const aspect = (img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 1.33;
                 const width = Math.min(460, img.naturalWidth || 400);
                 const height = Math.round(width / aspect);
-                const canvasRect = canvasBg.getBoundingClientRect();
+                const canvasRect = mapViewportRect();
                 const centerX = Math.round((canvasRect.width / 2 - panX) / zoom - width / 2);
                 const centerY = Math.round((canvasRect.height / 2 - panY) / zoom - height / 2);
                 const id = 'dec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -7853,7 +8092,7 @@
             img.onerror = () => {
                 const width = 400;
                 const height = 280;
-                const canvasRect = canvasBg.getBoundingClientRect();
+                const canvasRect = mapViewportRect();
                 const centerX = Math.round((canvasRect.width / 2 - panX) / zoom - width / 2);
                 const centerY = Math.round((canvasRect.height / 2 - panY) / zoom - height / 2);
                 const id = 'dec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -8206,8 +8445,21 @@
         let arrowDrawCurrent = null;
         let arrowHandleDragInfo = null;
 
+        function mapViewportRect() {
+            const layer = document.getElementById('canvas-gesture-layer');
+            if (layer) {
+                const r = layer.getBoundingClientRect();
+                if (r && r.width > 20 && r.height > 20) return r;
+            }
+            if (canvasBg) {
+                const r = canvasBg.getBoundingClientRect();
+                if (r && r.width > 0) return r;
+            }
+            return { left: 0, top: 0, width: 1000, height: 700, right: 1000, bottom: 700 };
+        }
+
         function screenToCanvasCoords(clientX, clientY) {
-            const canvasRect = canvasBg.getBoundingClientRect();
+            const canvasRect = mapViewportRect();
             const x = (clientX - canvasRect.left - panX) / zoom;
             const y = (clientY - canvasRect.top - panY) / zoom;
             return { x: Math.round(x), y: Math.round(y) };
@@ -8975,6 +9227,7 @@
                 panY -= dy;
                 applyTransform();
                 triggerAutoSave();
+                noteControlsGuideUsed();
                 return;
             }
             if (mode === 'pan-x') {
@@ -8983,16 +9236,18 @@
                 panX -= step;
                 applyTransform();
                 triggerAutoSave();
+                noteControlsGuideUsed();
                 return;
             }
 
             const delta = dy !== 0 ? dy : dx;
             if (delta === 0) return;
-            const rect = canvasBg.getBoundingClientRect();
+            const rect = mapViewportRect();
             const pivotX = e.clientX - rect.left;
             const pivotY = e.clientY - rect.top;
             if (zoomAt(zoom * zoomFactorForWheel(delta, !e.ctrlKey), pivotX, pivotY)) {
                 triggerAutoSave();
+                noteControlsGuideUsed();
             }
         }, { passive: false });
 
@@ -9382,7 +9637,9 @@
                 resizeInfo = null;
             }
             if (dragInfo) {
+                const moved = Math.hypot((e.clientX || 0) - (dragInfo.startX || 0), (e.clientY || 0) - (dragInfo.startY || 0)) > 4;
                 triggerAutoSave();
+                if (moved) noteControlsGuideUsed();
             }
             dragInfo = null;
             isDraggingCanvas = false;
@@ -9647,7 +9904,7 @@
                 if (touchStartDist > 5) {
                     const scaleFactor = currentDist / touchStartDist;
                     const targetZoom = Math.min(Math.max(touchStartZoom * scaleFactor, MIN_ZOOM), MAX_ZOOM);
-                    const canvasRect = canvasBg.getBoundingClientRect();
+                    const canvasRect = mapViewportRect();
                     const startX = touchPinchCenter.x - canvasRect.left;
                     const startY = touchPinchCenter.y - canvasRect.top;
                     const curX = ((t1.clientX + t2.clientX) / 2) - canvasRect.left;
@@ -9790,6 +10047,7 @@
                 if (e.touches.length < 2) {
                     isTouchPinching = false;
                     triggerAutoSave();
+                    noteControlsGuideUsed();
                 }
                 return;
             }
@@ -9858,6 +10116,7 @@
                 } else if (touchHasMoved) {
                     triggerAutoSave();
                     syncFromMap();
+                    noteControlsGuideUsed();
                 }
 
                 dragInfo = null;
@@ -9888,6 +10147,12 @@
                 e.stopPropagation();
             });
         }
+        const designToolbarScroller = document.getElementById('design-toolbar-expanded-content');
+        if (designToolbarScroller) {
+            designToolbarScroller.addEventListener('scroll', () => {
+                if (typeof closeDesignDropdowns === 'function') closeDesignDropdowns();
+            }, { passive: true });
+        }
 
         function clampZoom(value) {
             return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
@@ -9908,46 +10173,157 @@
         }
 
         function viewportCenterPivot() {
-            const rect = canvasBg.getBoundingClientRect();
+            const rect = mapViewportRect();
             return { x: rect.width / 2, y: rect.height / 2 };
         }
 
         function zoomBy(factor) {
             const pivot = viewportCenterPivot();
-            if (zoomAt(zoom * factor, pivot.x, pivot.y)) triggerAutoSave();
+            if (zoomAt(zoom * factor, pivot.x, pivot.y)) {
+                triggerAutoSave();
+                noteControlsGuideUsed();
+            }
         }
 
         function zoomTo(level) {
             const pivot = viewportCenterPivot();
-            if (zoomAt(level, pivot.x, pivot.y)) triggerAutoSave();
+            if (zoomAt(level, pivot.x, pivot.y)) {
+                triggerAutoSave();
+                noteControlsGuideUsed();
+            }
         }
 
         function applyTransform() {
             const layer = document.getElementById('pan-zoom-container');
             layer.style.transformOrigin = '0 0';
             layer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-            // Layout size is 44px. When the canvas is zoomed out, grow the control
-            // by 1/zoom (plus half a pixel) so the on-screen tap target stays >= 44px.
-            const hit = (zoom > 0 && zoom < 1) ? ((44.5 / 44) / zoom) : 1;
-            layer.style.setProperty('--collapse-hit', hit.toFixed(4));
+            const z = (zoom > 0) ? zoom : 1;
+            const phoneCoarse = window.matchMedia('(pointer: coarse) and (max-width: 640px)').matches;
+            if (phoneCoarse) {
+                // 28px layout face × faceScale × zoom = max(16px, 28px × zoom) on screen.
+                // Hit scale cancels zoom so the 44px target stays 44px on screen.
+                const faceScale = Math.max(16 / (28 * z), 1);
+                layer.style.setProperty('--collapse-face', faceScale.toFixed(4));
+                layer.style.setProperty('--collapse-hit', (1 / z).toFixed(4));
+            } else {
+                // Desktop face stays ~18px and the touch face stays ~28px, both constant on screen.
+                layer.style.setProperty('--collapse-face', '1');
+                layer.style.setProperty('--collapse-hit', ((44.5 / 44) / z).toFixed(4));
+            }
             const label = Math.round(zoom * 100) + '%';
             document.querySelectorAll('.zoom-readout').forEach(el => { el.textContent = label; });
         }
 
+        function visibleNodeBounds(node) {
+            if (!node || isNodeConcealed(node)) return null;
+            if (typeof node.x !== 'number' || typeof node.y !== 'number') return null;
+            const el = node.el || document.querySelector(`.bubble-node[data-id="${node.id}"]`);
+            if (el) {
+                const layer = document.getElementById('pan-zoom-container');
+                const layerRect = layer ? layer.getBoundingClientRect() : null;
+                const z = zoom || 1;
+                if (layerRect && layerRect.width > 0 && z > 0) {
+                    const parts = [el];
+                    el.querySelectorAll('.node-text-span, .bubble-img, .bubble-file-badge').forEach(part => parts.push(part));
+                    let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
+                    parts.forEach(part => {
+                        const r = part.getBoundingClientRect();
+                        if (!r || (r.width === 0 && r.height === 0)) return;
+                        minL = Math.min(minL, r.left);
+                        minT = Math.min(minT, r.top);
+                        maxR = Math.max(maxR, r.right);
+                        maxB = Math.max(maxB, r.bottom);
+                    });
+                    if (isFinite(minL)) {
+                        return {
+                            x: (minL - layerRect.left) / z,
+                            y: (minT - layerRect.top) / z,
+                            w: Math.max(1, (maxR - minL) / z),
+                            h: Math.max(1, (maxB - minT) / z)
+                        };
+                    }
+                }
+            }
+            const size = node.size || 16;
+            const text = node.text || '';
+            let w;
+            let h;
+            if (node.wrap) {
+                w = node.maxWidth || 240;
+                const chars = Math.max(8, Math.floor(w / (size * 0.55)));
+                const lines = Math.max(1, Math.ceil(Math.max(text.length, 1) / chars));
+                h = lines * size * 1.35 + 22;
+            } else {
+                w = Math.max(text.length * size * 0.62 + 48, 72);
+                h = size * 1.7 + 18;
+            }
+            return { x: node.x - w / 2, y: node.y - h / 2, w, h };
+        }
+
+        let pendingToolbarScroll = null;
+        let pendingToolbarScrollTimer = null;
+
+        function captureToolbarScroll() {
+            const header = document.querySelector('body > header');
+            const designScroller = document.getElementById('design-toolbar-expanded-content');
+            return {
+                header: header ? header.scrollLeft : 0,
+                design: designScroller ? designScroller.scrollLeft : 0
+            };
+        }
+
+        function rememberToolbarScroll() {
+            pendingToolbarScroll = captureToolbarScroll();
+            clearTimeout(pendingToolbarScrollTimer);
+            pendingToolbarScrollTimer = setTimeout(() => { pendingToolbarScroll = null; }, 600);
+        }
+
+        function keepToolbarScroll(e) {
+            if (e && e.cancelable) e.preventDefault();
+            if (!pendingToolbarScroll) rememberToolbarScroll();
+        }
+
+        function restoreToolbarScroll(saved) {
+            const header = document.querySelector('body > header');
+            const designScroller = document.getElementById('design-toolbar-expanded-content');
+            if (header && header.scrollLeft !== saved.header) header.scrollLeft = saved.header;
+            if (designScroller && designScroller.scrollLeft !== saved.design) designScroller.scrollLeft = saved.design;
+        }
+
+        function holdToolbarScroll(saved) {
+            restoreToolbarScroll(saved);
+            const header = document.querySelector('body > header');
+            const designScroller = document.getElementById('design-toolbar-expanded-content');
+            const onScroll = () => restoreToolbarScroll(saved);
+            if (header) header.addEventListener('scroll', onScroll);
+            if (designScroller) designScroller.addEventListener('scroll', onScroll);
+            setTimeout(() => {
+                if (header) header.removeEventListener('scroll', onScroll);
+                if (designScroller) designScroller.removeEventListener('scroll', onScroll);
+                restoreToolbarScroll(saved);
+            }, 400);
+        }
+
         function fitView() {
+            const savedScroll = pendingToolbarScroll || captureToolbarScroll();
+            pendingToolbarScroll = null;
+            clearTimeout(pendingToolbarScrollTimer);
+            const restoreScroll = () => restoreToolbarScroll(savedScroll);
+
             const allItems = [];
             Object.values(nodes).forEach(n => {
-                if (isNodeConcealed(n)) return;
-                if (typeof n.x === 'number' && typeof n.y === 'number') {
-                    allItems.push({ x: n.x - 100, y: n.y - 40, w: 200, h: 80 });
-                }
+                const box = visibleNodeBounds(n);
+                if (box) allItems.push(box);
             });
-            Object.values(canvasDecorations).forEach(d => {
-                if (typeof d.x === 'number' && typeof d.y === 'number') {
-                    allItems.push({ x: d.x, y: d.y, w: d.width || 200, h: d.height || 100 });
-                }
-            });
-            if (allItems.length === 0) return;
+            // Empty frames, stickies, and other decorations are not part of the fit.
+            if (allItems.length === 0) {
+                restoreScroll();
+                return;
+            }
+
+            // Close the docked guide before measuring so the extra space it frees
+            // is part of the centered view instead of a gap left under the map.
+            noteControlsGuideUsed();
 
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             allItems.forEach(item => {
@@ -9957,26 +10333,38 @@
                 maxY = Math.max(maxY, item.y + item.h);
             });
 
-            const canvasRect = canvasBg ? canvasBg.getBoundingClientRect() : null;
+            const canvasRect = mapViewportRect();
             const cW = (canvasRect && canvasRect.width > 50) ? canvasRect.width : (window.innerWidth ? window.innerWidth - 320 : 1000);
             const cH = (canvasRect && canvasRect.height > 50) ? canvasRect.height : (window.innerHeight ? window.innerHeight - 60 : 700);
-            const padding = 80;
-            const contentW = Math.max(maxX - minX + padding * 2, 200);
-            const contentH = Math.max(maxY - minY + padding * 2, 200);
+            const pad = 16;
+            let topInset = pad;
+            const toolbar = document.getElementById('floating-canvas-design-toolbar');
+            if (toolbar && canvasRect) {
+                const tb = toolbar.getBoundingClientRect();
+                if (tb.height > 0 && tb.bottom > canvasRect.top) {
+                    topInset = Math.max(pad, tb.bottom - canvasRect.top + 8);
+                }
+            }
+            topInset = Math.min(topInset, cH * 0.4);
+            const bottomInset = pad;
+            const contentW = Math.max(maxX - minX, 40);
+            const contentH = Math.max(maxY - minY, 40);
+            const availW = Math.max(80, cW - pad * 2);
+            const availH = Math.max(80, cH - topInset - bottomInset);
 
-            const scaleX = cW / contentW;
-            const scaleY = cH / contentH;
-            zoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.25), 1.25);
+            zoom = Math.min(Math.max(Math.min(availW / contentW, availH / contentH), 0.25), 1.25);
 
             const contentCenterX = (minX + maxX) / 2;
             const contentCenterY = (minY + maxY) / 2;
+            const bandCenterY = topInset + (cH - topInset - bottomInset) / 2;
 
             panX = Math.round(cW / 2 - contentCenterX * zoom);
-            panY = Math.round(cH / 2 - contentCenterY * zoom);
+            panY = Math.round(bandCenterY - contentCenterY * zoom);
 
             applyTransform();
             triggerAutoSave();
             setSaveStatus('saved', '✓ View Fitted to Content');
+            holdToolbarScroll(savedScroll);
         }
 
         // --- 3. LOGIC UTILS & 4-DIRECTIONAL LAYOUT ENGINE ---
