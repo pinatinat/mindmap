@@ -637,7 +637,8 @@
             flex: 1 1 220px;
         }
         #move-domain-banner a { color: #93c5fd; font-weight: 700; text-decoration: underline; }
-        #btn-move-maps {
+        #btn-move-maps,
+        #btn-move-maps-again {
             appearance: none;
             background: #2563eb;
             color: #ffffff;
@@ -650,8 +651,14 @@
             cursor: pointer;
             flex: 0 0 auto;
         }
-        #btn-move-maps:disabled { opacity: 0.65; cursor: default; }
-        #btn-move-backup {
+        #btn-move-maps:disabled,
+        #btn-move-maps-again:disabled { opacity: 0.65; cursor: default; }
+        #btn-move-maps-again {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        #btn-move-backup,
+        #btn-move-backup-again {
             background: transparent;
             border: 0;
             color: #cbd5e1;
@@ -661,6 +668,22 @@
             cursor: pointer;
             padding: 4px 2px;
             flex: 0 0 auto;
+        }
+        #btn-move-backup-again { font-size: 11px; }
+        #move-domain-done {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        #move-domain-done .move-again {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 12px;
+        }
+        @media (max-width: 480px) {
+            #app-homepage-view > header { padding-left: 10px; padding-right: 10px; }
+            #app-homepage-view .home-auth-label,
+            #app-homepage-view .home-version-badge { display: none; }
         }
         #move-domain-status {
             display: none;
@@ -815,15 +838,19 @@
         </div>
     </header>
 
-    <!-- Shown only on the old domain. Stays up until the move finishes. -->
+    <!-- Shown only on the old domain. Stays up after a move so maps can be sent again. -->
     <div id="move-domain-banner" role="region" aria-label="Move your maps">
         <div id="move-domain-offer" class="move-row">
             <p>OmniMind has moved to <a href="https://www.omnimindmap.app">omnimindmap.app</a>. Bring your maps with you.</p>
-            <button type="button" id="btn-move-maps" onclick="startDomainMove()">Move my maps</button>
-            <a href="#" id="btn-move-backup" onclick="downloadMoveBackup(event)">Download a backup</a>
+            <button type="button" id="btn-move-maps" data-move-maps onclick="startDomainMove()">Move my maps</button>
+            <a href="#" id="btn-move-backup" data-move-backup onclick="downloadMoveBackup(event)">Download a backup</a>
         </div>
         <div id="move-domain-done" class="move-row is-hidden">
             <p>Moved ✓ <a href="https://www.omnimindmap.app">open omnimindmap.app</a></p>
+            <div class="move-again">
+                <button type="button" id="btn-move-maps-again" data-move-maps onclick="startDomainMove()">Move my maps</button>
+                <a href="#" id="btn-move-backup-again" data-move-backup onclick="downloadMoveBackup(event)">Download a backup</a>
+            </div>
         </div>
         <p id="move-domain-status"></p>
     </div>
@@ -1423,31 +1450,29 @@
         <input type="file" id="home-file-input" accept=".json" onchange="importJSON(event); toggleHomepageView(false);" class="hidden">
 
         <!-- Top Header Navigation -->
-        <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-2xl cursor-pointer" onclick="toggleHomepageView(false)" title="Back to Canvas">🧠</span>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h1 class="font-black text-lg md:text-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent leading-none">OmniMind</h1>
-                            <span class="text-[0.65rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono border">v4.0 Hub</span>
-                        </div>
-                        <p class="text-[0.7rem] text-slate-400 hidden sm:block">Visual Mind Mapping & Workspace</p>
+        <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-3 sm:px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-2 shadow-sm max-w-full">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-2xl cursor-pointer shrink-0" onclick="toggleHomepageView(false)" title="Back to Canvas">🧠</span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-black text-lg md:text-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent leading-none">OmniMind</h1>
+                        <span class="home-version-badge text-[0.65rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono border">v4.0 Hub</span>
                     </div>
+                    <p class="text-[0.7rem] text-slate-400 hidden sm:block">Visual Mind Mapping & Workspace</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 shrink-0 ml-auto">
                 <!-- User Profile / Auth Status Widget -->
                 <div id="home-auth-widget" class="flex items-center gap-2">
-                    <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
+                    <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
                         <span>☁️</span>
-                        <span id="home-auth-text">Sign In / Cloud</span>
+                        <span id="home-auth-text" class="home-auth-label">Sign In / Cloud</span>
                     </button>
                 </div>
 
                 <!-- Prominent Action: Go to Active Canvas -->
-                <button type="button" onclick="toggleHomepageView(false)" class="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-transform active:scale-95">
+                <button type="button" onclick="toggleHomepageView(false)" class="home-open-canvas flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-transform active:scale-95 shrink-0">
                     <span>🎨 Open Canvas</span>
                     <span>➔</span>
                 </button>
@@ -3101,6 +3126,22 @@
             }
         }
 
+        async function idbDelete(key) {
+            try {
+                const db = await getIndexedDB();
+                if (!db) return false;
+                return new Promise((resolve) => {
+                    const tx = db.transaction(DB_STORE, 'readwrite');
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => resolve(false);
+                    tx.onabort = () => resolve(false);
+                    tx.objectStore(DB_STORE).delete(key);
+                });
+            } catch (e) {
+                return false;
+            }
+        }
+
         async function idbLoad(key) {
             try {
                 const db = await getIndexedDB();
@@ -3333,16 +3374,18 @@
                 console.warn('Migration note:', eMigration);
             }
 
-            // Brand new clean default registry
+            // Brand new clean default registry. The library name is not "Master Idea"
+            // so it cannot collide with a map the user already called that.
             const defaultId = 'proj_' + Date.now();
             projectRegistry = {
                 activeId: defaultId,
                 projects: [{
                     id: defaultId,
-                    name: 'Master Idea',
+                    name: 'My first map',
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
-                    nodeCount: 7
+                    nodeCount: 7,
+                    autoStarter: true
                 }]
             };
             currentProjectId = defaultId;
@@ -3365,6 +3408,8 @@
         function saveCurrentProjectImmediate() {
             clearTimeout(saveTimeout);
             if (!currentProjectId) return;
+            const starterMeta = getCurrentProjectMeta();
+            if (starterMeta && starterMeta.autoStarter) delete starterMeta.autoStarter;
             const cleanedNodes = cleanNodesForStorage(nodes);
             const cleanedDecs = cleanDecorationsForStorage(canvasDecorations, false);
 
@@ -3418,7 +3463,15 @@
             }
         }
 
-        function triggerAutoSave() {
+        function triggerAutoSave(options) {
+            const keepStarter = !!(options && options.keepStarter);
+            if (!keepStarter) {
+                const starterMeta = getCurrentProjectMeta();
+                if (starterMeta && starterMeta.autoStarter) {
+                    delete starterMeta.autoStarter;
+                    saveProjectRegistry(false);
+                }
+            }
             if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
                 // Read-only mode: do not save or overwrite local storage
                 return;
@@ -3451,7 +3504,7 @@
 
                 // Update metadata in project registry
                 const meta = getCurrentProjectMeta();
-                if (meta) {
+                if (meta && epoch === storageWriteEpoch) {
                     meta.updatedAt = Date.now();
                     meta.nodeCount = Object.keys(nodes).length;
                     saveProjectRegistry(false);
@@ -3621,6 +3674,8 @@
                 if (updated) {
                     renderDecorations();
                     renderTree();
+                    if (typeof syncFromMap === 'function') syncFromMap();
+                    if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
                 }
             } catch (e) {
                 console.warn('Could not hydrate from IndexedDB:', e);
@@ -4758,7 +4813,7 @@
                     authWidget.innerHTML = `
                         <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
                             <span>☁️</span>
-                            <span>Sign In / Cloud</span>
+                            <span class="home-auth-label">Sign In / Cloud</span>
                         </button>
                     `;
                 }
@@ -5847,6 +5902,7 @@
             if (!meta) return;
             meta.name = newName.trim();
             meta.updatedAt = Date.now();
+            if (meta.autoStarter) delete meta.autoStarter;
             saveProjectRegistry(false);
             updateProjectHeaderUI();
             renderProjectList();
@@ -6783,6 +6839,50 @@
             }[m]));
         }
 
+        function createFactoryStarterNodes() {
+            return {
+                'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
+                'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!' },
+                'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170 },
+                'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝' },
+                'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
+                'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490 },
+                'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨' }
+            };
+        }
+
+        function factoryStarterNodeMatches(saved, factory) {
+            if (!saved || !factory) return false;
+            if (saved.parentId !== factory.parentId || saved.text !== factory.text) return false;
+            if (Number(saved.x) !== factory.x || Number(saved.y) !== factory.y) return false;
+            if (saved.collapsed || saved.attachment) return false;
+            const fields = ['bg', 'fg', 'size', 'weight', 'tag', 'flag'];
+            return fields.every(key => (saved[key] ?? null) === (factory[key] ?? null));
+        }
+
+        function dataMatchesFactoryStarter(data) {
+            if (!data || !data.nodes) return false;
+            if (data.canvasDecorations && Object.keys(data.canvasDecorations).length) return false;
+            if (typeof data.panX === 'number' && data.panX !== 100) return false;
+            if (typeof data.panY === 'number' && data.panY !== 100) return false;
+            if (typeof data.zoom === 'number' && data.zoom !== 1) return false;
+            const factory = createFactoryStarterNodes();
+            const savedIds = Object.keys(data.nodes);
+            const factoryIds = Object.keys(factory);
+            if (savedIds.length !== factoryIds.length) return false;
+            return factoryIds.every(id => factoryStarterNodeMatches(data.nodes[id], factory[id]));
+        }
+
+        function canvasMatchesFactoryStarter() {
+            return dataMatchesFactoryStarter({
+                nodes,
+                canvasDecorations,
+                panX,
+                panY,
+                zoom
+            });
+        }
+
         // Initialize map
         function init(forceDefault = false) {
             sanitizeStorageOnBoot();
@@ -6792,15 +6892,7 @@
                 loaded = loadFromStorage(currentProjectId);
             }
             if (!loaded) {
-                nodes = {
-                    'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                    'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!' },
-                    'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170 },
-                    'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝' },
-                    'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                    'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490 },
-                    'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨' }
-                };
+                nodes = createFactoryStarterNodes();
                 canvasDecorations = {};
                 isDesignSelectable = true;
                 panX = 100;
@@ -6856,7 +6948,7 @@
                 const curMeta = getCurrentProjectMeta();
                 setSaveStatus('saved', `✓ Loaded "${curMeta ? curMeta.name : 'map'}"`);
             } else if (!isSharedUrl) {
-                triggerAutoSave();
+                triggerAutoSave({ keepStarter: true });
             }
         }
 
@@ -12928,7 +13020,6 @@
             const destIdb = await idbGetAll();
             const destRegistry = readRegistryFromBag(destBag);
             const destMeta = metaById(destRegistry);
-            const onlySeed = destRegistry.projects.length <= 1 && destRegistry.projects.every(item => item.name === 'Master Idea');
             const result = { added: 0, updated: 0, skipped: 0, proCopied: false };
             const ids = projectIdsInBackup(sourceBag, sourceIdb);
 
@@ -12994,8 +13085,29 @@
                 else result.added += 1;
             }
 
-            if (onlySeed && sourceRegistry.activeId && destMeta[sourceRegistry.activeId]) {
-                destRegistry.activeId = sourceRegistry.activeId;
+            if (decisions.length) {
+                const incomingIds = new Set(decisions.map(decision => decision.id));
+                const starterIds = destRegistry.projects.filter(meta => {
+                    if (!meta || incomingIds.has(meta.id)) return false;
+                    const flagged = meta.autoStarter === true;
+                    const legacyFactory = meta.autoStarter !== true && meta.name === 'Master Idea';
+                    if (!flagged && !legacyFactory) return false;
+                    if (meta.id === currentProjectId && !canvasMatchesFactoryStarter()) return false;
+                    const stored = pickFullerProject(destBag['omnimind_proj_data_' + meta.id], destIdb['omnimind_idb_proj_' + meta.id], meta);
+                    if (!stored) return flagged;
+                    return dataMatchesFactoryStarter(stored.data);
+                }).map(meta => meta.id);
+                for (const starterId of starterIds) {
+                    destRegistry.projects = destRegistry.projects.filter(meta => meta.id !== starterId);
+                    delete destMeta[starterId];
+                    try { localStorage.removeItem(getProjectStorageKey(starterId)); } catch (e) {}
+                    await idbDelete(getProjectIDBKey(starterId));
+                }
+            }
+
+            if (!destRegistry.projects.some(meta => meta.id === destRegistry.activeId)) {
+                const importedActive = sourceRegistry.activeId && destMeta[sourceRegistry.activeId] ? sourceRegistry.activeId : '';
+                destRegistry.activeId = importedActive || (destRegistry.projects[0] ? destRegistry.projects[0].id : null);
             } else if (!destRegistry.activeId && destRegistry.projects[0]) {
                 destRegistry.activeId = destRegistry.projects[0].id;
             }
@@ -13033,7 +13145,10 @@
             if (typeof renderTree === 'function') renderTree();
             if (typeof renderDecorations === 'function') renderDecorations();
             if (typeof applyTransform === 'function') applyTransform();
+            if (typeof syncFromMap === 'function') syncFromMap(true);
+            if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
             if (typeof updateProjectHeaderUI === 'function') updateProjectHeaderUI();
+            if (typeof renderProjectList === 'function') renderProjectList();
             if (typeof renderHomepage === 'function') renderHomepage();
             try {
                 Promise.resolve(fetchUserQuota(currentCloudUser)).then(() => {
@@ -13073,20 +13188,33 @@
         }
 
         function downloadMoveBackup(event) {
-            const link = document.getElementById('btn-move-backup');
-            if (link && link.dataset.ready === '1') return;
+            const link = (event && event.currentTarget && event.currentTarget.matches && event.currentTarget.matches('[data-move-backup]'))
+                ? event.currentTarget
+                : document.querySelector('[data-move-backup]');
+            if (link && link.dataset.ready === '1') {
+                if (!event || event.isTrusted !== true || link.dataset.armed === '1') {
+                    if (link.dataset.armed === '1' && event && event.isTrusted) link.dataset.armed = '0';
+                    return;
+                }
+                document.querySelectorAll('[data-move-backup]').forEach(item => {
+                    item.dataset.ready = '0';
+                    item.dataset.armed = '0';
+                    item.textContent = 'Download a backup';
+                });
+            }
             if (event) event.preventDefault();
             setMoveStatus('Preparing backup…');
             buildMoveBackup().then(payload => {
                 const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                if (link) {
-                    link.href = url;
-                    link.download = 'omnimind-maps-backup.json';
-                    link.dataset.ready = '1';
-                    link.textContent = 'Save backup file';
-                    link.click();
-                }
+                document.querySelectorAll('[data-move-backup]').forEach(item => {
+                    item.href = url;
+                    item.download = 'omnimind-maps-backup.json';
+                    item.dataset.ready = '1';
+                    item.dataset.armed = '1';
+                    item.textContent = 'Save backup file';
+                });
+                if (link) link.click();
                 setMoveStatus('If the file did not save, tap Save backup file.');
                 setTimeout(() => URL.revokeObjectURL(url), 120000);
             }).catch(() => setMoveStatus('Could not build the backup.'));
@@ -13149,8 +13277,7 @@
             moveTransferChild = child;
             moveTransferReady = false;
             moveSending = true;
-            const button = document.getElementById('btn-move-maps');
-            if (button) button.disabled = true;
+            document.querySelectorAll('[data-move-maps]').forEach(button => { button.disabled = true; });
             setMoveStatus('Opening omnimindmap.app…');
             runDomainMove(child);
         }
@@ -13193,8 +13320,7 @@
                 setMoveStatus(err && err.message ? err.message : 'The move did not finish.');
             } finally {
                 moveSending = false;
-                const button = document.getElementById('btn-move-maps');
-                if (button) button.disabled = false;
+                document.querySelectorAll('[data-move-maps]').forEach(button => { button.disabled = false; });
             }
         }
 
