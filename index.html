@@ -10214,6 +10214,104 @@
             document.querySelectorAll('.zoom-readout').forEach(el => { el.textContent = label; });
         }
 
+        function isPaintedControl(el) {
+            if (!el) return false;
+            // Opacity does not inherit as a computed value, so a hover-only
+            // toggle can be opacity 0 while its badge still reports 1.
+            let node = el;
+            while (node && node.nodeType === 1) {
+                const style = window.getComputedStyle(node);
+                if (style.display === 'none' || style.visibility === 'hidden') return false;
+                const opacity = parseFloat(style.opacity);
+                if (isFinite(opacity) && opacity < 0.05) return false;
+                if (node.classList && node.classList.contains('bubble-node')) break;
+                node = node.parentElement;
+            }
+            return true;
+        }
+
+        function fitContentPadding() {
+            const view = mapViewportRect();
+            const cW = (view && view.width > 50) ? view.width : (window.innerWidth ? window.innerWidth - 320 : 1000);
+            const cH = (view && view.height > 50) ? view.height : (window.innerHeight ? window.innerHeight - 60 : 700);
+            const pad = 16;
+            let topInset = pad;
+            const toolbar = document.getElementById('floating-canvas-design-toolbar');
+            if (toolbar && view) {
+                const tb = toolbar.getBoundingClientRect();
+                if (tb.height > 0 && tb.bottom > view.top) {
+                    topInset = Math.max(pad, tb.bottom - view.top + 8);
+                }
+            }
+            topInset = Math.min(topInset, cH * 0.4);
+            return { view, cW, cH, pad, topInset, bottomInset: pad };
+        }
+
+        // Screen box of every visible bubble, including a painted fold badge.
+        // Zones, stickies, cards, and other decorations are not part of this box.
+        function visibleNodesScreenBox() {
+            let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
+            let count = 0;
+            Object.values(nodes).forEach(node => {
+                if (!node || isNodeConcealed(node) || !node.el) return;
+                const parts = [node.el];
+                node.el.querySelectorAll('.node-text-span, .bubble-img, .bubble-file-badge, .collapse-toggle-face').forEach(part => {
+                    if (part.classList.contains('collapse-toggle-face') && !isPaintedControl(part)) return;
+                    parts.push(part);
+                });
+                parts.forEach(part => {
+                    const r = part.getBoundingClientRect();
+                    if (!r || (r.width < 1 && r.height < 1)) return;
+                    minL = Math.min(minL, r.left);
+                    minT = Math.min(minT, r.top);
+                    maxR = Math.max(maxR, r.right);
+                    maxB = Math.max(maxB, r.bottom);
+                    count += 1;
+                });
+            });
+            if (!count || !isFinite(minL)) return null;
+            return { minL, minT, maxR, maxB };
+        }
+
+        // The first pass can miss a counter-scaled fold badge, or a node whose
+        // box was measured before the fitted zoom. Re-center the painted nodes.
+        function tightenFitToVisibleNodes() {
+            const frame = fitContentPadding();
+            if (!frame.view) return;
+            for (let pass = 0; pass < 3; pass++) {
+                const box = visibleNodesScreenBox();
+                if (!box) return;
+                const availL = frame.view.left + frame.pad;
+                const availR = frame.view.right - frame.pad;
+                const availT = frame.view.top + frame.topInset;
+                const availB = frame.view.bottom - frame.bottomInset;
+                const availW = Math.max(40, availR - availL);
+                const availH = Math.max(40, availB - availT);
+                const contentW = Math.max(1, box.maxR - box.minL);
+                const contentH = Math.max(1, box.maxB - box.minT);
+                const need = Math.min(availW / contentW, availH / contentH);
+                const bandCx = (availL + availR) / 2;
+                const bandCy = (availT + availB) / 2;
+                if (need < 0.995 && zoom > 0.2501) {
+                    const cx = (box.minL + box.maxR) / 2;
+                    const cy = (box.minT + box.maxB) / 2;
+                    const canvasX = (cx - frame.view.left - panX) / zoom;
+                    const canvasY = (cy - frame.view.top - panY) / zoom;
+                    zoom = Math.max(0.25, zoom * need);
+                    panX = bandCx - frame.view.left - canvasX * zoom;
+                    panY = bandCy - frame.view.top - canvasY * zoom;
+                    applyTransform();
+                    continue;
+                }
+                const dx = bandCx - (box.minL + box.maxR) / 2;
+                const dy = bandCy - (box.minT + box.maxB) / 2;
+                if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+                panX += dx;
+                panY += dy;
+                applyTransform();
+            }
+        }
+
         function visibleNodeBounds(node) {
             if (!node || isNodeConcealed(node)) return null;
             if (typeof node.x !== 'number' || typeof node.y !== 'number') return null;
@@ -10224,7 +10322,10 @@
                 const z = zoom || 1;
                 if (layerRect && layerRect.width > 0 && z > 0) {
                     const parts = [el];
-                    el.querySelectorAll('.node-text-span, .bubble-img, .bubble-file-badge').forEach(part => parts.push(part));
+                    el.querySelectorAll('.node-text-span, .bubble-img, .bubble-file-badge, .collapse-toggle-face').forEach(part => {
+                        if (part.classList.contains('collapse-toggle-face') && !isPaintedControl(part)) return;
+                        parts.push(part);
+                    });
                     let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
                     parts.forEach(part => {
                         const r = part.getBoundingClientRect();
@@ -10333,20 +10434,12 @@
                 maxY = Math.max(maxY, item.y + item.h);
             });
 
-            const canvasRect = mapViewportRect();
-            const cW = (canvasRect && canvasRect.width > 50) ? canvasRect.width : (window.innerWidth ? window.innerWidth - 320 : 1000);
-            const cH = (canvasRect && canvasRect.height > 50) ? canvasRect.height : (window.innerHeight ? window.innerHeight - 60 : 700);
-            const pad = 16;
-            let topInset = pad;
-            const toolbar = document.getElementById('floating-canvas-design-toolbar');
-            if (toolbar && canvasRect) {
-                const tb = toolbar.getBoundingClientRect();
-                if (tb.height > 0 && tb.bottom > canvasRect.top) {
-                    topInset = Math.max(pad, tb.bottom - canvasRect.top + 8);
-                }
-            }
-            topInset = Math.min(topInset, cH * 0.4);
-            const bottomInset = pad;
+            const frame = fitContentPadding();
+            const cW = frame.cW;
+            const cH = frame.cH;
+            const pad = frame.pad;
+            const topInset = frame.topInset;
+            const bottomInset = frame.bottomInset;
             const contentW = Math.max(maxX - minX, 40);
             const contentH = Math.max(maxY - minY, 40);
             const availW = Math.max(80, cW - pad * 2);
@@ -10362,6 +10455,7 @@
             panY = Math.round(bandCenterY - contentCenterY * zoom);
 
             applyTransform();
+            tightenFitToVisibleNodes();
             triggerAutoSave();
             setSaveStatus('saved', '✓ View Fitted to Content');
             holdToolbarScroll(savedScroll);
