@@ -277,16 +277,70 @@
         .collapse-toggle.edge-left { right: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); top: 50%; transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
         .collapse-toggle.edge-bottom { left: 50%; top: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
         .collapse-toggle.edge-top { left: 50%; bottom: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+        /* Desktop: the circle sits a few pixels outside the bubble. A transparent
+           ::before reaches back over the node edge so the pointer never drops
+           into that gap. Hide is delayed so a slow move can still land. */
         @media (hover: hover) and (pointer: fine) {
             .collapse-toggle:not(.is-collapsed) {
                 opacity: 0;
                 pointer-events: none;
+                transition: opacity 120ms ease-out;
+                transition-delay: 300ms;
             }
-            .bubble-node:hover .collapse-toggle,
-            .bubble-node:focus-within .collapse-toggle,
+            .bubble-node:hover > .collapse-toggle,
+            .bubble-node:focus-within > .collapse-toggle,
+            .collapse-toggle:hover,
+            .collapse-toggle:focus,
+            .collapse-toggle:focus-visible,
             .collapse-toggle.is-collapsed {
                 opacity: 1;
                 pointer-events: auto;
+                transition-delay: 0s;
+            }
+            /* Only the gap is a target, and only while the circle is shown.
+               About 4px reaches the node edge, plus a 2px overlap so a slow
+               approach does not fall through. The node body stays clickable. */
+            .collapse-toggle::before {
+                content: '';
+                position: absolute;
+                background: transparent;
+                pointer-events: none;
+            }
+            .bubble-node:hover > .collapse-toggle::before,
+            .bubble-node:focus-within > .collapse-toggle::before,
+            .collapse-toggle:hover::before,
+            .collapse-toggle:focus::before,
+            .collapse-toggle:focus-visible::before,
+            .collapse-toggle.is-collapsed::before {
+                pointer-events: auto;
+            }
+            .collapse-toggle.edge-right::before {
+                top: 50%;
+                left: -5px;
+                width: 7px;
+                height: 22px;
+                transform: translateY(-50%);
+            }
+            .collapse-toggle.edge-left::before {
+                top: 50%;
+                right: -5px;
+                width: 7px;
+                height: 22px;
+                transform: translateY(-50%);
+            }
+            .collapse-toggle.edge-bottom::before {
+                left: 50%;
+                top: -5px;
+                width: 22px;
+                height: 7px;
+                transform: translateX(-50%);
+            }
+            .collapse-toggle.edge-top::before {
+                left: 50%;
+                bottom: -5px;
+                width: 22px;
+                height: 7px;
+                transform: translateX(-50%);
             }
         }
         @media (pointer: coarse) {
@@ -5927,6 +5981,7 @@
             }
 
             renderProjectList();
+            renderHomepage();
             updateProjectHeaderUI();
             setSaveStatus('saved', `✓ Deleted "${meta.name}"`);
         }
@@ -6827,20 +6882,10 @@
         }
 
         function getCollapseEdge(node) {
-            const children = getDirectChildren(node.id);
-            let right = 0, left = 0, down = 0, up = 0;
-            children.forEach(c => {
-                const dx = (c.x || 0) - (node.x || 0);
-                const dy = (c.y || 0) - (node.y || 0);
-                if (Math.abs(dy) > Math.abs(dx)) {
-                    if (dy >= 0) down += 1;
-                    else up += 1;
-                } else if (dx >= 0) right += 1;
-                else left += 1;
-            });
-            const ranked = [['right', right], ['left', left], ['bottom', down], ['top', up]];
-            ranked.sort((a, b) => b[1] - a[1]);
-            return ranked[0][1] > 0 ? ranked[0][0] : 'right';
+            const dir = getBranchDirection(node.id);
+            if (dir === 'down') return 'bottom';
+            if (dir === 'up') return 'top';
+            return dir === 'left' ? 'left' : 'right';
         }
 
         function captureConcealedIds() {
@@ -7011,9 +7056,10 @@
             if (!children.length) return;
             const collapsed = !!node.collapsed;
             const count = collapsed ? getDescendants(node.id).length : 0;
+            const edge = getCollapseEdge(node);
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'collapse-toggle edge-' + getCollapseEdge(node) + (collapsed ? ' is-collapsed' : '');
+            btn.className = 'collapse-toggle edge-' + edge + (collapsed ? ' is-collapsed' : '');
             const face = document.createElement('span');
             face.className = 'collapse-toggle-face';
             face.textContent = collapsed ? ('+' + count) : '−';
@@ -10640,7 +10686,7 @@
                 });
             }
 
-            updatePositions();
+            renderTree();
             syncFromMap();
             updatePropertiesPanel();
             triggerAutoSave();
@@ -10748,7 +10794,7 @@
                 autoLayoutAllRootsUp(200, 600);
             }
 
-            updatePositions();
+            renderTree();
             syncFromMap();
             updatePropertiesPanel();
             fitView();
