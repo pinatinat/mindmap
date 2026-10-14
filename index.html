@@ -659,6 +659,111 @@
             white-space: nowrap;
             pointer-events: auto;
         }
+
+        /* Old-domain move banner. Fixed above the homepage overlay. */
+        #move-domain-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 80;
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 8px 12px;
+            padding-top: max(8px, env(safe-area-inset-top));
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+        }
+        #move-domain-banner.is-open { display: block; }
+        #move-domain-banner .move-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        #move-domain-banner .is-hidden { display: none !important; }
+        #move-domain-banner p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.35;
+            flex: 1 1 220px;
+        }
+        #move-domain-banner a { color: #93c5fd; font-weight: 700; text-decoration: underline; }
+        #btn-move-maps,
+        #btn-move-maps-again {
+            appearance: none;
+            background: #2563eb;
+            color: #ffffff;
+            border: 0;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1.2;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+        #btn-move-maps:disabled,
+        #btn-move-maps-again:disabled { opacity: 0.65; cursor: default; }
+        #btn-move-maps-again {
+            padding: 2px 8px;
+            font-size: 11px;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        #btn-move-backup,
+        #btn-move-backup-again {
+            background: transparent;
+            border: 0;
+            color: #cbd5e1;
+            font-size: 12px;
+            line-height: 1.2;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 4px 2px;
+            flex: 0 0 auto;
+        }
+        #btn-move-backup-again {
+            font-size: 11px;
+            padding: 1px 2px;
+            white-space: nowrap;
+        }
+        #move-domain-banner.is-done {
+            padding-bottom: 6px;
+            padding-top: max(6px, env(safe-area-inset-top));
+        }
+        #move-domain-done {
+            align-items: center;
+        }
+        #move-domain-done .move-done-line {
+            flex: 1 1 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 8px;
+            line-height: 1.2;
+        }
+        #move-domain-done .move-done-text {
+            white-space: nowrap;
+        }
+        @media (max-width: 480px) {
+            #app-homepage-view > header { padding-left: 10px; padding-right: 10px; }
+            #app-homepage-view .home-auth-label,
+            #app-homepage-view .home-version-badge { display: none; }
+        }
+        #move-domain-status {
+            display: none;
+            flex-basis: 100%;
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.35;
+            color: #fde68a;
+        }
+        #move-domain-status.is-open { display: block; }
+        html.move-banner-open > body > header { margin-top: var(--move-banner-h, 56px); }
+        html.move-banner-open #app-homepage-view { top: var(--move-banner-h, 56px); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
@@ -735,6 +840,9 @@
             <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
                 📂 Import <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
             </label>
+            <label title="Import an OmniMind maps backup" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
+                📥 Import maps <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
+            </label>
             <button type="button" onclick="resetToDefault()" title="Reset map to default" class="text-slate-400 hover:text-red-500 p-1 rounded-full text-xs shrink-0">🔄</button>
         </div>
 
@@ -787,6 +895,9 @@
                 <label class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
                     <span>📂</span> Import JSON <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
                 </label>
+                <label onclick="event.stopPropagation()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
+                    <span>📥</span> Import maps <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
+                </label>
                 <div class="h-px bg-slate-100 my-1"></div>
                 <button type="button" onclick="resetToDefault()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
                     <span>🔄</span> Reset to Default
@@ -794,6 +905,23 @@
             </div>
         </div>
     </header>
+
+    <!-- Shown only on the old domain. Stays up after a move so maps can be sent again. -->
+    <div id="move-domain-banner" role="region" aria-label="Move your maps">
+        <div id="move-domain-offer" class="move-row">
+            <p>OmniMind has moved to <a href="https://www.omnimindmap.app">omnimindmap.app</a>. Bring your maps with you.</p>
+            <button type="button" id="btn-move-maps" data-move-maps onclick="startDomainMove()">Move my maps</button>
+            <a href="#" id="btn-move-backup" data-move-backup data-label="Download a backup" onclick="downloadMoveBackup(event)">Download a backup</a>
+        </div>
+        <div id="move-domain-done" class="move-row is-hidden">
+            <p class="move-done-line">
+                <span class="move-done-text">Moved ✓ <a href="https://www.omnimindmap.app">open omnimindmap.app</a></span>
+                <button type="button" id="btn-move-maps-again" data-move-maps onclick="startDomainMove()">Move again</button>
+                <a href="#" id="btn-move-backup-again" data-move-backup data-label="Backup" onclick="downloadMoveBackup(event)">Backup</a>
+            </p>
+        </div>
+        <p id="move-domain-status"></p>
+    </div>
 
     <!-- COLLABORATION / VIEW-ONLY STATUS BANNER -->
     <div id="collab-status-banner" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-30 bg-white/95 backdrop-blur border border-purple-200 text-purple-900 px-4 py-1.5 rounded-full shadow-lg text-xs font-semibold flex items-center gap-3">
@@ -1390,31 +1518,29 @@
         <input type="file" id="home-file-input" accept=".json" onchange="importJSON(event); toggleHomepageView(false);" class="hidden">
 
         <!-- Top Header Navigation -->
-        <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-2xl cursor-pointer" onclick="toggleHomepageView(false)" title="Back to Canvas">🧠</span>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h1 class="font-black text-lg md:text-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent leading-none">OmniMind</h1>
-                            <span class="text-[0.65rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono border">v4.0 Hub</span>
-                        </div>
-                        <p class="text-[0.7rem] text-slate-400 hidden sm:block">Visual Mind Mapping & Workspace</p>
+        <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-3 sm:px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-2 shadow-sm max-w-full">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-2xl cursor-pointer shrink-0" onclick="toggleHomepageView(false)" title="Back to Canvas">🧠</span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-black text-lg md:text-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent leading-none">OmniMind</h1>
+                        <span class="home-version-badge text-[0.65rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono border">v4.0 Hub</span>
                     </div>
+                    <p class="text-[0.7rem] text-slate-400 hidden sm:block">Visual Mind Mapping & Workspace</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 shrink-0 ml-auto">
                 <!-- User Profile / Auth Status Widget -->
                 <div id="home-auth-widget" class="flex items-center gap-2">
-                    <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
+                    <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
                         <span>☁️</span>
-                        <span id="home-auth-text">Sign In / Cloud</span>
+                        <span id="home-auth-text" class="home-auth-label">Sign In / Cloud</span>
                     </button>
                 </div>
 
                 <!-- Prominent Action: Go to Active Canvas -->
-                <button type="button" onclick="toggleHomepageView(false)" class="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-transform active:scale-95">
+                <button type="button" onclick="toggleHomepageView(false)" class="home-open-canvas flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-transform active:scale-95 shrink-0">
                     <span>🎨 Open Canvas</span>
                     <span>➔</span>
                 </button>
@@ -1813,6 +1939,11 @@
                     <button type="button" onclick="exportAllProjectsBackup()" class="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
                         <span>💾</span> Backup All
                     </button>
+                    <span class="text-slate-300">|</span>
+                    <label class="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer">
+                        <span>📥</span> Import maps
+                        <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
+                    </label>
                     <span class="text-slate-300">|</span>
                     <button type="button" onclick="toggleProjectManagerModal(false)" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full font-medium transition-colors">Close</button>
                 </div>
@@ -2600,6 +2731,7 @@
         let nodes = {}; 
         let selectedNodeId = 'root';
         let saveTimeout = null;
+        let storageWriteEpoch = 0;
         let isInlineEditing = false; // Track whether a bubble is being edited inline
 
         // Advanced Code editor: unrendered text must survive canvas-to-code sync.
@@ -3062,6 +3194,22 @@
             }
         }
 
+        async function idbDelete(key) {
+            try {
+                const db = await getIndexedDB();
+                if (!db) return false;
+                return new Promise((resolve) => {
+                    const tx = db.transaction(DB_STORE, 'readwrite');
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => resolve(false);
+                    tx.onabort = () => resolve(false);
+                    tx.objectStore(DB_STORE).delete(key);
+                });
+            } catch (e) {
+                return false;
+            }
+        }
+
         async function idbLoad(key) {
             try {
                 const db = await getIndexedDB();
@@ -3294,16 +3442,18 @@
                 console.warn('Migration note:', eMigration);
             }
 
-            // Brand new clean default registry
+            // Brand new clean default registry. The library name is not "Master Idea"
+            // so it cannot collide with a map the user already called that.
             const defaultId = 'proj_' + Date.now();
             projectRegistry = {
                 activeId: defaultId,
                 projects: [{
                     id: defaultId,
-                    name: 'Master Idea',
+                    name: 'My first map',
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
-                    nodeCount: 7
+                    nodeCount: 7,
+                    autoStarter: true
                 }]
             };
             currentProjectId = defaultId;
@@ -3326,6 +3476,8 @@
         function saveCurrentProjectImmediate() {
             clearTimeout(saveTimeout);
             if (!currentProjectId) return;
+            const starterMeta = getCurrentProjectMeta();
+            if (starterMeta && starterMeta.autoStarter) delete starterMeta.autoStarter;
             const cleanedNodes = cleanNodesForStorage(nodes);
             const cleanedDecs = cleanDecorationsForStorage(canvasDecorations, false);
 
@@ -3379,7 +3531,15 @@
             }
         }
 
-        function triggerAutoSave() {
+        function triggerAutoSave(options) {
+            const keepStarter = !!(options && options.keepStarter);
+            if (!keepStarter) {
+                const starterMeta = getCurrentProjectMeta();
+                if (starterMeta && starterMeta.autoStarter) {
+                    delete starterMeta.autoStarter;
+                    saveProjectRegistry(false);
+                }
+            }
             if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
                 // Read-only mode: do not save or overwrite local storage
                 return;
@@ -3390,6 +3550,8 @@
             setSaveStatus('saving');
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
+                const epoch = storageWriteEpoch;
+                if (epoch !== storageWriteEpoch) return;
                 const cleanedNodes = cleanNodesForStorage(nodes);
                 const cleanedDecs = cleanDecorationsForStorage(canvasDecorations, false);
 
@@ -3410,7 +3572,7 @@
 
                 // Update metadata in project registry
                 const meta = getCurrentProjectMeta();
-                if (meta) {
+                if (meta && epoch === storageWriteEpoch) {
                     meta.updatedAt = Date.now();
                     meta.nodeCount = Object.keys(nodes).length;
                     saveProjectRegistry(false);
@@ -3420,14 +3582,17 @@
                 let idbSaved = false;
                 try {
                     const idbKey = currentProjectId ? getProjectIDBKey(currentProjectId) : 'omnimind_full_data_v1';
+                    if (epoch !== storageWriteEpoch) return;
                     const [savedData, savedAssets] = await Promise.all([
                         idbSave(idbKey, fullData),
                         idbSave(ASSETS_STORAGE_KEY, canvasImageAssets)
                     ]);
+                    if (epoch !== storageWriteEpoch) return;
                     idbSaved = (savedData !== false);
                 } catch (err) {
                     console.warn('IndexedDB auto-save warning:', err);
                 }
+                if (epoch !== storageWriteEpoch) return;
 
                 // 2. Save to localStorage
                 let lsSaved = false;
@@ -3577,6 +3742,8 @@
                 if (updated) {
                     renderDecorations();
                     renderTree();
+                    if (typeof syncFromMap === 'function') syncFromMap();
+                    if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
                 }
             } catch (e) {
                 console.warn('Could not hydrate from IndexedDB:', e);
@@ -4714,7 +4881,7 @@
                     authWidget.innerHTML = `
                         <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
                             <span>☁️</span>
-                            <span>Sign In / Cloud</span>
+                            <span class="home-auth-label">Sign In / Cloud</span>
                         </button>
                     `;
                 }
@@ -5803,6 +5970,7 @@
             if (!meta) return;
             meta.name = newName.trim();
             meta.updatedAt = Date.now();
+            if (meta.autoStarter) delete meta.autoStarter;
             saveProjectRegistry(false);
             updateProjectHeaderUI();
             renderProjectList();
@@ -6740,6 +6908,50 @@
             }[m]));
         }
 
+        function createFactoryStarterNodes() {
+            return {
+                'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
+                'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!' },
+                'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170 },
+                'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝' },
+                'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
+                'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490 },
+                'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨' }
+            };
+        }
+
+        function factoryStarterNodeMatches(saved, factory) {
+            if (!saved || !factory) return false;
+            if (saved.parentId !== factory.parentId || saved.text !== factory.text) return false;
+            if (Number(saved.x) !== factory.x || Number(saved.y) !== factory.y) return false;
+            if (saved.collapsed || saved.attachment) return false;
+            const fields = ['bg', 'fg', 'size', 'weight', 'tag', 'flag'];
+            return fields.every(key => (saved[key] ?? null) === (factory[key] ?? null));
+        }
+
+        function dataMatchesFactoryStarter(data) {
+            if (!data || !data.nodes) return false;
+            if (data.canvasDecorations && Object.keys(data.canvasDecorations).length) return false;
+            if (typeof data.panX === 'number' && data.panX !== 100) return false;
+            if (typeof data.panY === 'number' && data.panY !== 100) return false;
+            if (typeof data.zoom === 'number' && data.zoom !== 1) return false;
+            const factory = createFactoryStarterNodes();
+            const savedIds = Object.keys(data.nodes);
+            const factoryIds = Object.keys(factory);
+            if (savedIds.length !== factoryIds.length) return false;
+            return factoryIds.every(id => factoryStarterNodeMatches(data.nodes[id], factory[id]));
+        }
+
+        function canvasMatchesFactoryStarter() {
+            return dataMatchesFactoryStarter({
+                nodes,
+                canvasDecorations,
+                panX,
+                panY,
+                zoom
+            });
+        }
+
         // Initialize map
         function init(forceDefault = false) {
             sanitizeStorageOnBoot();
@@ -6749,15 +6961,7 @@
                 loaded = loadFromStorage(currentProjectId);
             }
             if (!loaded) {
-                nodes = {
-                    'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                    'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!' },
-                    'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170 },
-                    'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝' },
-                    'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                    'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490 },
-                    'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨' }
-                };
+                nodes = createFactoryStarterNodes();
                 canvasDecorations = {};
                 isDesignSelectable = true;
                 panX = 100;
@@ -6813,7 +7017,7 @@
                 const curMeta = getCurrentProjectMeta();
                 setSaveStatus('saved', `✓ Loaded "${curMeta ? curMeta.name : 'map'}"`);
             } else if (!isSharedUrl) {
-                triggerAutoSave();
+                triggerAutoSave({ keepStarter: true });
             }
         }
 
@@ -12655,7 +12859,735 @@
             }
         }
 
+        // --- MOVE MAPS: old domain → www.omnimindmap.app ---
+        // Handover: the Move button calls window.open in the tap handler, then sends
+        // the backup as acknowledged postMessage chunks. A form POST cannot land on
+        // static Vercel hosting, and a URL hash is too small for attachments.
+        // iOS Safari only allows the new tab if open() runs before any await.
+        // Each side checks event.source and event.origin. Production accepts only
+        // https://omnimind-alpha.vercel.app → https://www.omnimindmap.app.
+        // Local testing: open http://127.0.0.1:<port>/?moveHost=old.
+        // The button opens http://localhost:<port>/?moveHost=new#import (a different origin).
+        const MOVE_OLD_ORIGIN = 'https://omnimind-alpha.vercel.app';
+        const MOVE_NEW_ORIGIN = 'https://www.omnimindmap.app';
+        const MOVE_DONE_KEY = 'omnimind_move_completed_v1';
+        const MOVE_CHUNK_CHARS = 180000;
+        let moveTransferChild = null;
+        let moveTransferReady = false;
+        let moveReadyWait = null;
+        let moveAckWait = null;
+        let moveDoneWait = null;
+        let moveSending = false;
+        let moveInbound = null;
+        let movePingTimer = null;
+
+        function moveSimMode() {
+            try {
+                const flag = new URLSearchParams(location.search).get('moveHost');
+                if (flag === 'old' || flag === 'new') return flag;
+            } catch (e) {}
+            return '';
+        }
+
+        function isOldMoveHost() {
+            if (location.hostname === 'omnimind-alpha.vercel.app') return true;
+            return moveSimMode() === 'old';
+        }
+
+        function isNewMoveHost() {
+            const host = location.hostname;
+            if (host === 'www.omnimindmap.app' || host === 'omnimindmap.app') return true;
+            return moveSimMode() === 'new';
+        }
+
+        function isImportMovePage() {
+            if (!isNewMoveHost()) return false;
+            return location.hash === '#import' || location.hash.indexOf('#import') === 0;
+        }
+
+        function isLocalMoveTest() {
+            const host = location.hostname;
+            return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || !!moveSimMode();
+        }
+
+        function isLocalHostname(hostname) {
+            return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+        }
+
+        function originHostname(origin) {
+            try { return new URL(origin).hostname; } catch (e) { return ''; }
+        }
+
+        function trustedMoveSenderOrigin(origin) {
+            if (origin === MOVE_OLD_ORIGIN) return true;
+            return isLocalMoveTest() && isLocalHostname(location.hostname) && isLocalHostname(originHostname(origin));
+        }
+
+        function trustedMoveReceiverOrigin(origin) {
+            if (origin === MOVE_NEW_ORIGIN || origin === 'https://omnimindmap.app') return true;
+            return isLocalMoveTest() && isLocalHostname(location.hostname) && isLocalHostname(originHostname(origin));
+        }
+
+        function moveChildUrl() {
+            if (location.hostname === 'omnimind-alpha.vercel.app') return MOVE_NEW_ORIGIN + '/#import';
+            const url = new URL(location.href);
+            url.searchParams.set('moveHost', 'new');
+            url.hash = 'import';
+            // 127.0.0.1 and localhost are different origins, so a local rehearsal
+            // copies storage the same way the two public domains will.
+            if (location.hostname === '127.0.0.1') url.hostname = 'localhost';
+            else if (location.hostname === 'localhost') url.hostname = '127.0.0.1';
+            return url.toString();
+        }
+
+        function moveChildOrigin() {
+            if (location.hostname === 'omnimind-alpha.vercel.app') return MOVE_NEW_ORIGIN;
+            try { return new URL(moveChildUrl()).origin; } catch (e) { return location.origin; }
+        }
+
+        function moveOpenerOrigin() {
+            if (location.hostname === 'www.omnimindmap.app' || location.hostname === 'omnimindmap.app') return MOVE_OLD_ORIGIN;
+            const port = location.port ? ':' + location.port : '';
+            if (location.hostname === 'localhost') return location.protocol + '//127.0.0.1' + port;
+            if (location.hostname === '127.0.0.1') return location.protocol + '//localhost' + port;
+            return location.origin;
+        }
+
+        function setMoveStatus(text) {
+            const el = document.getElementById('move-domain-status');
+            if (!el) return;
+            el.textContent = text || '';
+            el.classList.toggle('is-open', !!text);
+            syncMoveBannerHeight();
+        }
+
+        function syncMoveBannerHeight() {
+            const banner = document.getElementById('move-domain-banner');
+            const root = document.documentElement;
+            if (!banner || !banner.classList.contains('is-open')) {
+                root.classList.remove('move-banner-open');
+                root.style.removeProperty('--move-banner-h');
+                return;
+            }
+            const height = Math.ceil(banner.getBoundingClientRect().height);
+            root.style.setProperty('--move-banner-h', height + 'px');
+            root.classList.add('move-banner-open');
+        }
+
+        function renderMoveBanner() {
+            const banner = document.getElementById('move-domain-banner');
+            if (!banner) return;
+            if (!isOldMoveHost()) {
+                banner.classList.remove('is-open', 'is-done');
+                syncMoveBannerHeight();
+                return;
+            }
+            banner.classList.add('is-open');
+            let done = false;
+            try { done = !!localStorage.getItem(MOVE_DONE_KEY); } catch (e) {}
+            banner.classList.toggle('is-done', done);
+            const offer = document.getElementById('move-domain-offer');
+            const doneRow = document.getElementById('move-domain-done');
+            if (offer) offer.classList.toggle('is-hidden', done);
+            if (doneRow) doneRow.classList.toggle('is-hidden', !done);
+            syncMoveBannerHeight();
+        }
+
+        function stableStringify(value) {
+            if (value === null || typeof value !== 'object') return JSON.stringify(value);
+            if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+            const keys = Object.keys(value).sort();
+            return '{' + keys.map(key => JSON.stringify(key) + ':' + stableStringify(value[key])).join(',') + '}';
+        }
+
+        function asProjectData(value) {
+            if (!value) return null;
+            if (typeof value === 'string') {
+                try { value = JSON.parse(value); } catch (e) { return null; }
+            }
+            if (typeof value !== 'object' || !value.nodes || typeof value.nodes !== 'object') return null;
+            return value;
+        }
+
+        function projectStamp(data, meta) {
+            let stamp = 0;
+            if (data && typeof data.savedAt === 'number') stamp = data.savedAt;
+            if (meta && typeof meta.updatedAt === 'number') stamp = Math.max(stamp, meta.updatedAt);
+            return stamp;
+        }
+
+        function readRegistryFromBag(bag) {
+            const raw = bag && bag.omnimind_project_index_v1;
+            if (!raw) return { activeId: null, projects: [] };
+            try {
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (parsed && Array.isArray(parsed.projects)) {
+                    return { activeId: parsed.activeId || null, projects: parsed.projects.filter(item => item && item.id) };
+                }
+            } catch (e) {}
+            return { activeId: null, projects: [] };
+        }
+
+        function collectOmniLocalStorage() {
+            const bag = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || key.indexOf('omnimind_') !== 0 || key === MOVE_DONE_KEY) continue;
+                bag[key] = localStorage.getItem(key);
+            }
+            return bag;
+        }
+
+        async function idbGetAll() {
+            const db = await getIndexedDB();
+            if (!db) return {};
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(DB_STORE, 'readonly');
+                    const out = {};
+                    const req = tx.objectStore(DB_STORE).openCursor();
+                    req.onsuccess = () => {
+                        const cursor = req.result;
+                        if (!cursor) { resolve(out); return; }
+                        out[String(cursor.key)] = cursor.value;
+                        cursor.continue();
+                    };
+                    req.onerror = () => resolve(out);
+                } catch (e) {
+                    resolve({});
+                }
+            });
+        }
+
+        function projectIdsInBackup(localBag, idbBag) {
+            const ids = new Set();
+            readRegistryFromBag(localBag).projects.forEach(item => ids.add(item.id));
+            Object.keys(localBag || {}).forEach(key => {
+                if (key.indexOf('omnimind_proj_data_') === 0) ids.add(key.slice('omnimind_proj_data_'.length));
+            });
+            Object.keys(idbBag || {}).forEach(key => {
+                if (key.indexOf('omnimind_idb_proj_') === 0) ids.add(key.slice('omnimind_idb_proj_'.length));
+            });
+            return ids;
+        }
+
+        function metaById(registry) {
+            const map = {};
+            (registry.projects || []).forEach(item => { if (item && item.id) map[item.id] = item; });
+            return map;
+        }
+
+        function pickFullerProject(localValue, idbValue, meta) {
+            const fromLocal = asProjectData(localValue);
+            const fromIdb = asProjectData(idbValue);
+            if (fromLocal && fromIdb) {
+                const localPick = { data: fromLocal, stamp: projectStamp(fromLocal, meta) };
+                const idbPick = { data: fromIdb, stamp: projectStamp(fromIdb, meta) };
+                if (localPick.stamp > idbPick.stamp) return localPick;
+                if (idbPick.stamp > localPick.stamp) return idbPick;
+                return stableStringify(fromIdb).length >= stableStringify(fromLocal).length ? idbPick : localPick;
+            }
+            const data = fromIdb || fromLocal;
+            return data ? { data, stamp: projectStamp(data, meta) } : null;
+        }
+
+        async function buildMoveBackup() {
+            const localBag = collectOmniLocalStorage();
+            const idbBag = await idbGetAll();
+            return {
+                kind: 'omnimind-move',
+                version: 1,
+                exportedAt: Date.now(),
+                origin: location.origin,
+                localStorage: localBag,
+                indexedDB: idbBag
+            };
+        }
+
+        function normalizeMovePayload(parsed) {
+            if (!parsed || typeof parsed !== 'object') return null;
+            if (parsed.kind === 'omnimind-move' && parsed.localStorage && typeof parsed.localStorage === 'object') {
+                return {
+                    kind: 'omnimind-move',
+                    version: 1,
+                    exportedAt: parsed.exportedAt || Date.now(),
+                    localStorage: parsed.localStorage,
+                    indexedDB: (parsed.indexedDB && typeof parsed.indexedDB === 'object') ? parsed.indexedDB : {}
+                };
+            }
+            if (parsed.version === 'MM_V4_MULTI' && parsed.projectsData && typeof parsed.projectsData === 'object') {
+                const localBag = {};
+                const idbBag = {};
+                if (parsed.registry) localBag.omnimind_project_index_v1 = JSON.stringify(parsed.registry);
+                Object.keys(parsed.projectsData).forEach(id => {
+                    const data = parsed.projectsData[id];
+                    idbBag['omnimind_idb_proj_' + id] = data;
+                    try { localBag['omnimind_proj_data_' + id] = JSON.stringify(data); } catch (e) {}
+                });
+                if (parsed.imageAssets && typeof parsed.imageAssets === 'object') {
+                    idbBag[ASSETS_STORAGE_KEY] = parsed.imageAssets;
+                    try { localBag[ASSETS_STORAGE_KEY] = JSON.stringify(parsed.imageAssets); } catch (e) {}
+                }
+                return { kind: 'omnimind-move', version: 1, exportedAt: parsed.exportedAt || Date.now(), localStorage: localBag, indexedDB: idbBag };
+            }
+            return null;
+        }
+
+        function mergeAssetMaps(current, incoming) {
+            const out = Object.assign({}, current || {});
+            let changed = false;
+            Object.keys(incoming || {}).forEach(key => {
+                const next = incoming[key];
+                if (typeof next !== 'string' || !next) return;
+                const prev = out[key];
+                if (!prev || (prev !== next && next.length > String(prev).length)) {
+                    out[key] = next;
+                    changed = true;
+                }
+            });
+            return { assets: out, changed };
+        }
+
+        async function writeStoredProject(id, data) {
+            await idbSave(getProjectIDBKey(id), data);
+            const json = JSON.stringify(data);
+            try {
+                localStorage.setItem(getProjectStorageKey(id), json);
+            } catch (e) {
+                try {
+                    const light = Object.assign({}, data, { isLightweight: true });
+                    delete light.canvasImageAssets;
+                    localStorage.setItem(getProjectStorageKey(id), JSON.stringify(light));
+                } catch (e2) {}
+            }
+        }
+
+        async function applyMoveBackup(rawPayload) {
+            storageWriteEpoch += 1;
+            clearTimeout(saveTimeout);
+            const payload = normalizeMovePayload(rawPayload);
+            if (!payload) throw new Error('This file is not an OmniMind maps backup.');
+            const sourceBag = payload.localStorage || {};
+            const sourceIdb = payload.indexedDB || {};
+            const sourceRegistry = readRegistryFromBag(sourceBag);
+            const sourceMeta = metaById(sourceRegistry);
+            const destBag = collectOmniLocalStorage();
+            const destIdb = await idbGetAll();
+            const destRegistry = readRegistryFromBag(destBag);
+            const destMeta = metaById(destRegistry);
+            const result = { added: 0, updated: 0, skipped: 0, proCopied: false };
+            const ids = projectIdsInBackup(sourceBag, sourceIdb);
+
+            const decisions = [];
+            ids.forEach(id => {
+                const source = pickFullerProject(sourceBag['omnimind_proj_data_' + id], sourceIdb['omnimind_idb_proj_' + id], sourceMeta[id]);
+                const dest = pickFullerProject(destBag['omnimind_proj_data_' + id], destIdb['omnimind_idb_proj_' + id], destMeta[id]);
+                if (!source) return;
+                let winner = 'source';
+                if (dest) {
+                    const sourceJson = stableStringify(source.data);
+                    const destJson = stableStringify(dest.data);
+                    if (sourceJson === destJson) winner = 'same';
+                    else if (source.stamp < dest.stamp) winner = 'dest';
+                    else if (source.stamp === dest.stamp && sourceJson.length <= destJson.length) winner = 'dest';
+                }
+                decisions.push({ id, source, winner });
+            });
+
+            let assets = {};
+            function absorbSide(bag, idbBag) {
+                assets = mergeAssetMaps(assets, asAssetMap(idbBag[ASSETS_STORAGE_KEY])).assets;
+                assets = mergeAssetMaps(assets, asAssetMap(bag[ASSETS_STORAGE_KEY])).assets;
+                projectIdsInBackup(bag, idbBag).forEach(id => {
+                    [idbBag['omnimind_idb_proj_' + id], bag['omnimind_proj_data_' + id]].forEach(raw => {
+                        const data = asProjectData(raw);
+                        if (data && data.canvasImageAssets) assets = mergeAssetMaps(assets, data.canvasImageAssets).assets;
+                    });
+                });
+            }
+            absorbSide(destBag, destIdb);
+            absorbSide(sourceBag, sourceIdb);
+
+            for (const decision of decisions) {
+                if (decision.winner === 'same' || decision.winner === 'dest') {
+                    result.skipped += 1;
+                    continue;
+                }
+                const existed = !!destMeta[decision.id] || !!destBag['omnimind_proj_data_' + decision.id] || !!destIdb['omnimind_idb_proj_' + decision.id];
+                await writeStoredProject(decision.id, decision.source.data);
+                const stamp = decision.source.stamp || payload.exportedAt || Date.now();
+                const previous = sourceMeta[decision.id] || destMeta[decision.id] || {};
+                const rootNode = decision.source.data.nodes
+                    ? Object.values(decision.source.data.nodes).find(node => node && !node.parentId)
+                    : null;
+                const rootTitle = rootNode && rootNode.text
+                    ? String(rootNode.text).replace(/^[^\w\sÀ-ſ]+/, '').trim()
+                    : '';
+                const nodeCount = decision.source.data.nodes ? Object.keys(decision.source.data.nodes).length : (previous.nodeCount || 0);
+                destMeta[decision.id] = {
+                    id: decision.id,
+                    name: previous.name || decision.source.data.name || rootTitle || 'Imported map',
+                    createdAt: previous.createdAt || stamp,
+                    updatedAt: stamp,
+                    nodeCount
+                };
+                if (!destRegistry.projects.some(item => item.id === decision.id)) destRegistry.projects.push(destMeta[decision.id]);
+                else {
+                    const index = destRegistry.projects.findIndex(item => item.id === decision.id);
+                    destRegistry.projects[index] = destMeta[decision.id];
+                }
+                if (existed) result.updated += 1;
+                else result.added += 1;
+            }
+
+            if (decisions.length) {
+                const incomingIds = new Set(decisions.map(decision => decision.id));
+                const starterIds = destRegistry.projects.filter(meta => {
+                    if (!meta || incomingIds.has(meta.id)) return false;
+                    const flagged = meta.autoStarter === true;
+                    const legacyFactory = meta.autoStarter !== true && meta.name === 'Master Idea';
+                    if (!flagged && !legacyFactory) return false;
+                    if (meta.id === currentProjectId && !canvasMatchesFactoryStarter()) return false;
+                    const stored = pickFullerProject(destBag['omnimind_proj_data_' + meta.id], destIdb['omnimind_idb_proj_' + meta.id], meta);
+                    if (!stored) return flagged;
+                    return dataMatchesFactoryStarter(stored.data);
+                }).map(meta => meta.id);
+                for (const starterId of starterIds) {
+                    destRegistry.projects = destRegistry.projects.filter(meta => meta.id !== starterId);
+                    delete destMeta[starterId];
+                    try { localStorage.removeItem(getProjectStorageKey(starterId)); } catch (e) {}
+                    await idbDelete(getProjectIDBKey(starterId));
+                }
+            }
+
+            if (!destRegistry.projects.some(meta => meta.id === destRegistry.activeId)) {
+                const importedActive = sourceRegistry.activeId && destMeta[sourceRegistry.activeId] ? sourceRegistry.activeId : '';
+                destRegistry.activeId = importedActive || (destRegistry.projects[0] ? destRegistry.projects[0].id : null);
+            } else if (!destRegistry.activeId && destRegistry.projects[0]) {
+                destRegistry.activeId = destRegistry.projects[0].id;
+            }
+            try {
+                localStorage.setItem(PROJECT_REGISTRY_KEY, JSON.stringify(destRegistry));
+            } catch (e) {}
+            await idbSave(PROJECT_REGISTRY_KEY, destRegistry);
+
+            canvasImageAssets = assets;
+            await idbSave(ASSETS_STORAGE_KEY, assets);
+            try { localStorage.setItem(ASSETS_STORAGE_KEY, JSON.stringify(assets)); } catch (e) {}
+
+            const activeData = destMeta[destRegistry.activeId]
+                ? asProjectData(localStorage.getItem(getProjectStorageKey(destRegistry.activeId)))
+                : null;
+            if (activeData) {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(activeData)); } catch (e) {}
+            }
+
+            if (sourceBag.omnimind_pro_code && !localStorage.getItem('omnimind_pro_code')) {
+                localStorage.setItem('omnimind_pro_code', sourceBag.omnimind_pro_code);
+                result.proCopied = true;
+            }
+            Object.keys(sourceBag).forEach(key => {
+                if (key === MOVE_DONE_KEY || key === 'omnimind_pro_code' || key === PROJECT_REGISTRY_KEY || key === STORAGE_KEY || key === ASSETS_STORAGE_KEY) return;
+                if (key.indexOf('omnimind_proj_data_') === 0) return;
+                if (key.indexOf('omnimind_') !== 0) return;
+                if (!localStorage.getItem(key) && typeof sourceBag[key] === 'string') {
+                    try { localStorage.setItem(key, sourceBag[key]); } catch (e) {}
+                }
+            });
+
+            loadProjectRegistry();
+            if (currentProjectId) loadFromStorage(currentProjectId);
+            if (typeof renderTree === 'function') renderTree();
+            if (typeof renderDecorations === 'function') renderDecorations();
+            if (typeof applyTransform === 'function') applyTransform();
+            if (typeof syncFromMap === 'function') syncFromMap(true);
+            if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
+            if (typeof updateProjectHeaderUI === 'function') updateProjectHeaderUI();
+            if (typeof renderProjectList === 'function') renderProjectList();
+            if (typeof renderHomepage === 'function') renderHomepage();
+            try {
+                Promise.resolve(fetchUserQuota(currentCloudUser)).then(() => {
+                    if (typeof updateCloudAuthUI === 'function') updateCloudAuthUI();
+                });
+            } catch (e) {}
+            return result;
+        }
+
+        function asAssetMap(value) {
+            if (!value) return null;
+            if (typeof value === 'string') {
+                try { value = JSON.parse(value); } catch (e) { return null; }
+            }
+            if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+            return value;
+        }
+
+        function importMoveBackupFile(event) {
+            const input = event && event.target;
+            const file = input && input.files && input.files[0];
+            if (input) input.value = '';
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const parsed = JSON.parse(String(reader.result || ''));
+                    const result = await applyMoveBackup(parsed);
+                    const proNote = result.proCopied ? ' Pro status carried over.' : '';
+                    showUiToast('Maps imported. ' + result.added + ' new, ' + result.updated + ' updated, ' + result.skipped + ' unchanged.' + proNote, 'success', 4200);
+                } catch (err) {
+                    alert(err && err.message ? err.message : 'Could not read that backup.');
+                }
+            };
+            reader.onerror = () => alert('Could not read that backup.');
+            reader.readAsText(file);
+        }
+
+        function downloadMoveBackup(event) {
+            const link = (event && event.currentTarget && event.currentTarget.matches && event.currentTarget.matches('[data-move-backup]'))
+                ? event.currentTarget
+                : document.querySelector('[data-move-backup]');
+            if (link && link.dataset.ready === '1') {
+                if (!event || event.isTrusted !== true || link.dataset.armed === '1') {
+                    if (link.dataset.armed === '1' && event && event.isTrusted) link.dataset.armed = '0';
+                    return;
+                }
+                document.querySelectorAll('[data-move-backup]').forEach(item => {
+                    item.dataset.ready = '0';
+                    item.dataset.armed = '0';
+                    item.textContent = item.getAttribute('data-label') || 'Download a backup';
+                });
+            }
+            if (event) event.preventDefault();
+            setMoveStatus('Preparing backup…');
+            buildMoveBackup().then(payload => {
+                const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                document.querySelectorAll('[data-move-backup]').forEach(item => {
+                    item.href = url;
+                    item.download = 'omnimind-maps-backup.json';
+                    item.dataset.ready = '1';
+                    item.dataset.armed = '1';
+                    item.textContent = item.getAttribute('data-label') === 'Backup' ? 'Save' : 'Save backup file';
+                });
+                if (link) link.click();
+                setMoveStatus('If the file did not save, tap Save.');
+                setTimeout(() => URL.revokeObjectURL(url), 120000);
+            }).catch(() => setMoveStatus('Could not build the backup.'));
+        }
+
+        function waitForMoveReady(ms) {
+            if (moveTransferReady) return Promise.resolve(true);
+            return new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    if (moveReadyWait) moveReadyWait = null;
+                    resolve(false);
+                }, ms);
+                moveReadyWait = () => {
+                    clearTimeout(timer);
+                    resolve(true);
+                };
+            });
+        }
+
+        function waitForMoveAck(transferId, index, ms) {
+            return new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    if (moveAckWait && moveAckWait.transferId === transferId && moveAckWait.index === index) moveAckWait = null;
+                    resolve(false);
+                }, ms);
+                moveAckWait = {
+                    transferId,
+                    index,
+                    resolve: (ok) => {
+                        clearTimeout(timer);
+                        resolve(ok);
+                    }
+                };
+            });
+        }
+
+        function waitForMoveDone(transferId, ms) {
+            return new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    if (moveDoneWait && moveDoneWait.transferId === transferId) moveDoneWait = null;
+                    resolve(null);
+                }, ms);
+                moveDoneWait = {
+                    transferId,
+                    resolve: (message) => {
+                        clearTimeout(timer);
+                        resolve(message);
+                    }
+                };
+            });
+        }
+
+        function startDomainMove() {
+            if (!isOldMoveHost() || moveSending) return;
+            const child = window.open(moveChildUrl(), 'omnimind-move');
+            if (!child) {
+                setMoveStatus('Allow pop-ups for this site, then tap Move my maps again.');
+                return;
+            }
+            moveTransferChild = child;
+            moveTransferReady = false;
+            moveSending = true;
+            document.querySelectorAll('[data-move-maps]').forEach(button => { button.disabled = true; });
+            setMoveStatus('Opening omnimindmap.app…');
+            runDomainMove(child);
+        }
+
+        async function runDomainMove(child) {
+            try {
+                setMoveStatus('Packing your maps…');
+                const payload = await buildMoveBackup();
+                const json = JSON.stringify(payload);
+                const chunks = [];
+                for (let i = 0; i < json.length; i += MOVE_CHUNK_CHARS) chunks.push(json.slice(i, i + MOVE_CHUNK_CHARS));
+                if (!chunks.length) chunks.push('{}');
+                const ready = await waitForMoveReady(25000);
+                if (!ready) throw new Error('omnimindmap.app did not open. Allow pop-ups and tap Move my maps again.');
+                const transferId = 'mv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+                const origin = moveChildOrigin();
+                for (let i = 0; i < chunks.length; i++) {
+                    let acked = false;
+                    for (let attempt = 0; attempt < 8 && !acked; attempt++) {
+                        if (child.closed) throw new Error('The new tab was closed before the move finished.');
+                        child.postMessage({
+                            type: 'omnimind-move-chunk',
+                            transferId,
+                            index: i,
+                            total: chunks.length,
+                            chunk: chunks[i]
+                        }, origin);
+                        acked = await waitForMoveAck(transferId, i, 3000);
+                    }
+                    if (!acked) throw new Error('The new tab stopped responding. Keep it open and tap Move my maps again.');
+                    setMoveStatus('Sending maps… ' + (i + 1) + ' / ' + chunks.length);
+                }
+                const done = await waitForMoveDone(transferId, 60000);
+                if (!done) throw new Error('The new tab did not finish importing. Tap Move my maps again.');
+                if (done.type === 'omnimind-move-error') throw new Error(done.message || 'Import failed.');
+                localStorage.setItem(MOVE_DONE_KEY, JSON.stringify({ at: Date.now(), result: done.result || null }));
+                setMoveStatus('');
+                renderMoveBanner();
+            } catch (err) {
+                setMoveStatus(err && err.message ? err.message : 'The move did not finish.');
+            } finally {
+                moveSending = false;
+                document.querySelectorAll('[data-move-maps]').forEach(button => { button.disabled = false; });
+            }
+        }
+
+        function startMoveReadyPing() {
+            if (!isImportMovePage() || !window.opener) return;
+            if (movePingTimer) {
+                clearInterval(movePingTimer);
+                movePingTimer = null;
+            }
+            const target = moveOpenerOrigin();
+            const ping = () => {
+                try {
+                    if (!window.opener || window.opener.closed) return;
+                    window.opener.postMessage({ type: 'omnimind-move-ready' }, target);
+                } catch (e) {}
+            };
+            ping();
+            movePingTimer = setInterval(ping, 500);
+            setTimeout(() => {
+                if (movePingTimer) {
+                    clearInterval(movePingTimer);
+                    movePingTimer = null;
+                }
+            }, 30000);
+        }
+
+        async function receiveMoveChunk(event, data) {
+            if (movePingTimer) {
+                clearInterval(movePingTimer);
+                movePingTimer = null;
+            }
+            const total = data.total | 0;
+            const index = data.index | 0;
+            if (!data.transferId || total < 1 || total > 8000 || index < 0 || index >= total || typeof data.chunk !== 'string' || data.chunk.length > 250000) {
+                event.source.postMessage({ type: 'omnimind-move-error', transferId: data.transferId || '', message: 'That transfer was not valid.' }, event.origin);
+                return;
+            }
+            if (!moveInbound || moveInbound.transferId !== data.transferId) {
+                moveInbound = { transferId: data.transferId, total, parts: new Array(total), got: 0, bytes: 0 };
+            }
+            if (moveInbound.parts[index] == null) {
+                moveInbound.bytes += data.chunk.length;
+                if (moveInbound.bytes > 120000000) {
+                    moveInbound = null;
+                    event.source.postMessage({ type: 'omnimind-move-error', transferId: data.transferId, message: 'That backup is too large to move in the browser. Download a backup and use Import maps.' }, event.origin);
+                    return;
+                }
+                moveInbound.parts[index] = data.chunk;
+                moveInbound.got += 1;
+            }
+            event.source.postMessage({ type: 'omnimind-move-ack', transferId: data.transferId, index }, event.origin);
+            if (!moveInbound || moveInbound.got !== moveInbound.total) return;
+            const inbound = moveInbound;
+            moveInbound = null;
+            try {
+                const parsed = JSON.parse(inbound.parts.join(''));
+                const result = await applyMoveBackup(parsed);
+                event.source.postMessage({ type: 'omnimind-move-done', transferId: inbound.transferId, result }, event.origin);
+                if (location.hash.indexOf('import') !== -1) {
+                    history.replaceState(null, '', location.pathname + location.search);
+                }
+            } catch (err) {
+                event.source.postMessage({ type: 'omnimind-move-error', transferId: inbound.transferId, message: (err && err.message) || 'Import failed.' }, event.origin);
+            }
+        }
+
+        function onMoveChannelMessage(event) {
+            const data = event.data;
+            if (!data || typeof data.type !== 'string' || data.type.indexOf('omnimind-move-') !== 0) return;
+            if (isOldMoveHost()) {
+                if (!trustedMoveReceiverOrigin(event.origin)) return;
+                if (!moveTransferChild || event.source !== moveTransferChild) return;
+                if (data.type === 'omnimind-move-ready') {
+                    moveTransferReady = true;
+                    if (moveReadyWait) {
+                        const wake = moveReadyWait;
+                        moveReadyWait = null;
+                        wake();
+                    }
+                    return;
+                }
+                if (data.type === 'omnimind-move-ack' && moveAckWait && data.transferId === moveAckWait.transferId && data.index === moveAckWait.index) {
+                    const waiter = moveAckWait;
+                    moveAckWait = null;
+                    waiter.resolve(true);
+                    return;
+                }
+                if ((data.type === 'omnimind-move-done' || data.type === 'omnimind-move-error') && moveDoneWait && data.transferId === moveDoneWait.transferId) {
+                    const waiter = moveDoneWait;
+                    moveDoneWait = null;
+                    waiter.resolve(data);
+                }
+                return;
+            }
+            if (!isImportMovePage()) return;
+            if (!trustedMoveSenderOrigin(event.origin)) return;
+            if (!window.opener || event.source !== window.opener) return;
+            if (data.type === 'omnimind-move-chunk') receiveMoveChunk(event, data);
+        }
+
+        function initDomainMove() {
+            window.addEventListener('message', onMoveChannelMessage);
+            window.addEventListener('resize', syncMoveBannerHeight);
+            window.addEventListener('hashchange', () => {
+                if (isImportMovePage()) startMoveReadyPing();
+            });
+            renderMoveBanner();
+            startMoveReadyPing();
+        }
+
         // Boot
+        initDomainMove();
         init();
     </script>
 </body>
