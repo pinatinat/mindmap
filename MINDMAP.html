@@ -704,8 +704,8 @@
             <span class="hidden sm:inline">Share</span>
         </button>
 
-        <!-- LIFETIME PRO UPGRADE / STATUS BUTTON -->
-        <button type="button" onclick="openLifetimeProModal('canvas_header')" id="btn-header-pro" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0" title="OmniMind Lifetime Pro & Storage Quota">
+        <!-- OMNIMIND PRO BUTTON -->
+        <button type="button" onclick="openOmniMindProModal('canvas_header')" id="btn-header-pro" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0" title="OmniMind Pro & Storage Quota">
             <span class="text-[0.65rem]">⭐</span>
             <span id="btn-header-pro-text">Upgrade Pro</span>
         </button>
@@ -1443,7 +1443,7 @@
                                 <span>☁️</span> Cloud Storage Quota (Free Tier)
                             </span>
                             <div class="flex items-center gap-2">
-                                <button type="button" id="home-quota-upgrade-btn" onclick="openLifetimeProModal('home_card')" class="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-bold text-[0.65rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                                <button type="button" id="home-quota-upgrade-btn" onclick="openOmniMindProModal('home_card')" class="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-bold text-[0.65rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
                                     <span>⭐</span> Upgrade
                                 </button>
                                 <span id="home-quota-badge" class="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[0.7rem]">
@@ -1635,6 +1635,17 @@
                 </div>
             </div>
         </main>
+        <footer class="mt-auto border-t border-slate-200 bg-white px-4 md:px-8 py-5 text-xs text-slate-500">
+            <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p>OmniMind · OmniMind Pro is a one-time $9 purchase. No subscription.</p>
+                <nav class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <a href="/legal/terms.html" class="hover:text-slate-800 underline">Terms of Service</a>
+                    <a href="/legal/privacy.html" class="hover:text-slate-800 underline">Privacy Policy</a>
+                    <a href="/legal/refund.html" class="hover:text-slate-800 underline">Refund Policy</a>
+                    <a href="mailto:support@omnimindmap.app" class="hover:text-slate-800 underline">support@omnimindmap.app</a>
+                </nav>
+            </div>
+        </footer>
     </div>
 
     <!-- PROJECT MANAGER MODAL -->
@@ -1650,7 +1661,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button type="button" onclick="openLifetimeProModal('library_header')" id="btn-library-pro" class="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 text-white font-bold text-[0.68rem] shadow-xs hover:shadow transition-transform active:scale-95 flex items-center gap-1 cursor-pointer">
+                    <button type="button" onclick="openOmniMindProModal('library_header')" id="btn-library-pro" class="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 text-white font-bold text-[0.68rem] shadow-xs hover:shadow transition-transform active:scale-95 flex items-center gap-1 cursor-pointer">
                         <span>⭐</span> <span id="btn-library-pro-text">Upgrade Pro</span>
                     </button>
                     <button type="button" onclick="toggleProjectManagerModal(false)" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200 text-sm transition-colors leading-none">✕</button>
@@ -1758,7 +1769,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5">
-                            <button type="button" id="cloud-header-upgrade-btn" onclick="openLifetimeProModal('cloud_header')" class="hidden px-2.5 py-1 bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white rounded-full font-bold text-[0.68rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                            <button type="button" id="cloud-header-upgrade-btn" onclick="openOmniMindProModal('cloud_header')" class="hidden px-2.5 py-1 bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white rounded-full font-bold text-[0.68rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
                                 <span>⭐</span> Upgrade
                             </button>
                             <button type="button" onclick="saveActiveMapToCloud(null, false)" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold text-[0.7rem] shadow-sm transition-transform active:scale-95 flex items-center gap-1" title="Update or overwrite this map in the cloud">
@@ -1864,102 +1875,73 @@
         </div>
     </div>
 
-    <!-- LIFETIME PRO UPGRADE MODAL -->
-    <div id="lifetime-pro-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeLifetimeProModal()">
+    <!-- OMNIMIND PRO MODAL -->
+    <div id="omnimind-pro-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden" onclick="if(event.target===this) closeOmniMindProModal()">
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden mx-4 flex flex-col" onclick="event.stopPropagation()">
-            <!-- Banner Header -->
             <div class="relative px-6 pt-6 pb-5 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 text-white overflow-hidden">
                 <div class="absolute -right-8 -top-8 w-36 h-36 bg-purple-500/20 rounded-full blur-2xl pointer-events-none"></div>
                 <div class="flex items-center justify-between relative z-10">
                     <span class="inline-flex items-center gap-1.5 text-[0.65rem] font-black uppercase tracking-widest bg-amber-400/20 text-amber-300 border border-amber-400/40 px-3 py-1 rounded-full">
-                        ⭐ Early Adopter Special
+                        ⭐ OmniMind Pro
                     </span>
-                    <button type="button" onclick="closeLifetimeProModal()" class="text-white/60 hover:text-white p-1.5 rounded-full hover:bg-white/10 text-sm transition-colors leading-none">✕</button>
+                    <button type="button" onclick="closeOmniMindProModal()" class="text-white/60 hover:text-white p-1.5 rounded-full hover:bg-white/10 text-sm transition-colors leading-none">✕</button>
                 </div>
-                <h2 class="text-2xl font-black mt-3 tracking-tight">OmniMind Lifetime Pro</h2>
-                <p class="text-xs text-purple-200 mt-1 max-w-sm">Never worry about cloud limits again. One-time payment, yours forever.</p>
-                
-                <!-- Price Tag -->
+                <h2 class="text-2xl font-black mt-3 tracking-tight">OmniMind Pro</h2>
+                <p class="text-xs text-purple-200 mt-1 max-w-sm">One-time $9 purchase. No subscription.</p>
                 <div class="mt-4 flex items-baseline gap-2">
-                    <span class="text-3xl sm:text-4xl font-black text-white">₱299</span>
-                    <span class="text-xs text-purple-300 line-through">₱599</span>
-                    <span class="text-[0.7rem] bg-emerald-500/30 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">Save 50%</span>
-                    <span class="text-xs text-purple-200 ml-auto font-medium">One-Time Only</span>
+                    <span class="text-3xl sm:text-4xl font-black text-white">$9</span>
+                    <span class="text-xs text-purple-200 font-medium">One-time · USD</span>
                 </div>
             </div>
-
-            <!-- Modal Content / Features List -->
-            <div class="p-6 text-xs flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
+            <div class="p-6 text-xs flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
                 <div class="space-y-3">
                     <div class="flex items-start gap-3">
                         <div class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0">☁️</div>
                         <div>
                             <p class="font-bold text-slate-800 text-xs">50 Cloud Mind Map Slots</p>
-                            <p class="text-[0.72rem] text-slate-500">Expand from 3 free maps to 50 cloud save slots with full instant access.</p>
+                            <p class="text-[0.72rem] text-slate-500">Expand from 3 free maps to 50 cloud save slots.</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
                         <div class="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">🔄</div>
                         <div>
-                            <p class="font-bold text-slate-800 text-xs">Seamless Cross-Device Sync</p>
-                            <p class="text-[0.72rem] text-slate-500">Work seamlessly across desktop, laptop, tablet, and mobile browsers.</p>
+                            <p class="font-bold text-slate-800 text-xs">Cross-device sync</p>
+                            <p class="text-[0.72rem] text-slate-500">Use the same code on up to 3 devices.</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
                         <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">🛡️</div>
                         <div>
-                            <p class="font-bold text-slate-800 text-xs">Soft-Cap Data Safety Guarantee</p>
-                            <p class="text-[0.72rem] text-slate-500">Your maps are never deleted, frozen, or locked out. Always viewable and downloadable.</p>
+                            <p class="font-bold text-slate-800 text-xs">Soft-cap data safety</p>
+                            <p class="text-[0.72rem] text-slate-500">Existing maps stay viewable and downloadable.</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
                         <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">👥</div>
                         <div>
-                            <p class="font-bold text-slate-800 text-xs">Unlimited Real-Time Collaboration</p>
-                            <p class="text-[0.72rem] text-slate-500">Host multi-user live brainstorming rooms without restrictions.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">⚡</div>
-                        <div>
-                            <p class="font-bold text-slate-800 text-xs">Zero Recurring Subscriptions</p>
-                            <p class="text-[0.72rem] text-slate-500">Pay once with GCash, Maya, or Card. No hidden monthly charges or auto-renewals.</p>
+                            <p class="font-bold text-slate-800 text-xs">Real-time collaboration</p>
+                            <p class="text-[0.72rem] text-slate-500">Host shared maps without a monthly plan.</p>
                         </div>
                     </div>
                 </div>
-
-                <!-- Payment Methods Badges -->
                 <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
-                    <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Supported Payment Methods</span>
-                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
-                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💙 GCash</span>
-                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💚 Maya</span>
-                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">🧡 ShopeePay</span>
-                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs">💳 Visa / Mastercard</span>
-                    </div>
+                    <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Pay with PayPal</span>
+                    <div id="paypal-pro-button" class="min-h-[45px]"></div>
+                    <p id="paypal-pro-status" class="text-[0.7rem] text-slate-500"></p>
                 </div>
-
-                <!-- Current User Info & Reference -->
-                <div class="p-2.5 bg-purple-50/60 rounded-xl border border-purple-100 text-[0.72rem] text-purple-900 flex items-center justify-between">
-                    <div>
-                        <span class="text-slate-500">Upgrading Account:</span>
-                        <b id="pro-modal-user-display" class="font-mono text-purple-800 ml-1">user@example.com</b>
-                    </div>
-                    <span class="text-[0.68rem] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md font-mono" id="pro-modal-uid-display">UID</span>
-                </div>
-
-                <!-- CTA Button -->
-                <button type="button" onclick="handleProUpgradeClick()" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <span>⚡ Upgrade to Lifetime Pro — ₱299</span>
-                    <span>➔</span>
-                </button>
-
-                <!-- Activation Code / Manual Whitelist Trigger -->
-                <div class="text-center pt-1 border-t border-slate-100">
-                    <button type="button" onclick="promptActivationCode()" class="text-[0.7rem] text-slate-400 hover:text-purple-600 underline transition-colors">
-                        Have an activation code or paid manually? Click to activate Pro
-                    </button>
-                </div>
+                <form id="pro-activate-form" onsubmit="activateOmniMindPro(event)" class="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex flex-col gap-2">
+                    <p class="font-bold text-slate-800">Already paid? Enter the email and code</p>
+                    <input id="pro-activate-email" type="email" required autocomplete="email" placeholder="PayPal email" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
+                    <input id="pro-activate-code" type="text" required autocomplete="off" placeholder="OMNI-XXXX-XXXX" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono uppercase">
+                    <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">Activate OmniMind Pro</button>
+                    <p id="pro-activate-status" class="text-[0.7rem] text-slate-600 min-h-[1rem]"></p>
+                </form>
+                <p class="text-center text-[0.7rem] text-slate-400">
+                    <a href="/legal/terms.html" class="underline hover:text-slate-700">Terms</a>
+                    · <a href="/legal/privacy.html" class="underline hover:text-slate-700">Privacy</a>
+                    · <a href="/legal/refund.html" class="underline hover:text-slate-700">Refunds</a>
+                    · <a href="mailto:support@omnimindmap.app" class="underline hover:text-slate-700">support@omnimindmap.app</a>
+                </p>
             </div>
         </div>
     </div>
@@ -1990,8 +1972,8 @@
 
             <!-- Action Options -->
             <div class="flex flex-col gap-2">
-                <button type="button" onclick="closeQuotaExceededModal(); openLifetimeProModal('quota_limit');" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <span>⭐ Upgrade to Lifetime Pro (₱299 • 50 Slots)</span>
+                <button type="button" onclick="closeQuotaExceededModal(); openOmniMindProModal('quota_limit');" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>⭐ Upgrade to OmniMind Pro ($9 • 50 Slots)</span>
                 </button>
                 <button type="button" onclick="closeQuotaExceededModal(); toggleProjectManagerModal(true); switchLibraryTab('cloud');" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors">
                     📁 Overwrite or Delete an Older Cloud Map
@@ -2996,8 +2978,8 @@
                     statusEl.className = "flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all duration-300 cursor-pointer shadow-xs active:scale-95 shrink-0";
                     iconEl.className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse";
                     textEl.innerHTML = `${escapeHtml(message)} <span class="underline ml-1 font-extrabold text-amber-900 bg-amber-200/80 px-1 py-0.2 rounded shadow-2xs">Upgrade ⭐</span>`;
-                    statusEl.onclick = () => openLifetimeProModal('save_status_limit');
-                    statusEl.title = "Cloud Storage Limit Reached! Click to Upgrade to Lifetime Pro";
+                    statusEl.onclick = () => openOmniMindProModal('save_status_limit');
+                    statusEl.title = "Cloud Storage Limit Reached! Click to Upgrade to OmniMind Pro";
                     return;
                 }
                 statusEl.onclick = null;
@@ -3597,19 +3579,14 @@
         const DEFAULT_MAX_CLOUD_MAPS = 3;
         const PRO_CLOUD_MAPS = 50;
         let currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
-        let isUserLifetimePro = false;
+        let isUserOmniMindPro = false;
+        const PAYPAL_CLIENT_ID = 'AfLUWmx3V0glGmHJI9Lwq2vSeYMP4HWrdlrjnmx9UPtK7ssmgO8AldGDFOr5KrX17Usx8W_gyl9v6lT8';
+        const PRO_ACTIVATION_STORAGE_KEY = 'omnimind_pro_activation';
+        const PRO_DEVICE_STORAGE_KEY = 'omnimind_device_id';
+        let paypalSdkPromise = null;
 
-        // Payment Link for Lifetime Pro (Update this link once your payment provider checkout link is ready)
-        const PRO_PAYMENT_LINK = 'https://paymongo.page/l/omnimind-lifetime-pro';
-        const PAYMONGO_PRO_PAYMENT_LINK = PRO_PAYMENT_LINK; // backward compatibility
-
-        // Master activation codes for manual fulfillment / testing
-        const PRO_ACTIVATION_CODES = ['OMNIPRO50', 'LIFETIMEPRO2026', 'VIPMINDMAP'];
-
-        // In-code VIP / Admin accounts whitelist (by UID or Email, optional)
         const UPGRADED_ACCOUNTS = {
-            // Add any custom VIP UIDs or emails here if needed:
-            // 'example_uid': 50,
+            // Optional staff overrides by uid or email: { 'uid': 50 }
         };
         let homeMapFilter = 'all'; // 'all' | 'local' | 'cloud'
         let fbApp = null;
@@ -3619,31 +3596,53 @@
         let cloudMapsCache = [];
         let activeLibraryTab = 'local'; // 'local' | 'cloud'
 
+        function getProDeviceId() {
+            try {
+                let id = localStorage.getItem(PRO_DEVICE_STORAGE_KEY);
+                if (!id) {
+                    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('dev-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+                    localStorage.setItem(PRO_DEVICE_STORAGE_KEY, id);
+                }
+                return id;
+            } catch (e) {
+                return 'dev-session';
+            }
+        }
+
+        function readLocalProActivation() {
+            try {
+                const raw = localStorage.getItem(PRO_ACTIVATION_STORAGE_KEY);
+                if (!raw) return null;
+                const data = JSON.parse(raw);
+                if (data && data.verified && data.email && data.code) return data;
+            } catch (e) {}
+            return null;
+        }
+
+        function applyStoredProStatus() {
+            const stored = readLocalProActivation();
+            if (stored) {
+                isUserOmniMindPro = true;
+                currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
+            }
+            return stored;
+        }
+
         async function fetchUserQuota(user) {
-            isUserLifetimePro = false;
+            isUserOmniMindPro = false;
             currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
+            applyStoredProStatus();
 
-            // 1. Check local activation code storage
-            const localCode = localStorage.getItem('omnimind_pro_code');
-            if (localCode && (PRO_ACTIVATION_CODES.includes(localCode) || localCode.startsWith('PRO_'))) {
-                currentCloudUserQuota = PRO_CLOUD_MAPS;
-                isUserLifetimePro = true;
-            }
+            if (!user) return;
 
-            if (!user) {
-                return;
-            }
-
-            // 2. Check in-code whitelist (by UID or Email)
             if (UPGRADED_ACCOUNTS[user.uid]) {
                 currentCloudUserQuota = Math.max(currentCloudUserQuota, UPGRADED_ACCOUNTS[user.uid]);
-                isUserLifetimePro = currentCloudUserQuota >= PRO_CLOUD_MAPS;
+                isUserOmniMindPro = currentCloudUserQuota >= PRO_CLOUD_MAPS;
             } else if (user.email && UPGRADED_ACCOUNTS[user.email.toLowerCase()]) {
                 currentCloudUserQuota = Math.max(currentCloudUserQuota, UPGRADED_ACCOUNTS[user.email.toLowerCase()]);
-                isUserLifetimePro = currentCloudUserQuota >= PRO_CLOUD_MAPS;
+                isUserOmniMindPro = currentCloudUserQuota >= PRO_CLOUD_MAPS;
             }
 
-            // 3. Check Firestore profile document: users/{userId} for dynamic console or webhook upgrades
             if (fbDb) {
                 try {
                     const userDoc = await fbDb.collection('users').doc(user.uid).get();
@@ -3651,8 +3650,8 @@
                         const data = userDoc.data();
                         if (data && typeof data.maxMaps === 'number' && data.maxMaps > 0) {
                             currentCloudUserQuota = Math.max(currentCloudUserQuota, data.maxMaps);
-                            if (data.plan === 'lifetime_pro' || data.maxMaps >= PRO_CLOUD_MAPS) {
-                                isUserLifetimePro = true;
+                            if (data.plan === 'omnimind_pro' || data.maxMaps >= PRO_CLOUD_MAPS) {
+                                isUserOmniMindPro = true;
                             }
                         }
                     }
@@ -3662,143 +3661,138 @@
             }
         }
 
-        function openLifetimeProModal(source = 'general') {
-            const modal = document.getElementById('lifetime-pro-modal');
+        function loadPayPalSdk() {
+            if (window.paypal) return Promise.resolve(window.paypal);
+            if (paypalSdkPromise) return paypalSdkPromise;
+            paypalSdkPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(PAYPAL_CLIENT_ID) + '&currency=USD&intent=capture';
+                script.async = true;
+                script.onload = () => resolve(window.paypal);
+                script.onerror = () => {
+                    paypalSdkPromise = null;
+                    reject(new Error('PayPal could not load'));
+                };
+                document.head.appendChild(script);
+            });
+            return paypalSdkPromise;
+        }
+
+        function renderPayPalButton() {
+            const container = document.getElementById('paypal-pro-button');
+            const status = document.getElementById('paypal-pro-status');
+            if (!container || container.dataset.ready === '1') return;
+            container.dataset.ready = '1';
+            loadPayPalSdk().then((paypal) => {
+                if (!paypal || !paypal.Buttons) throw new Error('PayPal SDK missing');
+                paypal.Buttons({
+                    style: { layout: 'vertical', shape: 'rect', label: 'paypal' },
+                    createOrder: async () => {
+                        const res = await fetch('/api/paypal/create-order', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: '{}'
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok || !data.id) throw new Error(data.error || 'Could not start checkout');
+                        return data.id;
+                    },
+                    onApprove: async (data) => {
+                        if (status) status.textContent = 'Confirming payment…';
+                        const res = await fetch('/api/paypal/capture-order', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ orderID: data.orderID })
+                        });
+                        const result = await res.json().catch(() => ({}));
+                        if (!res.ok || !result.ok) {
+                            if (status) status.textContent = result.error || 'Payment was not confirmed';
+                            return;
+                        }
+                        const emailInput = document.getElementById('pro-activate-email');
+                        const codeInput = document.getElementById('pro-activate-code');
+                        if (emailInput && result.email) emailInput.value = result.email;
+                        if (codeInput && result.code) codeInput.value = result.code;
+                        const note = result.emailed
+                            ? 'We emailed ' + result.code + ' to ' + result.email + '.'
+                            : 'Your code is ' + result.code + '. Save it — email delivery is unavailable right now.';
+                        if (status) status.textContent = note;
+                        showAlert({
+                            title: 'OmniMind Pro purchased',
+                            icon: '🎉',
+                            message: note + '\n\nEnter the buyer email and code to activate this device.',
+                            type: 'success'
+                        });
+                    },
+                    onError: () => {
+                        if (status) status.textContent = 'PayPal checkout failed. Try again.';
+                    }
+                }).render('#paypal-pro-button');
+            }).catch(() => {
+                container.dataset.ready = '';
+                if (status) status.textContent = 'PayPal checkout could not load. Refresh and try again.';
+            });
+        }
+
+        function openOmniMindProModal(source) {
+            const modal = document.getElementById('omnimind-pro-modal');
             if (!modal) return;
-            const userDisplay = document.getElementById('pro-modal-user-display');
-            const uidDisplay = document.getElementById('pro-modal-uid-display');
-
-            if (userDisplay && uidDisplay) {
-                if (currentCloudUser) {
-                    userDisplay.textContent = currentCloudUser.email || currentCloudUser.displayName || 'Signed In';
-                    uidDisplay.textContent = currentCloudUser.uid.substring(0, 10) + '...';
-                } else {
-                    userDisplay.textContent = 'Guest / Unauthenticated';
-                    uidDisplay.textContent = 'Sign in recommended';
-                }
+            const emailInput = document.getElementById('pro-activate-email');
+            const stored = readLocalProActivation();
+            if (emailInput && !emailInput.value) {
+                emailInput.value = (stored && stored.email) || (currentCloudUser && currentCloudUser.email) || '';
             }
             modal.classList.remove('hidden');
+            renderPayPalButton();
         }
 
-        function closeLifetimeProModal() {
-            const modal = document.getElementById('lifetime-pro-modal');
+        function closeOmniMindProModal() {
+            const modal = document.getElementById('omnimind-pro-modal');
             if (modal) modal.classList.add('hidden');
         }
 
-        function openQuotaExceededModal(quota, currentCount) {
-            const modal = document.getElementById('quota-exceeded-modal');
-            if (!modal) {
-                openLifetimeProModal('quota_exceeded');
-                return;
-            }
-            const titleEl = document.getElementById('quota-modal-title');
-            const subEl = document.getElementById('quota-modal-subtitle');
-            if (titleEl) titleEl.textContent = `Cloud Storage Limit Reached (${currentCount}/${quota} maps)`;
-            if (subEl) subEl.textContent = `You have reached your ${quota}-map cloud limit on the free tier.`;
-            modal.classList.remove('hidden');
-        }
-
-        function closeQuotaExceededModal() {
-            const modal = document.getElementById('quota-exceeded-modal');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        async function handleProUpgradeClick() {
-            // Check if user is signed in first
-            if (!currentCloudUser) {
-                const proceed = await showConfirm({
-                    title: 'Sign In Tip',
-                    icon: '💡',
-                    message: "Tip: Signing in with Google before upgrading ensures your Lifetime Pro pass is permanently linked to your account.\n\nClick 'Sign In' to connect your Google account now, or 'Continue' to proceed directly to payment.",
-                    confirmText: 'Sign In with Google',
-                    cancelText: 'Continue to Payment'
+        async function activateOmniMindPro(event) {
+            if (event && event.preventDefault) event.preventDefault();
+            const emailEl = document.getElementById('pro-activate-email');
+            const codeEl = document.getElementById('pro-activate-code');
+            const statusEl = document.getElementById('pro-activate-status');
+            const email = emailEl ? emailEl.value.trim() : '';
+            const code = codeEl ? codeEl.value.trim() : '';
+            if (statusEl) statusEl.textContent = 'Checking code…';
+            try {
+                const res = await fetch('/api/pro/activate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, code: code, deviceId: getProDeviceId() })
                 });
-                if (proceed) {
-                    closeLifetimeProModal();
-                    signInWithGoogle();
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.ok) {
+                    if (statusEl) statusEl.textContent = data.error || 'Activation failed';
                     return;
                 }
-            }
-
-            // Check if link is still placeholder
-            const isPlaceholder = !PRO_PAYMENT_LINK || PRO_PAYMENT_LINK.includes('your-custom-link') || PRO_PAYMENT_LINK.includes('omnimind-lifetime-pro') || PRO_PAYMENT_LINK.includes('placeholder');
-            if (isPlaceholder) {
-                const choice = await showConfirm({
-                    title: 'Payment Checkout Notice',
-                    icon: '⚡',
-                    message: "Payment Checkout Notice:\n\nOur online checkout is currently being updated for our payment provider.\n\nIf you have already paid or have an activation code, click below to activate your Lifetime Pro pass immediately.",
-                    confirmText: 'Enter Activation Code',
-                    cancelText: 'Close'
-                });
-                if (choice) {
-                    await promptActivationCode();
-                }
-                return;
-            }
-
-            // Build dynamic checkout URL with user reference
-            const userId = currentCloudUser ? currentCloudUser.uid : 'guest';
-            const userEmail = (currentCloudUser && currentCloudUser.email) ? currentCloudUser.email : '';
-            const separator = PRO_PAYMENT_LINK.includes('?') ? '&' : '?';
-            const checkoutUrl = `${PRO_PAYMENT_LINK}${separator}client_reference_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(userEmail)}`;
-
-            window.open(checkoutUrl, '_blank');
-        }
-        const handlePayMongoUpgradeClick = handleProUpgradeClick; // backward compatibility alias
-
-        async function promptActivationCode() {
-            const code = await showPrompt({
-                title: 'Lifetime Pro Activation',
-                icon: '⭐',
-                message: 'Enter your Lifetime Pro Activation Code:',
-                placeholder: 'Enter activation code',
-                defaultValue: '',
-                confirmText: 'Activate Pro'
-            });
-            if (!code || !code.trim()) return;
-            await applyProActivationCode(code.trim());
-        }
-
-        async function applyProActivationCode(code) {
-            const cleanCode = code.toUpperCase().trim();
-            if (!PRO_ACTIVATION_CODES.includes(cleanCode) && !cleanCode.startsWith('PRO_')) {
+                localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
+                    verified: true,
+                    email: data.email,
+                    code: data.code,
+                    deviceId: getProDeviceId()
+                }));
+                isUserOmniMindPro = true;
+                currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
+                if (statusEl) statusEl.textContent = 'OmniMind Pro is active on this device.';
+                closeOmniMindProModal();
+                closeQuotaExceededModal();
+                renderCloudMapsList();
+                renderHomepage();
+                updateCloudAuthUI();
                 showAlert({
-                    title: 'Invalid Code',
-                    icon: '⚠️',
-                    message: 'Invalid activation code. Please check and try again.',
-                    type: 'danger'
+                    title: 'OmniMind Pro activated',
+                    icon: '🎉',
+                    message: 'Cloud storage is now ' + PRO_CLOUD_MAPS + ' maps. This code works on up to 3 devices.',
+                    type: 'success'
                 });
-                return;
+            } catch (e) {
+                if (statusEl) statusEl.textContent = 'Could not reach the activation server.';
             }
-
-            localStorage.setItem('omnimind_pro_code', cleanCode);
-            currentCloudUserQuota = PRO_CLOUD_MAPS;
-            isUserLifetimePro = true;
-
-            if (currentCloudUser && fbDb) {
-                try {
-                    await fbDb.collection('users').doc(currentCloudUser.uid).set({
-                        maxMaps: PRO_CLOUD_MAPS,
-                        plan: 'lifetime_pro',
-                        codeUsed: cleanCode,
-                        upgradedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                } catch (e) {
-                    console.warn('Note: Could not sync activation to Firestore:', e);
-                }
-            }
-
-            closeLifetimeProModal();
-            closeQuotaExceededModal();
-            renderCloudMapsList();
-            renderHomepage();
-            updateCloudAuthUI();
-            showAlert({
-                title: 'Lifetime Pro Activated!',
-                icon: '🎉',
-                message: `Your cloud storage has been expanded to ${PRO_CLOUD_MAPS} maps with Soft-Cap Protection.\n\nEnjoy unlimited cloud sync!`,
-                type: 'success'
-            });
         }
 
         function initFirebaseCloud() {
@@ -3827,8 +3821,9 @@
                             await fetchUserQuota(user);
                             fetchCloudMaps();
                         } else {
-                            currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
                             cloudMapsCache = [];
+                            currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
+                            applyStoredProStatus();
                             renderCloudMapsList();
                         }
                         updateCloudAuthUI();
@@ -3889,7 +3884,7 @@
                 const avatarEl = document.getElementById('cloud-user-avatar');
                 const planBadgeEl = document.getElementById('cloud-user-plan-badge');
                 const headerUpgradeBtn = document.getElementById('cloud-header-upgrade-btn');
-                const isPro = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
+                const isPro = isUserOmniMindPro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
 
                 if (userNameEl) userNameEl.textContent = displayName;
                 if (userEmailEl) userEmailEl.textContent = email;
@@ -3911,7 +3906,7 @@
             }
 
             // Update top canvas and library header buttons regardless of auth state
-            const isProGlobal = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
+            const isProGlobal = isUserOmniMindPro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
             const btnHeaderPro = document.getElementById('btn-header-pro');
             const btnHeaderProText = document.getElementById('btn-header-pro-text');
             if (btnHeaderPro && btnHeaderProText) {
@@ -4162,6 +4157,10 @@
                 return;
             }
 
+            const isOverQuota = cloudMapsCache.length > currentCloudUserQuota;
+            const isQuotaFull = cloudMapsCache.length >= currentCloudUserQuota;
+            const isUpgraded = isUserOmniMindPro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
+
             if (cloudMapsCache.length === 0) {
                 container.innerHTML = `
                 <div class="p-8 text-center text-slate-400 text-xs">
@@ -4173,17 +4172,13 @@
                             ☁️ Push Active Map to Cloud
                         </button>
                         ${!isUpgraded ? `
-                        <button type="button" onclick="openLifetimeProModal('empty_cloud')" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-purple-600 text-white rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95">
+                        <button type="button" onclick="openOmniMindProModal('empty_cloud')" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-purple-600 text-white rounded-full text-xs font-semibold shadow-sm transition-transform active:scale-95">
                             ⭐ Upgrade to Pro
                         </button>` : ''}
                     </div>
                 </div>`;
                 return;
             }
-
-            const isOverQuota = cloudMapsCache.length > currentCloudUserQuota;
-            const isQuotaFull = cloudMapsCache.length >= currentCloudUserQuota;
-            const isUpgraded = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
 
             let quotaBannerHtml = '';
             if (isOverQuota) {
@@ -4195,11 +4190,11 @@
                             <div>
                                 <p class="font-bold text-amber-950">Soft-Cap Storage Notice: ${cloudMapsCache.length} / ${currentCloudUserQuota} maps</p>
                                 <p class="text-[0.72rem] text-amber-800 mt-0.5 leading-relaxed">
-                                    Your existing maps are <b>100% safe, fully editable, and downloadable</b> anytime. To save brand new maps to the cloud, overwrite an older map or upgrade to Lifetime Pro.
+                                    Your existing maps are <b>100% safe, fully editable, and downloadable</b> anytime. To save brand new maps to the cloud, overwrite an older map or upgrade to OmniMind Pro.
                                 </p>
                             </div>
                         </div>
-                        <button type="button" onclick="openLifetimeProModal('soft_cap_banner')" class="shrink-0 px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[0.7rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                        <button type="button" onclick="openOmniMindProModal('soft_cap_banner')" class="shrink-0 px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[0.7rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
                             <span>⭐</span> Upgrade
                         </button>
                     </div>
@@ -4210,7 +4205,7 @@
                     <span class="font-semibold flex items-center gap-1.5">
                         <span>☁️</span> Cloud Quota: <b>${cloudMapsCache.length} / ${currentCloudUserQuota}</b> maps (Limit Reached)
                     </span>
-                    <button type="button" onclick="openLifetimeProModal('quota_full_banner')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-[0.7rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
+                    <button type="button" onclick="openOmniMindProModal('quota_full_banner')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-[0.7rem] shadow-2xs transition-transform active:scale-95 flex items-center gap-1">
                         <span>⭐</span> Upgrade to Pro
                     </button>
                 </div>`;
@@ -4218,7 +4213,7 @@
                 quotaBannerHtml = `
                 <div class="mb-3 p-2.5 rounded-xl border bg-indigo-50/80 border-indigo-200 text-indigo-800 text-xs flex items-center justify-between">
                     <span class="font-semibold flex items-center gap-1.5">
-                        <span>⭐</span> <b>Lifetime Pro Active:</b> ${cloudMapsCache.length} / ${currentCloudUserQuota} cloud slots used
+                        <span>⭐</span> <b>OmniMind Pro Active:</b> ${cloudMapsCache.length} / ${currentCloudUserQuota} cloud slots used
                     </span>
                     <span class="text-[0.7rem] text-indigo-700 font-bold bg-indigo-100/70 px-2 py-0.5 rounded-full">
                         ✓ VIP Storage
@@ -4230,7 +4225,7 @@
                     <span class="font-semibold flex items-center gap-1.5">
                         <span>☁️</span> Cloud Quota: <b>${cloudMapsCache.length} / ${currentCloudUserQuota}</b> free maps
                     </span>
-                    <button type="button" onclick="openLifetimeProModal('quota_banner')" class="text-[0.7rem] font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1">
+                    <button type="button" onclick="openOmniMindProModal('quota_banner')" class="text-[0.7rem] font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1">
                         <span>⭐</span> Upgrade (50 slots)
                     </button>
                 </div>`;
@@ -4321,8 +4316,8 @@
                 if (!isExistingCloud && cloudMapsCache.length >= currentCloudUserQuota) {
                     openQuotaExceededModal(currentCloudUserQuota, cloudMapsCache.length);
                     setSaveStatus('saved', `⚠️ Cloud limit reached (${cloudMapsCache.length}/${currentCloudUserQuota})`);
-                    alert(`☁️ Cloud Storage Limit Reached (${cloudMapsCache.length}/${currentCloudUserQuota} maps)\n\nYou have reached your free cloud storage limit.\n\nAll your existing maps remain 100% safe and editable!\n\nTo save this new map, upgrade to Lifetime Pro for 50 slots, or overwrite an existing cloud map.`);
-                    openLifetimeProModal('quota_limit_save');
+                    alert(`☁️ Cloud Storage Limit Reached (${cloudMapsCache.length}/${currentCloudUserQuota} maps)\n\nYou have reached your free cloud storage limit.\n\nAll your existing maps remain 100% safe and editable!\n\nTo save this new map, upgrade to OmniMind Pro for 50 slots, or overwrite an existing cloud map.`);
+                    openOmniMindProModal('quota_limit_save');
                     return;
                 }
 
@@ -4635,7 +4630,7 @@
             const pct = Math.min(100, Math.round((count / currentCloudUserQuota) * 100));
             const isOverQuota = count > currentCloudUserQuota;
             const isQuotaFull = count >= currentCloudUserQuota;
-            const isPro = isUserLifetimePro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
+            const isPro = isUserOmniMindPro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
 
             const homeQuotaTitle = document.getElementById('home-quota-title');
             const homeQuotaUpgradeBtn = document.getElementById('home-quota-upgrade-btn');
@@ -4646,7 +4641,7 @@
 
             if (homeQuotaTitle) {
                 homeQuotaTitle.innerHTML = isPro 
-                    ? `<span>⭐</span> Cloud Storage Quota (Lifetime Pro)` 
+                    ? `<span>⭐</span> Cloud Storage Quota (OmniMind Pro)` 
                     : `<span>☁️</span> Cloud Storage Quota (Free Tier)`;
             }
 
@@ -6779,6 +6774,7 @@
             updateProjectHeaderUI();
             // Initialize Firebase Cloud if configured
             initFirebaseCloud();
+            applyStoredProStatus();
             renderHomepage();
             checkUrlForSharedMap();
 
@@ -6818,10 +6814,8 @@
         }
 
         // --- 1. RENDERING PIPELINE ---
-        // Central Pro gate for branch actions. Returns true until a later billing check is added.
-        // PayMongo and lifetime-pro code stay as they are and are not consulted here.
         function isPro() {
-            return true;
+            return !!(isUserOmniMindPro || readLocalProActivation());
         }
 
         let foldRevealIds = null;

@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pro codes and capture records are written only by the server (Admin SDK).
+    match /pro_codes/{code} {
+      allow read, write: if false;
+    }
+    match /pro_captures/{captureId} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.keys().hasAny(['plan', 'maxMaps', 'codeUsed']);
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'maxMaps', 'codeUsed']);
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Signed-in users (including anonymous guests) can read maps so share links work.
+      // Writes stay open to any signed-in user so live collaboration can edit a shared map.
+      match /maps/{mapId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "omnimind",
+  "private": true,
+  "description": "OmniMind mind map. OmniMind Pro is a one-time $9 purchase via PayPal.",
+  "scripts": {
+    "test": "node --test tests/*.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
