@@ -277,16 +277,66 @@
         .collapse-toggle.edge-left { right: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); top: 50%; transform: translateY(-50%) scale(var(--collapse-hit, 1)); }
         .collapse-toggle.edge-bottom { left: 50%; top: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
         .collapse-toggle.edge-top { left: 50%; bottom: calc(100% + (15px * var(--collapse-hit, 1) - 9px)); transform: translateX(-50%) scale(var(--collapse-hit, 1)); }
+        /* Desktop only: the circle sits outside the bubble. An invisible bridge
+           covers the gap so the pointer never leaves the node on the way to it.
+           .collapse-hot keeps that target up for a moment after the pointer leaves. */
+        .collapse-hover-bridge {
+            display: none;
+        }
         @media (hover: hover) and (pointer: fine) {
             .collapse-toggle:not(.is-collapsed) {
                 opacity: 0;
                 pointer-events: none;
             }
-            .bubble-node:hover .collapse-toggle,
-            .bubble-node:focus-within .collapse-toggle,
+            .bubble-node:hover > .collapse-toggle,
+            .bubble-node.collapse-hot > .collapse-toggle,
+            .bubble-node:focus-within > .collapse-toggle,
+            .collapse-toggle:hover,
+            .collapse-toggle:focus,
+            .collapse-toggle:focus-visible,
             .collapse-toggle.is-collapsed {
                 opacity: 1;
                 pointer-events: auto;
+            }
+            .collapse-hover-bridge {
+                display: block;
+                position: absolute;
+                z-index: 5;
+                pointer-events: none;
+                background: transparent;
+            }
+            .bubble-node:hover > .collapse-hover-bridge,
+            .bubble-node.collapse-hot > .collapse-hover-bridge,
+            .bubble-node:focus-within > .collapse-hover-bridge {
+                pointer-events: auto;
+            }
+            .collapse-hover-bridge.edge-right {
+                left: calc(100% - 3px);
+                top: 50%;
+                width: calc(28px * var(--collapse-hit, 1) + 8px);
+                height: calc(26px * var(--collapse-hit, 1) + 10px);
+                transform: translateY(-50%);
+            }
+            .collapse-hover-bridge.edge-left {
+                right: calc(100% - 3px);
+                top: 50%;
+                width: calc(28px * var(--collapse-hit, 1) + 8px);
+                height: calc(26px * var(--collapse-hit, 1) + 10px);
+                transform: translateY(-50%);
+            }
+            .collapse-hover-bridge.edge-bottom {
+                left: 50%;
+                top: calc(100% - 3px);
+                width: calc(26px * var(--collapse-hit, 1) + 10px);
+                height: calc(28px * var(--collapse-hit, 1) + 8px);
+                transform: translateX(-50%);
+            }
+            .collapse-hover-bridge.edge-top {
+                left: 50%;
+                bottom: calc(100% - 3px);
+                width: calc(26px * var(--collapse-hit, 1) + 10px);
+                height: calc(28px * var(--collapse-hit, 1) + 8px);
+                transform: translateX(-50%);
             }
         }
         @media (pointer: coarse) {
@@ -7006,14 +7056,41 @@
             else apply();
         }
 
+        function bindCollapseHoverLinger(el) {
+            let timer = null;
+            const show = () => {
+                if (timer) { clearTimeout(timer); timer = null; }
+                el.classList.add('collapse-hot');
+            };
+            const hideLater = () => {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(() => {
+                    timer = null;
+                    if (!el.isConnected) return;
+                    if (el.matches(':hover') || el.contains(document.activeElement)) return;
+                    el.classList.remove('collapse-hot');
+                }, 300);
+            };
+            el.addEventListener('mouseenter', show);
+            el.addEventListener('mouseleave', hideLater);
+            el.addEventListener('focusin', show);
+            el.addEventListener('focusout', hideLater);
+        }
+
         function attachCollapseToggle(el, node) {
             const children = getDirectChildren(node.id);
             if (!children.length) return;
             const collapsed = !!node.collapsed;
             const count = collapsed ? getDescendants(node.id).length : 0;
+            const edge = getCollapseEdge(node);
+            const bridge = document.createElement('span');
+            bridge.className = 'collapse-hover-bridge edge-' + edge;
+            bridge.setAttribute('aria-hidden', 'true');
+            el.appendChild(bridge);
+            bindCollapseHoverLinger(el);
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'collapse-toggle edge-' + getCollapseEdge(node) + (collapsed ? ' is-collapsed' : '');
+            btn.className = 'collapse-toggle edge-' + edge + (collapsed ? ' is-collapsed' : '');
             const face = document.createElement('span');
             face.className = 'collapse-toggle-face';
             face.textContent = collapsed ? ('+' + count) : '−';
