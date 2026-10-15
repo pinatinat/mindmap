@@ -35,6 +35,20 @@
         let present = null;
         let future = [];
         let coalesceKey = null;
+        let suppressDepth = 0;
+
+        // Ignore edits caused by painting a restore (blur, focus moves, z-index
+        // noise) so they cannot push a lookalike step that makes the next undo
+        // appear to do nothing.
+        function suppressEdits() {
+            suppressDepth += 1;
+            let released = false;
+            return function release() {
+                if (released) return;
+                released = true;
+                suppressDepth = Math.max(0, suppressDepth - 1);
+            };
+        }
 
         function reset(snapshot) {
             past = [];
@@ -56,12 +70,25 @@
         function commit(snapshot, commitOptions) {
             const next = clone(snapshot);
             const key = (commitOptions && commitOptions.coalesceKey) || null;
+            if (suppressDepth > 0) {
+                return { recorded: false, coalesced: false, reason: 'suppressed' };
+            }
             if (!present) {
                 present = next;
                 coalesceKey = key;
                 return { recorded: false, coalesced: false, reason: 'baseline' };
             }
-            if (same(present, next)) {
+            // A drag selects the node on pointer-down, which is not itself a
+            // history step. Stamp that id onto the state we are about to leave
+            // so undo keeps the dragged node selected. A press that does not
+            // change the map still returns unchanged and leaves the stack alone.
+            const retain = commitOptions && commitOptions.retainSelection;
+            let outgoing = present;
+            if (retain && present.nodes && present.nodes[retain] && present.selectedNodeId !== retain) {
+                outgoing = clone(present);
+                outgoing.selectedNodeId = retain;
+            }
+            if (same(outgoing, next)) {
                 return { recorded: false, coalesced: false, reason: 'unchanged' };
             }
             if (key && key === coalesceKey) {
@@ -69,7 +96,7 @@
                 future = [];
                 return { recorded: true, coalesced: true };
             }
-            past.push(present);
+            past.push(outgoing);
             if (past.length > limit) past.shift();
             present = next;
             future = [];
@@ -102,6 +129,7 @@
             rebase,
             commit,
             seal,
+            suppressEdits,
             undo,
             redo,
             canUndo: function () { return past.length > 0; },
@@ -117,7 +145,10 @@
         if (!history || state.applying || state.suspended || !state.ready) {
             return { recorded: false, reason: 'skipped' };
         }
-        return history.commit(snapshot, { coalesceKey: state.coalesceKey || null });
+        return history.commit(snapshot, {
+            coalesceKey: state.coalesceKey || null,
+            retainSelection: state.retainSelection || null
+        });
     }
 
     function navigateHistory(history, direction, hooks) {
@@ -157,6 +188,46 @@
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
         if (target.isContentEditable) return true;
         return false;
+    }
+
+    // A stuck inline-edit flag must not swallow Ctrl+Z once focus has left the
+    // editor. The flag only counts while the event target is still that editor.
+    function reconcileEditingFlags(target, flags) {
+        const state = flags || {};
+        const tag = String((target && target.tagName) || '').toUpperCase();
+        return {
+            inlineEditing: !!(state.inlineEditing && (tag === 'INPUT' || tag === 'TEXTAREA')),
+            editingDecoration: !!(state.editingDecoration && target && target.isContentEditable)
+        };
+    }
+
+    function shouldBlurAfterHistoryNav(target) {
+        if (!target || !target.tagName) return false;
+        const tag = String(target.tagName).toUpperCase();
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+        if (target.isContentEditable) return true;
+        if (typeof target.closest === 'function' && target.closest('[data-undo-btn],[data-redo-btn]')) return true;
+        return false;
+    }
+
+    // pointerdown runs the action before a moving or disappearing toast can
+    // drop the click. A later click on the same press is ignored.
+    function createToastAction(run) {
+        let ran = false;
+        return {
+            handle(event) {
+                const type = String((event && event.type) || 'click');
+                if (type !== 'pointerdown' && type !== 'click') return false;
+                if (event) {
+                    if (typeof event.preventDefault === 'function') event.preventDefault();
+                    if (typeof event.stopPropagation === 'function') event.stopPropagation();
+                }
+                if (ran) return false;
+                ran = true;
+                if (typeof run === 'function') run();
+                return true;
+            }
+        };
     }
 
     function shouldHandleUndoShortcut(event, context) {
@@ -351,34 +422,65 @@
         const top = panY + minY * zoom;
         const right = panX + maxX * zoom;
         const bottom = panY + maxY * zoom;
-        const boxW = right - left;
-        const boxH = bottom - top;
-        const availW = Math.max(1, viewWidth - padLeft - padRight);
-        const availH = Math.max(1, viewHeight - padTop - padBottom);
+        const safeLeft = padLeft;
+        const safeTop = padTop;
+        const safeRight = viewWidth - padRight;
+        const safeBottom = viewHeight - padBottom;
+        const availW = Math.max(1, safeRight - safeLeft);
+        const availH = Math.max(1, safeBottom - safeTop);
+        const fullyInside = left >= safeLeft - 0.5 && top >= safeTop - 0.5
+            && right <= safeRight + 0.5 && bottom <= safeBottom + 0.5;
+        if (fullyInside) return { panX, panY, changed: false };
 
-        if (boxW > availW || boxH > availH) {
-            const cx = (minX + maxX) / 2;
-            const cy = (minY + maxY) / 2;
-            const newPanX = Math.round((padLeft + availW / 2) - cx * zoom);
-            const newPanY = Math.round((padTop + availH / 2) - cy * zoom);
-            return {
-                panX: newPanX,
-                panY: newPanY,
-                changed: newPanX !== Math.round(panX) || newPanY !== Math.round(panY)
-            };
-        }
-
-        let dx = 0;
-        let dy = 0;
-        if (left < padLeft) dx = padLeft - left;
-        else if (right > viewWidth - padRight) dx = (viewWidth - padRight) - right;
-        if (top < padTop) dy = padTop - top;
-        else if (bottom > viewHeight - padBottom) dy = (viewHeight - padBottom) - bottom;
-        if (dx === 0 && dy === 0) return { panX, panY, changed: false };
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        const newPanX = Math.round((safeLeft + availW / 2) - cx * zoom);
+        const newPanY = Math.round((safeTop + availH / 2) - cy * zoom);
         return {
-            panX: Math.round(panX + dx),
-            panY: Math.round(panY + dy),
-            changed: true
+            panX: newPanX,
+            panY: newPanY,
+            changed: newPanX !== Math.round(panX) || newPanY !== Math.round(panY)
+        };
+    }
+
+    // Toolbars and the bottom-left Guide sit on top of the canvas. Inset the
+    // safe area so a restored node is centred in the space that is actually visible.
+    function overlayInsets(viewWidth, viewHeight, base, overlays) {
+        const width = viewWidth || 0;
+        const height = viewHeight || 0;
+        const pads = base || {};
+        let padLeft = pads.padLeft || 0;
+        let padRight = pads.padRight || 0;
+        let padTop = pads.padTop || 0;
+        let padBottom = pads.padBottom || 0;
+        (overlays || []).forEach((box) => {
+            if (!box || !(width > 0) || !(height > 0)) return;
+            const left = Math.max(0, box.left);
+            const top = Math.max(0, box.top);
+            const right = Math.min(width, box.right);
+            const bottom = Math.min(height, box.bottom);
+            const w = right - left;
+            const h = bottom - top;
+            if (w < 8 || h < 8) return;
+            if (w >= width * 0.55) {
+                const fromTop = top;
+                const fromBottom = height - bottom;
+                if (fromTop <= fromBottom) padTop = Math.max(padTop, bottom + 8);
+                else padBottom = Math.max(padBottom, height - top + 8);
+                return;
+            }
+            if (left < width * 0.5) padLeft = Math.max(padLeft, right + 12);
+            else padRight = Math.max(padRight, width - left + 12);
+            if (bottom > height * 0.55) padBottom = Math.max(padBottom, height - top + 12);
+            else if (top < height * 0.45) padTop = Math.max(padTop, bottom + 12);
+        });
+        const capX = width * 0.4;
+        const capY = height * 0.4;
+        return {
+            padLeft: Math.min(padLeft, capX),
+            padRight: Math.min(padRight, capX),
+            padTop: Math.min(padTop, capY),
+            padBottom: Math.min(padBottom, capY)
         };
     }
 
@@ -389,8 +491,12 @@
         navigateHistory,
         undoShortcutFromEvent,
         isTypingTarget,
+        reconcileEditingFlags,
+        shouldBlurAfterHistoryNav,
+        createToastAction,
         shouldHandleUndoShortcut,
         shouldSealCoalesceOnPointerUp,
+        overlayInsets,
         shouldToastBranchDelete,
         inferBranchDirection,
         estimateNodeRect,

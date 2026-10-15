@@ -111,15 +111,44 @@ test('an on-screen change does not move the viewport', () => {
     assert.equal(pan.panY, 30);
 });
 
-test('a change below the viewport is panned into view without recentering a small box', () => {
+test('an off-screen node is centred in the safe area, not parked on the edge', () => {
     const pan = history.panToRevealRects({
         panX: 0, panY: 0, zoom: 1, viewWidth: 800, viewHeight: 600,
         padLeft: 10, padRight: 10, padTop: 10, padBottom: 10
     }, [{ x: 100, y: 900, w: 80, h: 40 }]);
     assert.equal(pan.changed, true);
-    const bottom = pan.panY + 940;
-    assert.ok(bottom <= 590);
-    assert.ok(bottom >= 500);
+    const screenX = pan.panX + 140;
+    const screenY = pan.panY + 920;
+    assert.ok(Math.abs(screenX - 400) <= 1, 'horizontal centre, got ' + screenX);
+    assert.ok(Math.abs(screenY - 300) <= 1, 'vertical centre, got ' + screenY);
+    assert.ok(screenY < 500, 'not left sitting on the bottom edge');
+});
+
+test('the guide and the design toolbar shift the centre into the visible area', () => {
+    const insets = history.overlayInsets(1000, 640, {
+        padLeft: 16, padRight: 16, padTop: 16, padBottom: 16
+    }, [
+        { left: 8, top: 8, right: 992, bottom: 52 },
+        { left: 16, top: 400, right: 276, bottom: 620 }
+    ]);
+    assert.ok(insets.padTop >= 60, 'toolbar clears the top');
+    assert.equal(insets.padLeft >= 288, true);
+    assert.ok(insets.padBottom >= 32, 'guide clears the bottom');
+    const pan = history.panToRevealRects({
+        panX: 0, panY: 0, zoom: 1, viewWidth: 1000, viewHeight: 640,
+        padLeft: insets.padLeft, padRight: insets.padRight,
+        padTop: insets.padTop, padBottom: insets.padBottom
+    }, [{ x: 20, y: 560, w: 90, h: 40 }]);
+    const screenX = pan.panX + 65;
+    const screenY = pan.panY + 580;
+    const safeCx = (insets.padLeft + (1000 - insets.padRight)) / 2;
+    const safeCy = (insets.padTop + (640 - insets.padBottom)) / 2;
+    assert.ok(Math.abs(screenX - safeCx) <= 1, screenX + ' vs ' + safeCx);
+    assert.ok(Math.abs(screenY - safeCy) <= 1, screenY + ' vs ' + safeCy);
+    const nodeLeft = pan.panX + 20;
+    const nodeTop = pan.panY + 560;
+    const overlapsGuide = nodeLeft < 276 && nodeLeft + 90 > 16 && nodeTop < 620 && nodeTop + 40 > 400;
+    assert.equal(overlapsGuide, false);
 });
 
 test('shortcuts ignore typing targets and open dialogs', () => {
@@ -234,6 +263,12 @@ test('the editor page wires undo without changing the Pro gate', () => {
     assert.match(index, /coalesceKey: 'text:'/);
     assert.match(index, /coalesceKey: 'font:'/);
     assert.match(index, /coalesceKey: dragKey/);
+    assert.match(index, /retainSelection: moved \? dragInfo\.nodeId/);
+    assert.match(index, /data-toast-action/);
+    assert.match(index, /createToastAction/);
+    assert.match(index, /suppressEdits/);
+    assert.match(index, /overlayInsets/);
+    assert.match(index, /reconcileEditingFlags/);
     assert.match(index, /save\(\) \{ triggerAutoSave\(\); \}/);
     assert.match(index, /function isPro\(\) \{\s*return true;\s*\}/);
     assert.doesNotMatch(index, /Delete collapsed branch/);
@@ -268,4 +303,105 @@ test('shape, colour, collapse, and layout snapshots restore as separate steps', 
     assert.equal(h.undo().nodes.root.bg, '#fff');
     assert.deepEqual(h.undo().canvasDecorations, {});
     assert.equal(h.canUndo(), false);
+});
+
+test('undoing a drag keeps the dragged node selected', () => {
+    const h = history.createHistory();
+    h.reset(snap({
+        root: { id: 'root', parentId: null, x: 0, y: 0 },
+        n4: { id: 'n4', parentId: 'root', x: 80, y: 40 }
+    }, { selectedNodeId: 'root' }));
+    h.commit(snap({
+        root: { id: 'root', parentId: null, x: 0, y: 0 },
+        n4: { id: 'n4', parentId: 'root', x: 260, y: 180 }
+    }, { selectedNodeId: 'n4' }), { coalesceKey: 'drag:n4', retainSelection: 'n4' });
+    h.seal();
+    const undone = h.undo();
+    assert.equal(undone.nodes.n4.x, 80);
+    assert.equal(undone.selectedNodeId, 'n4');
+    const redone = h.redo();
+    assert.equal(redone.nodes.n4.x, 260);
+    assert.equal(redone.selectedNodeId, 'n4');
+});
+
+test('a press that does not move the node does not rewrite history', () => {
+    const h = history.createHistory();
+    h.reset(snap({ a: { id: 'a', x: 10, y: 10 } }, { selectedNodeId: 'root' }));
+    const result = h.commit(snap({ a: { id: 'a', x: 10, y: 10 } }, { selectedNodeId: 'a' }), {
+        coalesceKey: 'drag:a',
+        retainSelection: 'a'
+    });
+    assert.equal(result.reason, 'unchanged');
+    assert.equal(h.canUndo(), false);
+    assert.equal(h.present().selectedNodeId, 'root');
+});
+
+test('toast undo runs on pointerdown and a following click does not undo twice', () => {
+    let runs = 0;
+    const action = history.createToastAction(() => { runs += 1; });
+    const stopped = [];
+    const event = (type) => ({
+        type,
+        preventDefault() { stopped.push(type); },
+        stopPropagation() { stopped.push('stop-' + type); }
+    });
+    assert.equal(action.handle(event('pointerdown')), true);
+    assert.equal(runs, 1);
+    assert.equal(action.handle(event('click')), false);
+    assert.equal(runs, 1);
+    assert.ok(stopped.includes('pointerdown'));
+    assert.ok(stopped.includes('stop-pointerdown'));
+    const keyboard = history.createToastAction(() => { runs += 1; });
+    assert.equal(keyboard.handle(event('click')), true);
+    assert.equal(runs, 2);
+    assert.equal(action.handle(event('mousedown')), false);
+});
+
+test('a side effect after redo does not swallow the next undo', () => {
+    const h = history.createHistory();
+    h.reset(snap({ a: { id: 'a', text: 'one' } }));
+    h.commit(snap({ a: { id: 'a', text: 'two' } }));
+    h.commit(snap({ a: { id: 'a', text: 'three' } }));
+    assert.equal(h.undo().nodes.a.text, 'two');
+    const release = h.suppressEdits();
+    assert.equal(h.redo().nodes.a.text, 'three');
+    const side = h.commit(snap({ a: { id: 'a', text: 'three', noise: 1 } }));
+    assert.equal(side.reason, 'suppressed');
+    assert.equal(h.present().nodes.a.text, 'three');
+    assert.equal(h.present().nodes.a.noise, undefined);
+    release();
+    release();
+    assert.equal(h.undo().nodes.a.text, 'two');
+    assert.equal(h.canRedo(), true);
+});
+
+test('stale editing flags do not block undo once focus has left the editor', () => {
+    const stale = history.reconcileEditingFlags({ tagName: 'BODY' }, {
+        inlineEditing: true,
+        editingDecoration: true
+    });
+    assert.equal(stale.inlineEditing, false);
+    assert.equal(stale.editingDecoration, false);
+    const typing = history.reconcileEditingFlags({ tagName: 'INPUT' }, { inlineEditing: true });
+    assert.equal(typing.inlineEditing, true);
+    const deco = history.reconcileEditingFlags(
+        { tagName: 'DIV', isContentEditable: true },
+        { editingDecoration: true }
+    );
+    assert.equal(deco.editingDecoration, true);
+    assert.equal(history.shouldBlurAfterHistoryNav({ tagName: 'INPUT' }), true);
+    assert.equal(history.shouldBlurAfterHistoryNav({
+        tagName: 'BUTTON',
+        closest(sel) { return sel.indexOf('data-redo-btn') !== -1; }
+    }), true);
+    assert.equal(history.shouldBlurAfterHistoryNav({
+        tagName: 'DIV',
+        closest() { return null; }
+    }), false);
+    const undo = { key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false };
+    assert.equal(history.shouldHandleUndoShortcut(undo, {
+        target: { tagName: 'BODY' },
+        inlineEditing: false,
+        editingDecoration: false
+    }).handle, true);
 });

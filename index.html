@@ -2464,12 +2464,13 @@
             if (!container) return;
 
             const toast = document.createElement('div');
-            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-[-10px] opacity-0 ${
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur text-xs sm:text-sm font-medium ${
                 type === 'success' ? 'bg-white/95 text-emerald-900 border-emerald-200' :
                 type === 'error' ? 'bg-white/95 text-red-900 border-red-200' :
                 type === 'warning' ? 'bg-white/95 text-amber-900 border-amber-200' :
                 'bg-white/95 text-slate-800 border-slate-200'
             }`;
+            toast.style.pointerEvents = 'auto';
 
             const iconMap = {
                 success: '✅',
@@ -2492,13 +2493,11 @@
                 sep.textContent = ' · ';
                 const actionBtn = document.createElement('button');
                 actionBtn.type = 'button';
-                actionBtn.className = 'font-bold text-blue-700 hover:text-blue-900 underline underline-offset-2';
+                actionBtn.setAttribute('data-toast-action', '1');
+                actionBtn.className = 'font-bold text-blue-700 hover:text-blue-900 underline underline-offset-2 px-1.5 py-1 -my-1 rounded-md cursor-pointer';
+                actionBtn.style.touchAction = 'manipulation';
+                actionBtn.style.pointerEvents = 'auto';
                 actionBtn.textContent = action.label;
-                actionBtn.onclick = (ev) => {
-                    ev.stopPropagation();
-                    if (typeof action.onClick === 'function') action.onClick();
-                    toast.remove();
-                };
                 textSpan.appendChild(sep);
                 textSpan.appendChild(actionBtn);
             }
@@ -2506,16 +2505,65 @@
             toast.appendChild(iconSpan);
             toast.appendChild(textSpan);
 
-            container.appendChild(toast);
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
-                toast.classList.add('translate-y-0', 'opacity-100');
+            let dismissed = false;
+            let hideTimer = null;
+            let removeTimer = null;
+            function dismissToast() {
+                if (dismissed) return;
+                dismissed = true;
+                clearTimeout(hideTimer);
+                clearTimeout(removeTimer);
+                toast.style.pointerEvents = 'none';
+                toast.style.opacity = '0';
+                removeTimer = setTimeout(() => toast.remove(), 180);
+            }
+            function removeToastNow() {
+                dismissed = true;
+                clearTimeout(hideTimer);
+                clearTimeout(removeTimer);
+                toast.remove();
+            }
+
+            const runAction = () => {
+                if (action && typeof action.onClick === 'function') action.onClick();
+            };
+            const controller = (typeof MindmapHistory !== 'undefined' && MindmapHistory.createToastAction)
+                ? MindmapHistory.createToastAction(runAction)
+                : null;
+            let acted = false;
+            const activate = (ev) => {
+                const hit = ev.target && ev.target.closest && ev.target.closest('[data-toast-action]');
+                if (!hit) {
+                    ev.stopPropagation();
+                    return;
+                }
+                if (controller) {
+                    if (controller.handle(ev)) acted = true;
+                    if (acted && ev.type === 'click') removeToastNow();
+                    return;
+                }
+                ev.preventDefault();
+                ev.stopPropagation();
+                if (!acted) {
+                    acted = true;
+                    runAction();
+                }
+                if (ev.type === 'click') removeToastNow();
+            };
+            // The action runs on pointerdown so a moving toast, or a click that
+            // lands on the canvas, cannot drop it. The rest of the press is
+            // stopped so the canvas never treats it as a pan or a selection.
+            // A drag that happens to end on the toast still commits.
+            ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach((type) => {
+                toast.addEventListener(type, (ev) => {
+                    if (dragInfo || decDragInfo || resizeInfo || arrowDrawStart || arrowHandleDragInfo) return;
+                    if (type === 'pointerdown' || type === 'click') activate(ev);
+                    else ev.stopPropagation();
+                });
             });
 
-            setTimeout(() => {
-                toast.classList.add('translate-y-[-10px]', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
+            container.appendChild(toast);
+            hideTimer = setTimeout(dismissToast, duration);
         }
 
         function showUiDialog({
@@ -3569,7 +3617,7 @@
         }
 
         function triggerAutoSave(options) {
-            noteMapHistory(options && options.coalesceKey ? options.coalesceKey : null);
+            noteMapHistory(options || null);
             const keepStarter = !!(options && options.keepStarter);
             if (!keepStarter) {
                 const starterMeta = getCurrentProjectMeta();
@@ -3704,14 +3752,16 @@
             });
         }
 
-        function noteMapHistory(coalesceKey) {
+        function noteMapHistory(options) {
             if (!mapHistory || typeof MindmapHistory === 'undefined') return;
+            const opts = (options && typeof options === 'object') ? options : { coalesceKey: options || null };
             try {
                 MindmapHistory.recordMapEdit(mapHistory, captureHistorySnapshot(), {
                     applying: historyApplying,
                     suspended: historySuspended,
                     ready: historyReady,
-                    coalesceKey: coalesceKey || null
+                    coalesceKey: opts.coalesceKey || null,
+                    retainSelection: opts.retainSelection || null
                 });
             } catch (err) {
                 console.warn('History record skipped:', err);
@@ -3758,18 +3808,52 @@
         function readHistoryViewport() {
             const frame = (typeof fitContentPadding === 'function')
                 ? fitContentPadding()
-                : { cW: window.innerWidth || 1000, cH: window.innerHeight || 700, pad: 24, topInset: 24, bottomInset: 24 };
+                : { cW: window.innerWidth || 1000, cH: window.innerHeight || 700, pad: 24, topInset: 24, bottomInset: 24, view: null };
+            const view = frame.view;
+            const overlays = [];
+            if (view) {
+                ['floating-canvas-design-toolbar', 'canvas-instructions-card', 'btn-show-canvas-guide'].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (!el || el.classList.contains('hidden')) return;
+                    const style = window.getComputedStyle(el);
+                    if (style.display === 'none' || style.visibility === 'hidden') return;
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width < 2 || rect.height < 2) return;
+                    overlays.push({
+                        left: rect.left - view.left,
+                        top: rect.top - view.top,
+                        right: rect.right - view.left,
+                        bottom: rect.bottom - view.top
+                    });
+                });
+            }
+            const insets = (typeof MindmapHistory !== 'undefined' && MindmapHistory.overlayInsets)
+                ? MindmapHistory.overlayInsets(frame.cW, frame.cH, {
+                    padLeft: frame.pad,
+                    padRight: frame.pad,
+                    padTop: frame.topInset,
+                    padBottom: frame.bottomInset
+                }, overlays)
+                : { padLeft: frame.pad, padRight: frame.pad, padTop: frame.topInset, padBottom: frame.bottomInset };
             return {
                 panX,
                 panY,
                 zoom,
                 viewWidth: frame.cW,
                 viewHeight: frame.cH,
-                padLeft: frame.pad,
-                padRight: frame.pad,
-                padTop: frame.topInset,
-                padBottom: frame.bottomInset
+                padLeft: insets.padLeft,
+                padRight: insets.padRight,
+                padTop: insets.padTop,
+                padBottom: insets.padBottom
             };
+        }
+
+        function blurHistoryFocus() {
+            const active = document.activeElement;
+            if (!active || active === document.body || typeof MindmapHistory === 'undefined') return;
+            if (MindmapHistory.shouldBlurAfterHistoryNav(active) && typeof active.blur === 'function') {
+                active.blur();
+            }
         }
 
         function paintRestoredMap() {
@@ -3785,7 +3869,10 @@
 
         function performHistoryNav(direction) {
             if (!mapHistory || historyApplying || typeof MindmapHistory === 'undefined') return;
+            const release = mapHistory.suppressEdits();
             historyApplying = true;
+            isInlineEditing = false;
+            editingDecorationId = null;
             sealHistoryCoalesce();
             try {
                 MindmapHistory.navigateHistory(mapHistory, direction, {
@@ -3804,6 +3891,15 @@
             } finally {
                 historyApplying = false;
                 updateUndoRedoButtons();
+                blurHistoryFocus();
+                // Keep the lock through the rest of this turn so a blur or a
+                // focus move off a now-disabled redo button cannot commit a
+                // lookalike step before the next Ctrl+Z.
+                setTimeout(() => {
+                    blurHistoryFocus();
+                    release();
+                    updateUndoRedoButtons();
+                }, 0);
             }
         }
 
@@ -9692,7 +9788,7 @@
 
         function isCanvasChromeTarget(target) {
             if (!target || !target.closest) return false;
-            return !!target.closest('#floating-canvas-design-toolbar, .floating-canvas-toolbar, #canvas-instructions-card, #btn-show-canvas-guide, #arrow-draw-banner, input, textarea, [contenteditable="true"]');
+            return !!target.closest('#floating-canvas-design-toolbar, .floating-canvas-toolbar, #canvas-instructions-card, #btn-show-canvas-guide, #arrow-draw-banner, #omni-toast-container, input, textarea, [contenteditable="true"]');
         }
 
         canvasGestureLayer.addEventListener('wheel', e => {
@@ -10069,6 +10165,7 @@
         });
 
         window.addEventListener('mouseup', e => {
+            if (e.target && e.target.closest && e.target.closest('#omni-toast-container') && !dragInfo && !decDragInfo && !resizeInfo && !arrowDrawStart && !arrowHandleDragInfo) return;
             // A press that slides off the Render button must not keep a stale editor snapshot.
             if (!(e.target && e.target.closest && e.target.closest('#btn_run_adv'))) {
                 advCodeArmedValue = null;
@@ -10120,7 +10217,7 @@
             if (dragInfo) {
                 const moved = Math.hypot((e.clientX || 0) - (dragInfo.startX || 0), (e.clientY || 0) - (dragInfo.startY || 0)) > 4;
                 const dragKey = dragInfo.nodeId ? ('drag:' + dragInfo.nodeId) : null;
-                triggerAutoSave(dragKey ? { coalesceKey: dragKey } : undefined);
+                triggerAutoSave(dragKey ? { coalesceKey: dragKey, retainSelection: moved ? dragInfo.nodeId : null } : undefined);
                 if (dragKey && mapHistory) mapHistory.seal();
                 if (moved) noteControlsGuideUsed();
             }
@@ -10598,7 +10695,7 @@
                     }
                 } else if (touchHasMoved) {
                     const dragKey = dragInfo.nodeId ? ('drag:' + dragInfo.nodeId) : null;
-                    triggerAutoSave(dragKey ? { coalesceKey: dragKey } : undefined);
+                    triggerAutoSave(dragKey ? { coalesceKey: dragKey, retainSelection: dragInfo.nodeId } : undefined);
                     if (dragKey && mapHistory) mapHistory.seal();
                     syncFromMap();
                     noteControlsGuideUsed();
@@ -11602,6 +11699,14 @@
                     toggleProjectManagerModal(false);
                     return;
                 }
+            }
+            if (typeof MindmapHistory !== 'undefined' && MindmapHistory.reconcileEditingFlags) {
+                const editing = MindmapHistory.reconcileEditingFlags(e.target, {
+                    inlineEditing: isInlineEditing,
+                    editingDecoration: !!editingDecorationId
+                });
+                if (isInlineEditing && !editing.inlineEditing) isInlineEditing = false;
+                if (editingDecorationId && !editing.editingDecoration) editingDecorationId = null;
             }
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingDecorationId) return;
 
