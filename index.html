@@ -824,6 +824,8 @@
             <button type="button" onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95 shrink-0" title="Add Child to Selected Node (Tab)">+ Child</button>
             <button type="button" onclick="addSibling()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium shadow-xs transition-transform active:scale-95 shrink-0" title="Add Sibling to Selected Node (Enter)">+ Sibling</button>
             <button type="button" onclick="deleteNode()" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-transform active:scale-95 shrink-0" title="Delete Selected Node (Del)">Delete</button>
+            <button type="button" data-undo-btn id="btn-undo" onclick="undoMapEdit()" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:pointer-events-none text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold transition-transform active:scale-95 shrink-0" title="Undo (Ctrl/Cmd+Z)">↩ Undo</button>
+            <button type="button" data-redo-btn id="btn-redo" onclick="redoMapEdit()" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:pointer-events-none text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold transition-transform active:scale-95 shrink-0" title="Redo (Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y)">↪ Redo</button>
         </div>
 
         <!-- DIVIDER -->
@@ -859,6 +861,13 @@
         <div class="relative shrink-0 md:hidden">
             <button type="button" onclick="toggleMobileOverflowMenu()" id="btn-mobile-overflow" class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-2 border border-slate-200 shrink-0" title="More Actions">⋮</button>
             <div id="mobile-overflow-menu" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl p-1.5 min-w-[170px] z-50 text-xs font-medium" onclick="toggleMobileOverflowMenu(false)">
+                <button type="button" data-undo-btn onclick="undoMapEdit()" disabled class="text-left px-3 py-2 hover:bg-slate-50 disabled:opacity-40 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>↩</span> Undo
+                </button>
+                <button type="button" data-redo-btn onclick="redoMapEdit()" disabled class="text-left px-3 py-2 hover:bg-slate-50 disabled:opacity-40 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>↪</span> Redo
+                </button>
+                <div class="h-px bg-slate-100 my-1"></div>
                 <button type="button" onclick="toggleAllNodesWrap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
                     <span>↩️</span> Toggle Wrap All
                 </button>
@@ -986,7 +995,7 @@
                 <!-- Node Text -->
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Node Text</label>
-                    <input type="text" id="prop-text" oninput="updateNodeText(this.value)" placeholder="Select a node..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                    <input type="text" id="prop-text" oninput="updateNodeText(this.value)" onblur="sealHistoryCoalesce()" placeholder="Select a node..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
                 </div>
 
                 <!-- Background Color -->
@@ -1224,7 +1233,7 @@
                     <button onclick="syncFromMap(true)" class="text-xs text-blue-600 hover:underline shrink-0">Sync from visual</button>
                 </div>
                 <p class="text-[0.68rem] text-slate-400 mb-2 leading-tight">Controls bubble hierarchy, locations <code>@(x, y)</code>, and design elements. <span class="text-indigo-600 font-semibold">Auto-renders on paste / Ctrl+Enter</span></p>
-                <textarea id="advcode_input" oninput="scheduleLiveAdvRender()" onpaste="scheduleLiveAdvRender(true)" class="flex-1 w-full border rounded-xl p-3 text-xs font-mono focus:outline-indigo-500 resize-none mb-3 bg-slate-50 leading-relaxed text-slate-700" placeholder="# Root Idea @ (200, 250)&#10;  - Branch A @ (500, 180) [Tag]&#10;    - Detail @ (800, 180)&#10;  - Branch B @ (500, 320)&#10;&#10;# Second Root @ (200, 550)&#10;  - Sub-concept @ (500, 550)&#10;&#10;---&#10;# Design Elements&#10;@zone &quot;Grouping Zone&quot; @ (150, 120, 380, 250) {layer: behind, z: 1, bg: rgba(239, 246, 255, 0.45), border: dashed #3b82f6}&#10;@sticky &quot;📌 Guide Note&quot; @ (550, 450, 220, 180) {layer: front, z: 1, bg: #fef08a}&#10;@card &quot;Section Card&quot; @ (600, 100, 320, 200) {layer: behind, z: 2}"></textarea>
+                <textarea id="advcode_input" oninput="scheduleLiveAdvRender()" onpaste="scheduleLiveAdvRender(true)" onblur="scheduleAdvCodeHistorySeal()" class="flex-1 w-full border rounded-xl p-3 text-xs font-mono focus:outline-indigo-500 resize-none mb-3 bg-slate-50 leading-relaxed text-slate-700" placeholder="# Root Idea @ (200, 250)&#10;  - Branch A @ (500, 180) [Tag]&#10;    - Detail @ (800, 180)&#10;  - Branch B @ (500, 320)&#10;&#10;# Second Root @ (200, 550)&#10;  - Sub-concept @ (500, 550)&#10;&#10;---&#10;# Design Elements&#10;@zone &quot;Grouping Zone&quot; @ (150, 120, 380, 250) {layer: behind, z: 1, bg: rgba(239, 246, 255, 0.45), border: dashed #3b82f6}&#10;@sticky &quot;📌 Guide Note&quot; @ (550, 450, 220, 180) {layer: front, z: 1, bg: #fef08a}&#10;@card &quot;Section Card&quot; @ (600, 100, 320, 200) {layer: behind, z: 2}"></textarea>
                 <button type="button" onpointerdown="armAdvCodeRender(event)" onclick="runAdvCodeFromButton()" id="btn_run_adv" class="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-2.5 rounded-full font-bold text-sm shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5">
                     <span>▶</span> Render Advanced Code <span class="text-[0.65rem] opacity-75 font-normal">(Ctrl+Enter)</span>
                 </button>
@@ -1287,6 +1296,12 @@
                     <!-- Fit View Button -->
                     <button type="button" onpointerdown="rememberToolbarScroll()" onmousedown="keepToolbarScroll(event)" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
                         <span>🎯</span> Fit
+                    </button>
+                    <button type="button" data-undo-btn id="btn-undo-design" onclick="undoMapEdit()" disabled class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none text-slate-700 font-semibold transition-colors shrink-0" title="Undo (Ctrl/Cmd+Z)">
+                        <span>↩</span> <span class="hidden sm:inline">Undo</span>
+                    </button>
+                    <button type="button" data-redo-btn id="btn-redo-design" onclick="redoMapEdit()" disabled class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none text-slate-700 font-semibold transition-colors shrink-0" title="Redo (Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y)">
+                        <span>↪</span> <span class="hidden sm:inline">Redo</span>
                     </button>
                     <button type="button" onclick="zoomBy(1/1.1)" class="px-2 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-bold transition-colors shrink-0" title="Zoom out (viewport center)">−</button>
                     <button type="button" onclick="zoomTo(1)" class="zoom-readout px-2 py-1 rounded-full hover:bg-slate-100 text-slate-600 font-semibold tabular-nums transition-colors shrink-0" title="Reset zoom to 100% (viewport center)">100%</button>
@@ -2437,13 +2452,14 @@
     <!-- ======================================================== -->
     <div id="omni-toast-container" class="fixed top-5 right-5 z-[110] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
 
+    <script src="js/mindmap-history.js"></script>
     <script>
         // ========================================================
         // MODERN UI DIALOG SYSTEM (ALERT, CONFIRM, PROMPT, TOAST)
         // ========================================================
         let omniDialogActiveResolve = null;
 
-        function showUiToast(message, type = 'info', duration = 3200) {
+        function showUiToast(message, type = 'info', duration = 3200, action = null) {
             const container = document.getElementById('omni-toast-container');
             if (!container) return;
 
@@ -2470,6 +2486,22 @@
             const textSpan = document.createElement('span');
             textSpan.className = 'flex-1 leading-snug';
             textSpan.textContent = message;
+            if (action && action.label) {
+                const sep = document.createElement('span');
+                sep.className = 'text-slate-400';
+                sep.textContent = ' · ';
+                const actionBtn = document.createElement('button');
+                actionBtn.type = 'button';
+                actionBtn.className = 'font-bold text-blue-700 hover:text-blue-900 underline underline-offset-2';
+                actionBtn.textContent = action.label;
+                actionBtn.onclick = (ev) => {
+                    ev.stopPropagation();
+                    if (typeof action.onClick === 'function') action.onClick();
+                    toast.remove();
+                };
+                textSpan.appendChild(sep);
+                textSpan.appendChild(actionBtn);
+            }
 
             toast.appendChild(iconSpan);
             toast.appendChild(textSpan);
@@ -2755,6 +2787,11 @@
         let zoom = 1;
         let isDraggingCanvas = false;
         let dragInfo = null;
+        let mapHistory = (typeof MindmapHistory !== 'undefined') ? MindmapHistory.createHistory({ limit: 80 }) : null;
+        let historyReady = false;
+        let historyApplying = false;
+        let historySuspended = false;
+        let advCodeHistoryOpen = false;
 
         // Canvas Background & Theme State
         let canvasBgColor = '#f8fafc';
@@ -3532,6 +3569,7 @@
         }
 
         function triggerAutoSave(options) {
+            noteMapHistory(options && options.coalesceKey ? options.coalesceKey : null);
             const keepStarter = !!(options && options.keepStarter);
             if (!keepStarter) {
                 const starterMeta = getCurrentProjectMeta();
@@ -3639,6 +3677,184 @@
             }, 300);
         }
 
+        function captureHistorySnapshot() {
+            return {
+                nodes: cleanNodesForStorage(nodes),
+                canvasDecorations: cleanDecorationsForStorage(canvasDecorations, false),
+                canvasBgColor,
+                canvasGridStyle,
+                selectedNodeId: selectedNodeId || null,
+                selectedDecorationId: selectedDecorationId || null
+            };
+        }
+
+        function sealHistoryCoalesce() {
+            advCodeHistoryOpen = false;
+            if (mapHistory) mapHistory.seal();
+        }
+
+        function updateUndoRedoButtons() {
+            const canUndo = !!(mapHistory && historyReady && mapHistory.canUndo());
+            const canRedo = !!(mapHistory && historyReady && mapHistory.canRedo());
+            document.querySelectorAll('[data-undo-btn]').forEach((btn) => {
+                btn.disabled = !canUndo;
+            });
+            document.querySelectorAll('[data-redo-btn]').forEach((btn) => {
+                btn.disabled = !canRedo;
+            });
+        }
+
+        function noteMapHistory(coalesceKey) {
+            if (!mapHistory || typeof MindmapHistory === 'undefined') return;
+            try {
+                MindmapHistory.recordMapEdit(mapHistory, captureHistorySnapshot(), {
+                    applying: historyApplying,
+                    suspended: historySuspended,
+                    ready: historyReady,
+                    coalesceKey: coalesceKey || null
+                });
+            } catch (err) {
+                console.warn('History record skipped:', err);
+            }
+            updateUndoRedoButtons();
+        }
+
+        function resetMapHistory() {
+            historySuspended = false;
+            historyReady = true;
+            if (mapHistory) {
+                try {
+                    mapHistory.reset(captureHistorySnapshot());
+                } catch (err) {
+                    console.warn('History reset skipped:', err);
+                }
+            }
+            updateUndoRedoButtons();
+        }
+
+        function rebaseMapHistory() {
+            if (!mapHistory || !historyReady || historyApplying) return;
+            try {
+                mapHistory.rebase(captureHistorySnapshot());
+            } catch (err) {
+                console.warn('History rebase skipped:', err);
+            }
+            updateUndoRedoButtons();
+        }
+
+        function restoreHistorySnapshot(snap) {
+            nodes = JSON.parse(JSON.stringify((snap && snap.nodes) || {}));
+            canvasDecorations = JSON.parse(JSON.stringify((snap && snap.canvasDecorations) || {}));
+            canvasBgColor = (snap && snap.canvasBgColor) || '#f8fafc';
+            canvasGridStyle = (snap && snap.canvasGridStyle) || 'dots';
+            selectedNodeId = (snap && snap.selectedNodeId && nodes[snap.selectedNodeId])
+                ? snap.selectedNodeId
+                : (Object.keys(nodes).find((id) => nodes[id] && nodes[id].parentId == null) || Object.keys(nodes)[0] || null);
+            selectedDecorationId = (snap && snap.selectedDecorationId && canvasDecorations[snap.selectedDecorationId])
+                ? snap.selectedDecorationId
+                : null;
+        }
+
+        function readHistoryViewport() {
+            const frame = (typeof fitContentPadding === 'function')
+                ? fitContentPadding()
+                : { cW: window.innerWidth || 1000, cH: window.innerHeight || 700, pad: 24, topInset: 24, bottomInset: 24 };
+            return {
+                panX,
+                panY,
+                zoom,
+                viewWidth: frame.cW,
+                viewHeight: frame.cH,
+                padLeft: frame.pad,
+                padRight: frame.pad,
+                padTop: frame.topInset,
+                padBottom: frame.bottomInset
+            };
+        }
+
+        function paintRestoredMap() {
+            setCanvasBg(canvasBgColor, canvasGridStyle, true);
+            renderTree();
+            renderDecorations();
+            if (typeof updateBoundArrows === 'function') updateBoundArrows();
+            if (typeof applyDesignLayerSettings === 'function') applyDesignLayerSettings();
+            syncFromMap();
+            updatePropertiesPanel();
+            applyTransform();
+        }
+
+        function performHistoryNav(direction) {
+            if (!mapHistory || historyApplying || typeof MindmapHistory === 'undefined') return;
+            historyApplying = true;
+            sealHistoryCoalesce();
+            try {
+                MindmapHistory.navigateHistory(mapHistory, direction, {
+                    apply(snap) {
+                        restoreHistorySnapshot(snap);
+                        paintRestoredMap();
+                    },
+                    viewport() { return readHistoryViewport(); },
+                    applyPan(pan) {
+                        panX = pan.panX;
+                        panY = pan.panY;
+                        applyTransform();
+                    },
+                    save() { triggerAutoSave(); }
+                });
+            } finally {
+                historyApplying = false;
+                updateUndoRedoButtons();
+            }
+        }
+
+        function undoMapEdit() {
+            performHistoryNav('undo');
+        }
+
+        function redoMapEdit() {
+            performHistoryNav('redo');
+        }
+
+        function showBranchDeletedToast() {
+            showUiToast('Branch deleted', 'info', 5200, {
+                label: 'Undo',
+                onClick: () => undoMapEdit()
+            });
+        }
+
+        function isUndoBlockedByOverlay() {
+            const ids = [
+                'omni-dialog-overlay',
+                'project-manager-modal',
+                'export-image-modal',
+                'cloud-config-modal',
+                'lifetime-pro-modal',
+                'quota-exceeded-modal',
+                'share-team-modal',
+                'app-homepage-view'
+            ];
+            return ids.some((id) => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden');
+            });
+        }
+
+        function scheduleAdvCodeHistorySeal() {
+            setTimeout(() => {
+                if (!advRenderDebounceTimer && advCodeHistoryOpen) {
+                    advCodeHistoryOpen = false;
+                    if (mapHistory) mapHistory.seal();
+                }
+            }, 700);
+        }
+
+        window.addEventListener('pointerup', () => {
+            if (!mapHistory || typeof MindmapHistory === 'undefined') return;
+            if (MindmapHistory.shouldSealCoalesceOnPointerUp(mapHistory.getCoalesceKey())) {
+                mapHistory.seal();
+            }
+        });
+
         function loadFromStorage(projId = currentProjectId) {
             try {
                 loadAssetsFromStorage();
@@ -3744,6 +3960,7 @@
                     renderTree();
                     if (typeof syncFromMap === 'function') syncFromMap();
                     if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
+                    if (typeof rebaseMapHistory === 'function') rebaseMapHistory();
                 }
             } catch (e) {
                 console.warn('Could not hydrate from IndexedDB:', e);
@@ -5539,6 +5756,7 @@
 
                 // Load map canvas data
                 if (docData.data) {
+                    historySuspended = true;
                     isApplyingRemoteUpdate = true;
                     nodes = docData.data.nodes || {};
                     canvasDecorations = docData.data.canvasDecorations || {};
@@ -5561,6 +5779,7 @@
                     updatePropertiesPanel();
                     fitView();
                     isApplyingRemoteUpdate = false;
+                    resetMapHistory();
                 }
 
                 // Update active title in header
@@ -5629,6 +5848,7 @@
                     renderDecorations();
                     syncFromMap();
                     isApplyingRemoteUpdate = false;
+                    if (typeof rebaseMapHistory === 'function') rebaseMapHistory();
                 }
             }, (err) => {
                 console.warn('Live subscription error:', err);
@@ -6035,6 +6255,7 @@
             const sourceMeta = projectRegistry.projects.find(p => p.id === projId);
             if (!sourceMeta) return;
 
+            historySuspended = true;
             saveCurrentProjectImmediate();
 
             let sourceData = null;
@@ -6085,6 +6306,7 @@
             renderProjectList();
             fitView();
             setSaveStatus('saved', `✓ Duplicated as "${dupName}"`);
+            resetMapHistory();
         }
 
         async function deleteProject(projId) {
@@ -6155,6 +6377,7 @@
         }
 
         function createNewProject(name, initialNodes = null, initialDecorations = null, pX = null, pY = null, zVal = null, bgCol = '#f8fafc', gridSt = 'dots') {
+            historySuspended = true;
             saveCurrentProjectImmediate();
 
             // Clear any active shared collab listener
@@ -6226,6 +6449,7 @@
             updateProjectHeaderUI();
             fitView();
             setSaveStatus('saved', `✓ Created "${finalName}"`);
+            resetMapHistory();
         }
 
         function switchProject(targetId) {
@@ -6234,6 +6458,7 @@
                 return;
             }
 
+            historySuspended = true;
             saveCurrentProjectImmediate();
 
             // Clear any active shared collab listener
@@ -6285,6 +6510,7 @@
             const displayName = curMeta ? curMeta.name : 'map';
             setSaveStatus('saved', `✓ Switched to "${displayName}"`);
             toggleProjectManagerModal(false);
+            resetMapHistory();
         }
 
         // ==========================================
@@ -7018,6 +7244,11 @@
                 setSaveStatus('saved', `✓ Loaded "${curMeta ? curMeta.name : 'map'}"`);
             } else if (!isSharedUrl) {
                 triggerAutoSave({ keepStarter: true });
+            }
+            if (forceDefault && historyReady) {
+                updateUndoRedoButtons();
+            } else {
+                resetMapHistory();
             }
         }
 
@@ -8011,7 +8242,7 @@
             }
 
             if (!skipSave) {
-                triggerAutoSave();
+                triggerAutoSave({ coalesceKey: 'canvas-bg' });
             }
             if (typeof syncGuideDock === 'function') syncGuideDock();
         }
@@ -8498,7 +8729,7 @@
             canvasDecorations[id].opacity = parseFloat(val);
             const el = document.querySelector(`.canvas-decoration[data-id="${id}"]`);
             if (el) el.style.opacity = val;
-            triggerAutoSave();
+            triggerAutoSave({ coalesceKey: 'opacity:' + id });
         }
 
         function cycleDecorationBorder(id) {
@@ -9888,7 +10119,9 @@
             }
             if (dragInfo) {
                 const moved = Math.hypot((e.clientX || 0) - (dragInfo.startX || 0), (e.clientY || 0) - (dragInfo.startY || 0)) > 4;
-                triggerAutoSave();
+                const dragKey = dragInfo.nodeId ? ('drag:' + dragInfo.nodeId) : null;
+                triggerAutoSave(dragKey ? { coalesceKey: dragKey } : undefined);
+                if (dragKey && mapHistory) mapHistory.seal();
                 if (moved) noteControlsGuideUsed();
             }
             dragInfo = null;
@@ -10364,7 +10597,9 @@
                         lastTouchTapNodeId = dragInfo.nodeId;
                     }
                 } else if (touchHasMoved) {
-                    triggerAutoSave();
+                    const dragKey = dragInfo.nodeId ? ('drag:' + dragInfo.nodeId) : null;
+                    triggerAutoSave(dragKey ? { coalesceKey: dragKey } : undefined);
+                    if (dragKey && mapHistory) mapHistory.seal();
                     syncFromMap();
                     noteControlsGuideUsed();
                 }
@@ -10887,31 +11122,14 @@
             return autoLayoutTreeRight(rootId, startX, startY);
         }
 
-        // 4-Way Orientation Detection
+        // 4-Way Orientation Detection.
+        // Siblings in a tree share a row, so an average x-offset (or a selected
+        // child used as the origin) used to highlight Right after a Tree layout.
         function getBranchDirection(nodeId) {
-            const target = nodes[nodeId];
-            if (!target) return 'right';
-            let children = Object.values(nodes).filter(n => n.parentId === target.id);
-            if (children.length === 0 && target.parentId && nodes[target.parentId]) {
-                const parent = nodes[target.parentId];
-                children = Object.values(nodes).filter(n => n.parentId === parent.id);
-                if (children.length === 0) return 'right';
+            if (typeof MindmapHistory !== 'undefined') {
+                return MindmapHistory.inferBranchDirection(nodes, nodeId);
             }
-            if (children.length === 0) return 'right';
-
-            let totalDx = 0, totalDy = 0;
-            children.forEach(c => {
-                totalDx += (c.x - target.x);
-                totalDy += (c.y - target.y);
-            });
-            const avgDx = totalDx / children.length;
-            const avgDy = totalDy / children.length;
-
-            if (Math.abs(avgDx) >= Math.abs(avgDy)) {
-                return avgDx >= 0 ? 'right' : 'left';
-            } else {
-                return avgDy >= 0 ? 'down' : 'up';
-            }
+            return 'right';
         }
 
         // Transpose a branch to a specific direction or cycle between counterparts
@@ -11351,26 +11569,8 @@
                 if (roots.length <= 1) return alert("Cannot delete the last root.");
             }
 
-            const descendants = getDescendants(selectedNodeId);
-            const hiddenCount = descendants.filter(dId => isNodeConcealed(dId)).length;
-            if ((selected.collapsed && descendants.length > 0) || hiddenCount > 0) {
-                if (deleteConfirmBusy) return;
-                deleteConfirmBusy = true;
-                const noun = (selected.collapsed ? descendants.length : hiddenCount);
-                let ok = false;
-                try {
-                    ok = await showConfirm({
-                        title: 'Delete collapsed branch?',
-                        message: `“${selected.text}” will also remove ${noun} hidden node${noun === 1 ? '' : 's'}.`,
-                        confirmText: 'Delete branch',
-                        cancelText: 'Cancel',
-                        isDanger: true
-                    });
-                } finally {
-                    deleteConfirmBusy = false;
-                }
-                if (!ok || !nodes[selectedNodeId]) return;
-            }
+            const toastBranch = typeof MindmapHistory !== 'undefined'
+                && MindmapHistory.shouldToastBranchDelete(selected, nodes);
             const toRemove = getDescendants(selectedNodeId);
             toRemove.forEach(dId => delete nodes[dId]);
             const parentId = selected.parentId;
@@ -11382,6 +11582,7 @@
             renderTree();
             syncFromMap();
             triggerAutoSave();
+            if (toastBranch) showBranchDeletedToast();
         }
 
         // Keyboard shortcuts
@@ -11403,6 +11604,19 @@
                 }
             }
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingDecorationId) return;
+
+            if (!isUndoBlockedByOverlay() && typeof MindmapHistory !== 'undefined') {
+                const undoDecision = MindmapHistory.shouldHandleUndoShortcut(e, {
+                    inlineEditing: isInlineEditing,
+                    editingDecoration: !!editingDecorationId
+                });
+                if (undoDecision.handle) {
+                    e.preventDefault();
+                    if (undoDecision.command === 'undo') undoMapEdit();
+                    else redoMapEdit();
+                    return;
+                }
+            }
 
             if (isArrowDrawingMode) {
                 if (e.key === 'Escape') {
@@ -11479,7 +11693,7 @@
                 const isRoot = nodes[selectedNodeId].parentId === null;
                 labelEl.innerHTML = `${isRoot ? '🌟 ' : '○ '}<span class="font-semibold">${escapeHtml(value)}</span>`;
                 syncFromMap();
-                triggerAutoSave();
+                triggerAutoSave({ coalesceKey: 'text:' + selectedNodeId });
             }
         }
 
@@ -11523,7 +11737,7 @@
             document.getElementById('prop-font-size').value = sz;
             document.getElementById('prop-font-size-val').textContent = sz + 'px';
             renderTree();
-            triggerAutoSave();
+            triggerAutoSave({ coalesceKey: 'font:' + selectedNodeId });
         }
 
         // Toggle bold
@@ -12541,7 +12755,7 @@
             if (autoFit) {
                 fitView();
             }
-            triggerAutoSave();
+            triggerAutoSave(advCodeHistoryOpen ? { coalesceKey: 'adv-code' } : undefined);
             setSaveStatus('saved', '✓ Advanced Code Rendered');
             setAdvRenderHint('done');
         } catch (err) {
@@ -12668,6 +12882,7 @@
 
         // Live rendering & keyboard listener for Advanced Code
         function scheduleLiveAdvRender(immediate = false) {
+            advCodeHistoryOpen = true;
             advCodeDirty = true;
             if (immediate) advRenderWantsFit = true;
             if (advRenderDebounceTimer) {
