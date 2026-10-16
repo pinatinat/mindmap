@@ -659,6 +659,111 @@
             white-space: nowrap;
             pointer-events: auto;
         }
+
+        /* Old-domain move banner. Fixed above the homepage overlay. */
+        #move-domain-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 80;
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 8px 12px;
+            padding-top: max(8px, env(safe-area-inset-top));
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+        }
+        #move-domain-banner.is-open { display: block; }
+        #move-domain-banner .move-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        #move-domain-banner .is-hidden { display: none !important; }
+        #move-domain-banner p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.35;
+            flex: 1 1 220px;
+        }
+        #move-domain-banner a { color: #93c5fd; font-weight: 700; text-decoration: underline; }
+        #btn-move-maps,
+        #btn-move-maps-again {
+            appearance: none;
+            background: #2563eb;
+            color: #ffffff;
+            border: 0;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1.2;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+        #btn-move-maps:disabled,
+        #btn-move-maps-again:disabled { opacity: 0.65; cursor: default; }
+        #btn-move-maps-again {
+            padding: 2px 8px;
+            font-size: 11px;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        #btn-move-backup,
+        #btn-move-backup-again {
+            background: transparent;
+            border: 0;
+            color: #cbd5e1;
+            font-size: 12px;
+            line-height: 1.2;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 4px 2px;
+            flex: 0 0 auto;
+        }
+        #btn-move-backup-again {
+            font-size: 11px;
+            padding: 1px 2px;
+            white-space: nowrap;
+        }
+        #move-domain-banner.is-done {
+            padding-bottom: 6px;
+            padding-top: max(6px, env(safe-area-inset-top));
+        }
+        #move-domain-done {
+            align-items: center;
+        }
+        #move-domain-done .move-done-line {
+            flex: 1 1 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 8px;
+            line-height: 1.2;
+        }
+        #move-domain-done .move-done-text {
+            white-space: nowrap;
+        }
+        @media (max-width: 480px) {
+            #app-homepage-view > header { padding-left: 10px; padding-right: 10px; }
+            #app-homepage-view .home-auth-label,
+            #app-homepage-view .home-version-badge { display: none; }
+        }
+        #move-domain-status {
+            display: none;
+            flex-basis: 100%;
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.35;
+            color: #fde68a;
+        }
+        #move-domain-status.is-open { display: block; }
+        html.move-banner-open > body > header { margin-top: var(--move-banner-h, 56px); }
+        html.move-banner-open #app-homepage-view { top: var(--move-banner-h, 56px); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
@@ -719,6 +824,8 @@
             <button type="button" onclick="addChild()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-transform active:scale-95 shrink-0" title="Add Child to Selected Node (Tab)">+ Child</button>
             <button type="button" onclick="addSibling()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium shadow-xs transition-transform active:scale-95 shrink-0" title="Add Sibling to Selected Node (Enter)">+ Sibling</button>
             <button type="button" onclick="deleteNode()" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-transform active:scale-95 shrink-0" title="Delete Selected Node (Del)">Delete</button>
+            <button type="button" data-undo-btn id="btn-undo" onclick="undoMapEdit()" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:pointer-events-none text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold transition-transform active:scale-95 shrink-0" title="Undo (Ctrl/Cmd+Z)">↩ Undo</button>
+            <button type="button" data-redo-btn id="btn-redo" onclick="redoMapEdit()" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:pointer-events-none text-slate-700 px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold transition-transform active:scale-95 shrink-0" title="Redo (Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y)">↪ Redo</button>
         </div>
 
         <!-- DIVIDER -->
@@ -734,6 +841,9 @@
             <button type="button" onclick="exportJSON()" title="Export JSON file to your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">💾 JSON</button>
             <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
                 📂 Import <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+            </label>
+            <label title="Import an OmniMind maps backup" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
+                📥 Import maps <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
             </label>
             <button type="button" onclick="resetToDefault()" title="Reset map to default" class="text-slate-400 hover:text-red-500 p-1 rounded-full text-xs shrink-0">🔄</button>
         </div>
@@ -751,6 +861,13 @@
         <div class="relative shrink-0 md:hidden">
             <button type="button" onclick="toggleMobileOverflowMenu()" id="btn-mobile-overflow" class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-2 border border-slate-200 shrink-0" title="More Actions">⋮</button>
             <div id="mobile-overflow-menu" class="absolute right-0 top-full mt-1.5 hidden flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl p-1.5 min-w-[170px] z-50 text-xs font-medium" onclick="toggleMobileOverflowMenu(false)">
+                <button type="button" data-undo-btn onclick="undoMapEdit()" disabled class="text-left px-3 py-2 hover:bg-slate-50 disabled:opacity-40 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>↩</span> Undo
+                </button>
+                <button type="button" data-redo-btn onclick="redoMapEdit()" disabled class="text-left px-3 py-2 hover:bg-slate-50 disabled:opacity-40 text-slate-700 rounded-xl flex items-center gap-2">
+                    <span>↪</span> Redo
+                </button>
+                <div class="h-px bg-slate-100 my-1"></div>
                 <button type="button" onclick="toggleAllNodesWrap()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
                     <span>↩️</span> Toggle Wrap All
                 </button>
@@ -787,6 +904,9 @@
                 <label class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
                     <span>📂</span> Import JSON <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
                 </label>
+                <label onclick="event.stopPropagation()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
+                    <span>📥</span> Import maps <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
+                </label>
                 <div class="h-px bg-slate-100 my-1"></div>
                 <button type="button" onclick="resetToDefault()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
                     <span>🔄</span> Reset to Default
@@ -794,6 +914,23 @@
             </div>
         </div>
     </header>
+
+    <!-- Shown only on the old domain. Stays up after a move so maps can be sent again. -->
+    <div id="move-domain-banner" role="region" aria-label="Move your maps">
+        <div id="move-domain-offer" class="move-row">
+            <p>OmniMind has moved to <a href="https://www.omnimindmap.app">omnimindmap.app</a>. Bring your maps with you.</p>
+            <button type="button" id="btn-move-maps" data-move-maps onclick="startDomainMove()">Move my maps</button>
+            <a href="#" id="btn-move-backup" data-move-backup data-label="Download a backup" onclick="downloadMoveBackup(event)">Download a backup</a>
+        </div>
+        <div id="move-domain-done" class="move-row is-hidden">
+            <p class="move-done-line">
+                <span class="move-done-text">Moved ✓ <a href="https://www.omnimindmap.app">open omnimindmap.app</a></span>
+                <button type="button" id="btn-move-maps-again" data-move-maps onclick="startDomainMove()">Move again</button>
+                <a href="#" id="btn-move-backup-again" data-move-backup data-label="Backup" onclick="downloadMoveBackup(event)">Backup</a>
+            </p>
+        </div>
+        <p id="move-domain-status"></p>
+    </div>
 
     <!-- COLLABORATION / VIEW-ONLY STATUS BANNER -->
     <div id="collab-status-banner" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-30 bg-white/95 backdrop-blur border border-purple-200 text-purple-900 px-4 py-1.5 rounded-full shadow-lg text-xs font-semibold flex items-center gap-3">
@@ -858,7 +995,7 @@
                 <!-- Node Text -->
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Node Text</label>
-                    <input type="text" id="prop-text" oninput="updateNodeText(this.value)" placeholder="Select a node..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                    <input type="text" id="prop-text" oninput="updateNodeText(this.value)" onblur="sealHistoryCoalesce()" placeholder="Select a node..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
                 </div>
 
                 <!-- Background Color -->
@@ -1096,7 +1233,7 @@
                     <button onclick="syncFromMap(true)" class="text-xs text-blue-600 hover:underline shrink-0">Sync from visual</button>
                 </div>
                 <p class="text-[0.68rem] text-slate-400 mb-2 leading-tight">Controls bubble hierarchy, locations <code>@(x, y)</code>, and design elements. <span class="text-indigo-600 font-semibold">Auto-renders on paste / Ctrl+Enter</span></p>
-                <textarea id="advcode_input" oninput="scheduleLiveAdvRender()" onpaste="scheduleLiveAdvRender(true)" class="flex-1 w-full border rounded-xl p-3 text-xs font-mono focus:outline-indigo-500 resize-none mb-3 bg-slate-50 leading-relaxed text-slate-700" placeholder="# Root Idea @ (200, 250)&#10;  - Branch A @ (500, 180) [Tag]&#10;    - Detail @ (800, 180)&#10;  - Branch B @ (500, 320)&#10;&#10;# Second Root @ (200, 550)&#10;  - Sub-concept @ (500, 550)&#10;&#10;---&#10;# Design Elements&#10;@zone &quot;Grouping Zone&quot; @ (150, 120, 380, 250) {layer: behind, z: 1, bg: rgba(239, 246, 255, 0.45), border: dashed #3b82f6}&#10;@sticky &quot;📌 Guide Note&quot; @ (550, 450, 220, 180) {layer: front, z: 1, bg: #fef08a}&#10;@card &quot;Section Card&quot; @ (600, 100, 320, 200) {layer: behind, z: 2}"></textarea>
+                <textarea id="advcode_input" oninput="scheduleLiveAdvRender()" onpaste="scheduleLiveAdvRender(true)" onblur="scheduleAdvCodeHistorySeal()" class="flex-1 w-full border rounded-xl p-3 text-xs font-mono focus:outline-indigo-500 resize-none mb-3 bg-slate-50 leading-relaxed text-slate-700" placeholder="# Root Idea @ (200, 250)&#10;  - Branch A @ (500, 180) [Tag]&#10;    - Detail @ (800, 180)&#10;  - Branch B @ (500, 320)&#10;&#10;# Second Root @ (200, 550)&#10;  - Sub-concept @ (500, 550)&#10;&#10;---&#10;# Design Elements&#10;@zone &quot;Grouping Zone&quot; @ (150, 120, 380, 250) {layer: behind, z: 1, bg: rgba(239, 246, 255, 0.45), border: dashed #3b82f6}&#10;@sticky &quot;📌 Guide Note&quot; @ (550, 450, 220, 180) {layer: front, z: 1, bg: #fef08a}&#10;@card &quot;Section Card&quot; @ (600, 100, 320, 200) {layer: behind, z: 2}"></textarea>
                 <button type="button" onpointerdown="armAdvCodeRender(event)" onclick="runAdvCodeFromButton()" id="btn_run_adv" class="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-2.5 rounded-full font-bold text-sm shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5">
                     <span>▶</span> Render Advanced Code <span class="text-[0.65rem] opacity-75 font-normal">(Ctrl+Enter)</span>
                 </button>
@@ -1159,6 +1296,12 @@
                     <!-- Fit View Button -->
                     <button type="button" onpointerdown="rememberToolbarScroll()" onmousedown="keepToolbarScroll(event)" onclick="fitView()" class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-semibold transition-colors shrink-0" title="Center and fit all content on screen">
                         <span>🎯</span> Fit
+                    </button>
+                    <button type="button" data-undo-btn id="btn-undo-design" onclick="undoMapEdit()" disabled class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none text-slate-700 font-semibold transition-colors shrink-0" title="Undo (Ctrl/Cmd+Z)">
+                        <span>↩</span> <span class="hidden sm:inline">Undo</span>
+                    </button>
+                    <button type="button" data-redo-btn id="btn-redo-design" onclick="redoMapEdit()" disabled class="flex items-center gap-1 px-2.5 py-1 rounded-full hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none text-slate-700 font-semibold transition-colors shrink-0" title="Redo (Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y)">
+                        <span>↪</span> <span class="hidden sm:inline">Redo</span>
                     </button>
                     <button type="button" onclick="zoomBy(1/1.1)" class="px-2 py-1 rounded-full hover:bg-slate-100 text-slate-700 font-bold transition-colors shrink-0" title="Zoom out (viewport center)">−</button>
                     <button type="button" onclick="zoomTo(1)" class="zoom-readout px-2 py-1 rounded-full hover:bg-slate-100 text-slate-600 font-semibold tabular-nums transition-colors shrink-0" title="Reset zoom to 100% (viewport center)">100%</button>
@@ -1390,31 +1533,29 @@
         <input type="file" id="home-file-input" accept=".json" onchange="importJSON(event); toggleHomepageView(false);" class="hidden">
 
         <!-- Top Header Navigation -->
-        <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-2xl cursor-pointer" onclick="toggleHomepageView(false)" title="Back to Canvas">🧠</span>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h1 class="font-black text-lg md:text-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent leading-none">OmniMind</h1>
-                            <span class="text-[0.65rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono border">v4.0 Hub</span>
-                        </div>
-                        <p class="text-[0.7rem] text-slate-400 hidden sm:block">Visual Mind Mapping & Workspace</p>
+        <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-3 sm:px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-2 shadow-sm max-w-full">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-2xl cursor-pointer shrink-0" onclick="toggleHomepageView(false)" title="Back to Canvas">🧠</span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-black text-lg md:text-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent leading-none">OmniMind</h1>
+                        <span class="home-version-badge text-[0.65rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono border">v4.0 Hub</span>
                     </div>
+                    <p class="text-[0.7rem] text-slate-400 hidden sm:block">Visual Mind Mapping & Workspace</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 shrink-0 ml-auto">
                 <!-- User Profile / Auth Status Widget -->
                 <div id="home-auth-widget" class="flex items-center gap-2">
-                    <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
+                    <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
                         <span>☁️</span>
-                        <span id="home-auth-text">Sign In / Cloud</span>
+                        <span id="home-auth-text" class="home-auth-label">Sign In / Cloud</span>
                     </button>
                 </div>
 
                 <!-- Prominent Action: Go to Active Canvas -->
-                <button type="button" onclick="toggleHomepageView(false)" class="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-transform active:scale-95">
+                <button type="button" onclick="toggleHomepageView(false)" class="home-open-canvas flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-transform active:scale-95 shrink-0">
                     <span>🎨 Open Canvas</span>
                     <span>➔</span>
                 </button>
@@ -1824,6 +1965,11 @@
                     <button type="button" onclick="exportAllProjectsBackup()" class="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
                         <span>💾</span> Backup All
                     </button>
+                    <span class="text-slate-300">|</span>
+                    <label class="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer">
+                        <span>📥</span> Import maps
+                        <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
+                    </label>
                     <span class="text-slate-300">|</span>
                     <button type="button" onclick="toggleProjectManagerModal(false)" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full font-medium transition-colors">Close</button>
                 </div>
@@ -2288,23 +2434,25 @@
     <!-- ======================================================== -->
     <div id="omni-toast-container" class="fixed top-5 right-5 z-[110] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
 
+    <script src="js/mindmap-history.js"></script>
     <script>
         // ========================================================
         // MODERN UI DIALOG SYSTEM (ALERT, CONFIRM, PROMPT, TOAST)
         // ========================================================
         let omniDialogActiveResolve = null;
 
-        function showUiToast(message, type = 'info', duration = 3200) {
+        function showUiToast(message, type = 'info', duration = 3200, action = null) {
             const container = document.getElementById('omni-toast-container');
             if (!container) return;
 
             const toast = document.createElement('div');
-            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-[-10px] opacity-0 ${
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur text-xs sm:text-sm font-medium ${
                 type === 'success' ? 'bg-white/95 text-emerald-900 border-emerald-200' :
                 type === 'error' ? 'bg-white/95 text-red-900 border-red-200' :
                 type === 'warning' ? 'bg-white/95 text-amber-900 border-amber-200' :
                 'bg-white/95 text-slate-800 border-slate-200'
             }`;
+            toast.style.pointerEvents = 'auto';
 
             const iconMap = {
                 success: '✅',
@@ -2321,20 +2469,83 @@
             const textSpan = document.createElement('span');
             textSpan.className = 'flex-1 leading-snug';
             textSpan.textContent = message;
+            if (action && action.label) {
+                const sep = document.createElement('span');
+                sep.className = 'text-slate-400';
+                sep.textContent = ' · ';
+                const actionBtn = document.createElement('button');
+                actionBtn.type = 'button';
+                actionBtn.setAttribute('data-toast-action', '1');
+                actionBtn.className = 'font-bold text-blue-700 hover:text-blue-900 underline underline-offset-2 px-1.5 py-1 -my-1 rounded-md cursor-pointer';
+                actionBtn.style.touchAction = 'manipulation';
+                actionBtn.style.pointerEvents = 'auto';
+                actionBtn.textContent = action.label;
+                textSpan.appendChild(sep);
+                textSpan.appendChild(actionBtn);
+            }
 
             toast.appendChild(iconSpan);
             toast.appendChild(textSpan);
 
-            container.appendChild(toast);
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
-                toast.classList.add('translate-y-0', 'opacity-100');
+            let dismissed = false;
+            let hideTimer = null;
+            let removeTimer = null;
+            function dismissToast() {
+                if (dismissed) return;
+                dismissed = true;
+                clearTimeout(hideTimer);
+                clearTimeout(removeTimer);
+                toast.style.pointerEvents = 'none';
+                toast.style.opacity = '0';
+                removeTimer = setTimeout(() => toast.remove(), 180);
+            }
+            function removeToastNow() {
+                dismissed = true;
+                clearTimeout(hideTimer);
+                clearTimeout(removeTimer);
+                toast.remove();
+            }
+
+            const runAction = () => {
+                if (action && typeof action.onClick === 'function') action.onClick();
+            };
+            const controller = (typeof MindmapHistory !== 'undefined' && MindmapHistory.createToastAction)
+                ? MindmapHistory.createToastAction(runAction)
+                : null;
+            let acted = false;
+            const activate = (ev) => {
+                const hit = ev.target && ev.target.closest && ev.target.closest('[data-toast-action]');
+                if (!hit) {
+                    ev.stopPropagation();
+                    return;
+                }
+                if (controller) {
+                    if (controller.handle(ev)) acted = true;
+                    if (acted && ev.type === 'click') removeToastNow();
+                    return;
+                }
+                ev.preventDefault();
+                ev.stopPropagation();
+                if (!acted) {
+                    acted = true;
+                    runAction();
+                }
+                if (ev.type === 'click') removeToastNow();
+            };
+            // The action runs on pointerdown so a moving toast, or a click that
+            // lands on the canvas, cannot drop it. The rest of the press is
+            // stopped so the canvas never treats it as a pan or a selection.
+            // A drag that happens to end on the toast still commits.
+            ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach((type) => {
+                toast.addEventListener(type, (ev) => {
+                    if (dragInfo || decDragInfo || resizeInfo || arrowDrawStart || arrowHandleDragInfo) return;
+                    if (type === 'pointerdown' || type === 'click') activate(ev);
+                    else ev.stopPropagation();
+                });
             });
 
-            setTimeout(() => {
-                toast.classList.add('translate-y-[-10px]', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
+            container.appendChild(toast);
+            hideTimer = setTimeout(dismissToast, duration);
         }
 
         function showUiDialog({
@@ -2582,6 +2793,7 @@
         let nodes = {}; 
         let selectedNodeId = 'root';
         let saveTimeout = null;
+        let storageWriteEpoch = 0;
         let isInlineEditing = false; // Track whether a bubble is being edited inline
 
         // Advanced Code editor: unrendered text must survive canvas-to-code sync.
@@ -2605,6 +2817,11 @@
         let zoom = 1;
         let isDraggingCanvas = false;
         let dragInfo = null;
+        let mapHistory = (typeof MindmapHistory !== 'undefined') ? MindmapHistory.createHistory({ limit: 80 }) : null;
+        let historyReady = false;
+        let historyApplying = false;
+        let historySuspended = false;
+        let advCodeHistoryOpen = false;
 
         // Canvas Background & Theme State
         let canvasBgColor = '#f8fafc';
@@ -3044,6 +3261,22 @@
             }
         }
 
+        async function idbDelete(key) {
+            try {
+                const db = await getIndexedDB();
+                if (!db) return false;
+                return new Promise((resolve) => {
+                    const tx = db.transaction(DB_STORE, 'readwrite');
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => resolve(false);
+                    tx.onabort = () => resolve(false);
+                    tx.objectStore(DB_STORE).delete(key);
+                });
+            } catch (e) {
+                return false;
+            }
+        }
+
         async function idbLoad(key) {
             try {
                 const db = await getIndexedDB();
@@ -3276,16 +3509,18 @@
                 console.warn('Migration note:', eMigration);
             }
 
-            // Brand new clean default registry
+            // Brand new clean default registry. The library name is not "Master Idea"
+            // so it cannot collide with a map the user already called that.
             const defaultId = 'proj_' + Date.now();
             projectRegistry = {
                 activeId: defaultId,
                 projects: [{
                     id: defaultId,
-                    name: 'Master Idea',
+                    name: 'My first map',
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
-                    nodeCount: 7
+                    nodeCount: 7,
+                    autoStarter: true
                 }]
             };
             currentProjectId = defaultId;
@@ -3308,6 +3543,8 @@
         function saveCurrentProjectImmediate() {
             clearTimeout(saveTimeout);
             if (!currentProjectId) return;
+            const starterMeta = getCurrentProjectMeta();
+            if (starterMeta && starterMeta.autoStarter) delete starterMeta.autoStarter;
             const cleanedNodes = cleanNodesForStorage(nodes);
             const cleanedDecs = cleanDecorationsForStorage(canvasDecorations, false);
 
@@ -3361,7 +3598,16 @@
             }
         }
 
-        function triggerAutoSave() {
+        function triggerAutoSave(options) {
+            noteMapHistory(options || null);
+            const keepStarter = !!(options && options.keepStarter);
+            if (!keepStarter) {
+                const starterMeta = getCurrentProjectMeta();
+                if (starterMeta && starterMeta.autoStarter) {
+                    delete starterMeta.autoStarter;
+                    saveProjectRegistry(false);
+                }
+            }
             if (typeof activeCollabMode !== 'undefined' && activeCollabMode === 'view') {
                 // Read-only mode: do not save or overwrite local storage
                 return;
@@ -3372,6 +3618,8 @@
             setSaveStatus('saving');
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
+                const epoch = storageWriteEpoch;
+                if (epoch !== storageWriteEpoch) return;
                 const cleanedNodes = cleanNodesForStorage(nodes);
                 const cleanedDecs = cleanDecorationsForStorage(canvasDecorations, false);
 
@@ -3392,7 +3640,7 @@
 
                 // Update metadata in project registry
                 const meta = getCurrentProjectMeta();
-                if (meta) {
+                if (meta && epoch === storageWriteEpoch) {
                     meta.updatedAt = Date.now();
                     meta.nodeCount = Object.keys(nodes).length;
                     saveProjectRegistry(false);
@@ -3402,14 +3650,17 @@
                 let idbSaved = false;
                 try {
                     const idbKey = currentProjectId ? getProjectIDBKey(currentProjectId) : 'omnimind_full_data_v1';
+                    if (epoch !== storageWriteEpoch) return;
                     const [savedData, savedAssets] = await Promise.all([
                         idbSave(idbKey, fullData),
                         idbSave(ASSETS_STORAGE_KEY, canvasImageAssets)
                     ]);
+                    if (epoch !== storageWriteEpoch) return;
                     idbSaved = (savedData !== false);
                 } catch (err) {
                     console.warn('IndexedDB auto-save warning:', err);
                 }
+                if (epoch !== storageWriteEpoch) return;
 
                 // 2. Save to localStorage
                 let lsSaved = false;
@@ -3455,6 +3706,232 @@
                 }
             }, 300);
         }
+
+        function captureHistorySnapshot() {
+            return {
+                nodes: cleanNodesForStorage(nodes),
+                canvasDecorations: cleanDecorationsForStorage(canvasDecorations, false),
+                canvasBgColor,
+                canvasGridStyle,
+                selectedNodeId: selectedNodeId || null,
+                selectedDecorationId: selectedDecorationId || null
+            };
+        }
+
+        function sealHistoryCoalesce() {
+            advCodeHistoryOpen = false;
+            if (mapHistory) mapHistory.seal();
+        }
+
+        function updateUndoRedoButtons() {
+            const canUndo = !!(mapHistory && historyReady && mapHistory.canUndo());
+            const canRedo = !!(mapHistory && historyReady && mapHistory.canRedo());
+            document.querySelectorAll('[data-undo-btn]').forEach((btn) => {
+                btn.disabled = !canUndo;
+            });
+            document.querySelectorAll('[data-redo-btn]').forEach((btn) => {
+                btn.disabled = !canRedo;
+            });
+        }
+
+        function noteMapHistory(options) {
+            if (!mapHistory || typeof MindmapHistory === 'undefined') return;
+            const opts = (options && typeof options === 'object') ? options : { coalesceKey: options || null };
+            try {
+                MindmapHistory.recordMapEdit(mapHistory, captureHistorySnapshot(), {
+                    applying: historyApplying,
+                    suspended: historySuspended,
+                    ready: historyReady,
+                    coalesceKey: opts.coalesceKey || null,
+                    retainSelection: opts.retainSelection || null
+                });
+            } catch (err) {
+                console.warn('History record skipped:', err);
+            }
+            updateUndoRedoButtons();
+        }
+
+        function resetMapHistory() {
+            historySuspended = false;
+            historyReady = true;
+            if (mapHistory) {
+                try {
+                    mapHistory.reset(captureHistorySnapshot());
+                } catch (err) {
+                    console.warn('History reset skipped:', err);
+                }
+            }
+            updateUndoRedoButtons();
+        }
+
+        function rebaseMapHistory() {
+            if (!mapHistory || !historyReady || historyApplying) return;
+            try {
+                mapHistory.rebase(captureHistorySnapshot());
+            } catch (err) {
+                console.warn('History rebase skipped:', err);
+            }
+            updateUndoRedoButtons();
+        }
+
+        function restoreHistorySnapshot(snap) {
+            nodes = JSON.parse(JSON.stringify((snap && snap.nodes) || {}));
+            canvasDecorations = JSON.parse(JSON.stringify((snap && snap.canvasDecorations) || {}));
+            canvasBgColor = (snap && snap.canvasBgColor) || '#f8fafc';
+            canvasGridStyle = (snap && snap.canvasGridStyle) || 'dots';
+            selectedNodeId = (snap && snap.selectedNodeId && nodes[snap.selectedNodeId])
+                ? snap.selectedNodeId
+                : (Object.keys(nodes).find((id) => nodes[id] && nodes[id].parentId == null) || Object.keys(nodes)[0] || null);
+            selectedDecorationId = (snap && snap.selectedDecorationId && canvasDecorations[snap.selectedDecorationId])
+                ? snap.selectedDecorationId
+                : null;
+        }
+
+        function readHistoryViewport() {
+            const frame = (typeof fitContentPadding === 'function')
+                ? fitContentPadding()
+                : { cW: window.innerWidth || 1000, cH: window.innerHeight || 700, pad: 24, topInset: 24, bottomInset: 24, view: null };
+            const view = frame.view;
+            const overlays = [];
+            if (view) {
+                ['floating-canvas-design-toolbar', 'canvas-instructions-card', 'btn-show-canvas-guide'].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (!el || el.classList.contains('hidden')) return;
+                    const style = window.getComputedStyle(el);
+                    if (style.display === 'none' || style.visibility === 'hidden') return;
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width < 2 || rect.height < 2) return;
+                    overlays.push({
+                        left: rect.left - view.left,
+                        top: rect.top - view.top,
+                        right: rect.right - view.left,
+                        bottom: rect.bottom - view.top
+                    });
+                });
+            }
+            const insets = (typeof MindmapHistory !== 'undefined' && MindmapHistory.overlayInsets)
+                ? MindmapHistory.overlayInsets(frame.cW, frame.cH, {
+                    padLeft: frame.pad,
+                    padRight: frame.pad,
+                    padTop: frame.topInset,
+                    padBottom: frame.bottomInset
+                }, overlays)
+                : { padLeft: frame.pad, padRight: frame.pad, padTop: frame.topInset, padBottom: frame.bottomInset };
+            return {
+                panX,
+                panY,
+                zoom,
+                viewWidth: frame.cW,
+                viewHeight: frame.cH,
+                padLeft: insets.padLeft,
+                padRight: insets.padRight,
+                padTop: insets.padTop,
+                padBottom: insets.padBottom
+            };
+        }
+
+        function blurHistoryFocus() {
+            const active = document.activeElement;
+            if (!active || active === document.body || typeof MindmapHistory === 'undefined') return;
+            if (MindmapHistory.shouldBlurAfterHistoryNav(active) && typeof active.blur === 'function') {
+                active.blur();
+            }
+        }
+
+        function paintRestoredMap() {
+            setCanvasBg(canvasBgColor, canvasGridStyle, true);
+            renderTree();
+            renderDecorations();
+            if (typeof updateBoundArrows === 'function') updateBoundArrows();
+            if (typeof applyDesignLayerSettings === 'function') applyDesignLayerSettings();
+            syncFromMap();
+            updatePropertiesPanel();
+            applyTransform();
+        }
+
+        function performHistoryNav(direction) {
+            if (!mapHistory || historyApplying || typeof MindmapHistory === 'undefined') return;
+            const release = mapHistory.suppressEdits();
+            historyApplying = true;
+            isInlineEditing = false;
+            editingDecorationId = null;
+            sealHistoryCoalesce();
+            try {
+                MindmapHistory.navigateHistory(mapHistory, direction, {
+                    apply(snap) {
+                        restoreHistorySnapshot(snap);
+                        paintRestoredMap();
+                    },
+                    viewport() { return readHistoryViewport(); },
+                    applyPan(pan) {
+                        panX = pan.panX;
+                        panY = pan.panY;
+                        applyTransform();
+                    },
+                    save() { triggerAutoSave(); }
+                });
+            } finally {
+                historyApplying = false;
+                updateUndoRedoButtons();
+                blurHistoryFocus();
+                // Keep the lock through the rest of this turn so a blur or a
+                // focus move off a now-disabled redo button cannot commit a
+                // lookalike step before the next Ctrl+Z.
+                setTimeout(() => {
+                    blurHistoryFocus();
+                    release();
+                    updateUndoRedoButtons();
+                }, 0);
+            }
+        }
+
+        function undoMapEdit() {
+            performHistoryNav('undo');
+        }
+
+        function redoMapEdit() {
+            performHistoryNav('redo');
+        }
+
+        function showBranchDeletedToast() {
+            showUiToast('Branch deleted', 'info', 5200, {
+                label: 'Undo',
+                onClick: () => undoMapEdit()
+            });
+        }
+
+        function isUndoBlockedByOverlay() {
+            const ids = [
+                'omni-dialog-overlay',
+                'project-manager-modal',
+                'export-image-modal',
+                'cloud-config-modal',
+                'lifetime-pro-modal',
+                'quota-exceeded-modal',
+                'share-team-modal',
+                'app-homepage-view'
+            ];
+            return ids.some((id) => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden');
+            });
+        }
+
+        function scheduleAdvCodeHistorySeal() {
+            setTimeout(() => {
+                if (!advRenderDebounceTimer && advCodeHistoryOpen) {
+                    advCodeHistoryOpen = false;
+                    if (mapHistory) mapHistory.seal();
+                }
+            }, 700);
+        }
+
+        window.addEventListener('pointerup', () => {
+            if (!mapHistory || typeof MindmapHistory === 'undefined') return;
+            if (MindmapHistory.shouldSealCoalesceOnPointerUp(mapHistory.getCoalesceKey())) {
+                mapHistory.seal();
+            }
+        });
 
         function loadFromStorage(projId = currentProjectId) {
             try {
@@ -3559,6 +4036,9 @@
                 if (updated) {
                     renderDecorations();
                     renderTree();
+                    if (typeof syncFromMap === 'function') syncFromMap();
+                    if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
+                    if (typeof rebaseMapHistory === 'function') rebaseMapHistory();
                 }
             } catch (e) {
                 console.warn('Could not hydrate from IndexedDB:', e);
@@ -4709,7 +5189,7 @@
                     authWidget.innerHTML = `
                         <button type="button" onclick="handleCloudButtonClick()" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
                             <span>☁️</span>
-                            <span>Sign In / Cloud</span>
+                            <span class="home-auth-label">Sign In / Cloud</span>
                         </button>
                     `;
                 }
@@ -5367,6 +5847,7 @@
 
                 // Load map canvas data
                 if (docData.data) {
+                    historySuspended = true;
                     isApplyingRemoteUpdate = true;
                     nodes = docData.data.nodes || {};
                     canvasDecorations = docData.data.canvasDecorations || {};
@@ -5389,6 +5870,7 @@
                     updatePropertiesPanel();
                     fitView();
                     isApplyingRemoteUpdate = false;
+                    resetMapHistory();
                 }
 
                 // Update active title in header
@@ -5457,6 +5939,7 @@
                     renderDecorations();
                     syncFromMap();
                     isApplyingRemoteUpdate = false;
+                    if (typeof rebaseMapHistory === 'function') rebaseMapHistory();
                 }
             }, (err) => {
                 console.warn('Live subscription error:', err);
@@ -5798,6 +6281,7 @@
             if (!meta) return;
             meta.name = newName.trim();
             meta.updatedAt = Date.now();
+            if (meta.autoStarter) delete meta.autoStarter;
             saveProjectRegistry(false);
             updateProjectHeaderUI();
             renderProjectList();
@@ -5862,6 +6346,7 @@
             const sourceMeta = projectRegistry.projects.find(p => p.id === projId);
             if (!sourceMeta) return;
 
+            historySuspended = true;
             saveCurrentProjectImmediate();
 
             let sourceData = null;
@@ -5912,6 +6397,7 @@
             renderProjectList();
             fitView();
             setSaveStatus('saved', `✓ Duplicated as "${dupName}"`);
+            resetMapHistory();
         }
 
         async function deleteProject(projId) {
@@ -5982,6 +6468,7 @@
         }
 
         function createNewProject(name, initialNodes = null, initialDecorations = null, pX = null, pY = null, zVal = null, bgCol = '#f8fafc', gridSt = 'dots') {
+            historySuspended = true;
             saveCurrentProjectImmediate();
 
             // Clear any active shared collab listener
@@ -6053,6 +6540,7 @@
             updateProjectHeaderUI();
             fitView();
             setSaveStatus('saved', `✓ Created "${finalName}"`);
+            resetMapHistory();
         }
 
         function switchProject(targetId) {
@@ -6061,6 +6549,7 @@
                 return;
             }
 
+            historySuspended = true;
             saveCurrentProjectImmediate();
 
             // Clear any active shared collab listener
@@ -6112,6 +6601,7 @@
             const displayName = curMeta ? curMeta.name : 'map';
             setSaveStatus('saved', `✓ Switched to "${displayName}"`);
             toggleProjectManagerModal(false);
+            resetMapHistory();
         }
 
         // ==========================================
@@ -6735,6 +7225,50 @@
             }[m]));
         }
 
+        function createFactoryStarterNodes() {
+            return {
+                'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
+                'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!' },
+                'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170 },
+                'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝' },
+                'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
+                'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490 },
+                'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨' }
+            };
+        }
+
+        function factoryStarterNodeMatches(saved, factory) {
+            if (!saved || !factory) return false;
+            if (saved.parentId !== factory.parentId || saved.text !== factory.text) return false;
+            if (Number(saved.x) !== factory.x || Number(saved.y) !== factory.y) return false;
+            if (saved.collapsed || saved.attachment) return false;
+            const fields = ['bg', 'fg', 'size', 'weight', 'tag', 'flag'];
+            return fields.every(key => (saved[key] ?? null) === (factory[key] ?? null));
+        }
+
+        function dataMatchesFactoryStarter(data) {
+            if (!data || !data.nodes) return false;
+            if (data.canvasDecorations && Object.keys(data.canvasDecorations).length) return false;
+            if (typeof data.panX === 'number' && data.panX !== 100) return false;
+            if (typeof data.panY === 'number' && data.panY !== 100) return false;
+            if (typeof data.zoom === 'number' && data.zoom !== 1) return false;
+            const factory = createFactoryStarterNodes();
+            const savedIds = Object.keys(data.nodes);
+            const factoryIds = Object.keys(factory);
+            if (savedIds.length !== factoryIds.length) return false;
+            return factoryIds.every(id => factoryStarterNodeMatches(data.nodes[id], factory[id]));
+        }
+
+        function canvasMatchesFactoryStarter() {
+            return dataMatchesFactoryStarter({
+                nodes,
+                canvasDecorations,
+                panX,
+                panY,
+                zoom
+            });
+        }
+
         // Initialize map
         function init(forceDefault = false) {
             sanitizeStorageOnBoot();
@@ -6744,15 +7278,7 @@
                 loaded = loadFromStorage(currentProjectId);
             }
             if (!loaded) {
-                nodes = {
-                    'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                    'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!' },
-                    'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170 },
-                    'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝' },
-                    'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                    'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490 },
-                    'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨' }
-                };
+                nodes = createFactoryStarterNodes();
                 canvasDecorations = {};
                 isDesignSelectable = true;
                 panX = 100;
@@ -6809,7 +7335,12 @@
                 const curMeta = getCurrentProjectMeta();
                 setSaveStatus('saved', `✓ Loaded "${curMeta ? curMeta.name : 'map'}"`);
             } else if (!isSharedUrl) {
-                triggerAutoSave();
+                triggerAutoSave({ keepStarter: true });
+            }
+            if (forceDefault && historyReady) {
+                updateUndoRedoButtons();
+            } else {
+                resetMapHistory();
             }
         }
 
@@ -7801,7 +8332,7 @@
             }
 
             if (!skipSave) {
-                triggerAutoSave();
+                triggerAutoSave({ coalesceKey: 'canvas-bg' });
             }
             if (typeof syncGuideDock === 'function') syncGuideDock();
         }
@@ -8288,7 +8819,7 @@
             canvasDecorations[id].opacity = parseFloat(val);
             const el = document.querySelector(`.canvas-decoration[data-id="${id}"]`);
             if (el) el.style.opacity = val;
-            triggerAutoSave();
+            triggerAutoSave({ coalesceKey: 'opacity:' + id });
         }
 
         function cycleDecorationBorder(id) {
@@ -9251,7 +9782,7 @@
 
         function isCanvasChromeTarget(target) {
             if (!target || !target.closest) return false;
-            return !!target.closest('#floating-canvas-design-toolbar, .floating-canvas-toolbar, #canvas-instructions-card, #btn-show-canvas-guide, #arrow-draw-banner, input, textarea, [contenteditable="true"]');
+            return !!target.closest('#floating-canvas-design-toolbar, .floating-canvas-toolbar, #canvas-instructions-card, #btn-show-canvas-guide, #arrow-draw-banner, #omni-toast-container, input, textarea, [contenteditable="true"]');
         }
 
         canvasGestureLayer.addEventListener('wheel', e => {
@@ -9628,6 +10159,7 @@
         });
 
         window.addEventListener('mouseup', e => {
+            if (e.target && e.target.closest && e.target.closest('#omni-toast-container') && !dragInfo && !decDragInfo && !resizeInfo && !arrowDrawStart && !arrowHandleDragInfo) return;
             // A press that slides off the Render button must not keep a stale editor snapshot.
             if (!(e.target && e.target.closest && e.target.closest('#btn_run_adv'))) {
                 advCodeArmedValue = null;
@@ -9678,7 +10210,9 @@
             }
             if (dragInfo) {
                 const moved = Math.hypot((e.clientX || 0) - (dragInfo.startX || 0), (e.clientY || 0) - (dragInfo.startY || 0)) > 4;
-                triggerAutoSave();
+                const dragKey = dragInfo.nodeId ? ('drag:' + dragInfo.nodeId) : null;
+                triggerAutoSave(dragKey ? { coalesceKey: dragKey, retainSelection: moved ? dragInfo.nodeId : null } : undefined);
+                if (dragKey && mapHistory) mapHistory.seal();
                 if (moved) noteControlsGuideUsed();
             }
             dragInfo = null;
@@ -10154,7 +10688,9 @@
                         lastTouchTapNodeId = dragInfo.nodeId;
                     }
                 } else if (touchHasMoved) {
-                    triggerAutoSave();
+                    const dragKey = dragInfo.nodeId ? ('drag:' + dragInfo.nodeId) : null;
+                    triggerAutoSave(dragKey ? { coalesceKey: dragKey, retainSelection: dragInfo.nodeId } : undefined);
+                    if (dragKey && mapHistory) mapHistory.seal();
                     syncFromMap();
                     noteControlsGuideUsed();
                 }
@@ -10254,6 +10790,104 @@
             document.querySelectorAll('.zoom-readout').forEach(el => { el.textContent = label; });
         }
 
+        function isPaintedControl(el) {
+            if (!el) return false;
+            // Opacity does not inherit as a computed value, so a hover-only
+            // toggle can be opacity 0 while its badge still reports 1.
+            let node = el;
+            while (node && node.nodeType === 1) {
+                const style = window.getComputedStyle(node);
+                if (style.display === 'none' || style.visibility === 'hidden') return false;
+                const opacity = parseFloat(style.opacity);
+                if (isFinite(opacity) && opacity < 0.05) return false;
+                if (node.classList && node.classList.contains('bubble-node')) break;
+                node = node.parentElement;
+            }
+            return true;
+        }
+
+        function fitContentPadding() {
+            const view = mapViewportRect();
+            const cW = (view && view.width > 50) ? view.width : (window.innerWidth ? window.innerWidth - 320 : 1000);
+            const cH = (view && view.height > 50) ? view.height : (window.innerHeight ? window.innerHeight - 60 : 700);
+            const pad = 16;
+            let topInset = pad;
+            const toolbar = document.getElementById('floating-canvas-design-toolbar');
+            if (toolbar && view) {
+                const tb = toolbar.getBoundingClientRect();
+                if (tb.height > 0 && tb.bottom > view.top) {
+                    topInset = Math.max(pad, tb.bottom - view.top + 8);
+                }
+            }
+            topInset = Math.min(topInset, cH * 0.4);
+            return { view, cW, cH, pad, topInset, bottomInset: pad };
+        }
+
+        // Screen box of every visible bubble, including a painted fold badge.
+        // Zones, stickies, cards, and other decorations are not part of this box.
+        function visibleNodesScreenBox() {
+            let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
+            let count = 0;
+            Object.values(nodes).forEach(node => {
+                if (!node || isNodeConcealed(node) || !node.el) return;
+                const parts = [node.el];
+                node.el.querySelectorAll('.node-text-span, .bubble-img, .bubble-file-badge, .collapse-toggle-face').forEach(part => {
+                    if (part.classList.contains('collapse-toggle-face') && !isPaintedControl(part)) return;
+                    parts.push(part);
+                });
+                parts.forEach(part => {
+                    const r = part.getBoundingClientRect();
+                    if (!r || (r.width < 1 && r.height < 1)) return;
+                    minL = Math.min(minL, r.left);
+                    minT = Math.min(minT, r.top);
+                    maxR = Math.max(maxR, r.right);
+                    maxB = Math.max(maxB, r.bottom);
+                    count += 1;
+                });
+            });
+            if (!count || !isFinite(minL)) return null;
+            return { minL, minT, maxR, maxB };
+        }
+
+        // The first pass can miss a counter-scaled fold badge, or a node whose
+        // box was measured before the fitted zoom. Re-center the painted nodes.
+        function tightenFitToVisibleNodes() {
+            const frame = fitContentPadding();
+            if (!frame.view) return;
+            for (let pass = 0; pass < 3; pass++) {
+                const box = visibleNodesScreenBox();
+                if (!box) return;
+                const availL = frame.view.left + frame.pad;
+                const availR = frame.view.right - frame.pad;
+                const availT = frame.view.top + frame.topInset;
+                const availB = frame.view.bottom - frame.bottomInset;
+                const availW = Math.max(40, availR - availL);
+                const availH = Math.max(40, availB - availT);
+                const contentW = Math.max(1, box.maxR - box.minL);
+                const contentH = Math.max(1, box.maxB - box.minT);
+                const need = Math.min(availW / contentW, availH / contentH);
+                const bandCx = (availL + availR) / 2;
+                const bandCy = (availT + availB) / 2;
+                if (need < 0.995 && zoom > 0.2501) {
+                    const cx = (box.minL + box.maxR) / 2;
+                    const cy = (box.minT + box.maxB) / 2;
+                    const canvasX = (cx - frame.view.left - panX) / zoom;
+                    const canvasY = (cy - frame.view.top - panY) / zoom;
+                    zoom = Math.max(0.25, zoom * need);
+                    panX = bandCx - frame.view.left - canvasX * zoom;
+                    panY = bandCy - frame.view.top - canvasY * zoom;
+                    applyTransform();
+                    continue;
+                }
+                const dx = bandCx - (box.minL + box.maxR) / 2;
+                const dy = bandCy - (box.minT + box.maxB) / 2;
+                if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+                panX += dx;
+                panY += dy;
+                applyTransform();
+            }
+        }
+
         function visibleNodeBounds(node) {
             if (!node || isNodeConcealed(node)) return null;
             if (typeof node.x !== 'number' || typeof node.y !== 'number') return null;
@@ -10264,7 +10898,10 @@
                 const z = zoom || 1;
                 if (layerRect && layerRect.width > 0 && z > 0) {
                     const parts = [el];
-                    el.querySelectorAll('.node-text-span, .bubble-img, .bubble-file-badge').forEach(part => parts.push(part));
+                    el.querySelectorAll('.node-text-span, .bubble-img, .bubble-file-badge, .collapse-toggle-face').forEach(part => {
+                        if (part.classList.contains('collapse-toggle-face') && !isPaintedControl(part)) return;
+                        parts.push(part);
+                    });
                     let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
                     parts.forEach(part => {
                         const r = part.getBoundingClientRect();
@@ -10373,20 +11010,12 @@
                 maxY = Math.max(maxY, item.y + item.h);
             });
 
-            const canvasRect = mapViewportRect();
-            const cW = (canvasRect && canvasRect.width > 50) ? canvasRect.width : (window.innerWidth ? window.innerWidth - 320 : 1000);
-            const cH = (canvasRect && canvasRect.height > 50) ? canvasRect.height : (window.innerHeight ? window.innerHeight - 60 : 700);
-            const pad = 16;
-            let topInset = pad;
-            const toolbar = document.getElementById('floating-canvas-design-toolbar');
-            if (toolbar && canvasRect) {
-                const tb = toolbar.getBoundingClientRect();
-                if (tb.height > 0 && tb.bottom > canvasRect.top) {
-                    topInset = Math.max(pad, tb.bottom - canvasRect.top + 8);
-                }
-            }
-            topInset = Math.min(topInset, cH * 0.4);
-            const bottomInset = pad;
+            const frame = fitContentPadding();
+            const cW = frame.cW;
+            const cH = frame.cH;
+            const pad = frame.pad;
+            const topInset = frame.topInset;
+            const bottomInset = frame.bottomInset;
             const contentW = Math.max(maxX - minX, 40);
             const contentH = Math.max(maxY - minY, 40);
             const availW = Math.max(80, cW - pad * 2);
@@ -10402,6 +11031,7 @@
             panY = Math.round(bandCenterY - contentCenterY * zoom);
 
             applyTransform();
+            tightenFitToVisibleNodes();
             triggerAutoSave();
             setSaveStatus('saved', '✓ View Fitted to Content');
             holdToolbarScroll(savedScroll);
@@ -10583,31 +11213,14 @@
             return autoLayoutTreeRight(rootId, startX, startY);
         }
 
-        // 4-Way Orientation Detection
+        // 4-Way Orientation Detection.
+        // Siblings in a tree share a row, so an average x-offset (or a selected
+        // child used as the origin) used to highlight Right after a Tree layout.
         function getBranchDirection(nodeId) {
-            const target = nodes[nodeId];
-            if (!target) return 'right';
-            let children = Object.values(nodes).filter(n => n.parentId === target.id);
-            if (children.length === 0 && target.parentId && nodes[target.parentId]) {
-                const parent = nodes[target.parentId];
-                children = Object.values(nodes).filter(n => n.parentId === parent.id);
-                if (children.length === 0) return 'right';
+            if (typeof MindmapHistory !== 'undefined') {
+                return MindmapHistory.inferBranchDirection(nodes, nodeId);
             }
-            if (children.length === 0) return 'right';
-
-            let totalDx = 0, totalDy = 0;
-            children.forEach(c => {
-                totalDx += (c.x - target.x);
-                totalDy += (c.y - target.y);
-            });
-            const avgDx = totalDx / children.length;
-            const avgDy = totalDy / children.length;
-
-            if (Math.abs(avgDx) >= Math.abs(avgDy)) {
-                return avgDx >= 0 ? 'right' : 'left';
-            } else {
-                return avgDy >= 0 ? 'down' : 'up';
-            }
+            return 'right';
         }
 
         // Transpose a branch to a specific direction or cycle between counterparts
@@ -11047,26 +11660,8 @@
                 if (roots.length <= 1) return alert("Cannot delete the last root.");
             }
 
-            const descendants = getDescendants(selectedNodeId);
-            const hiddenCount = descendants.filter(dId => isNodeConcealed(dId)).length;
-            if ((selected.collapsed && descendants.length > 0) || hiddenCount > 0) {
-                if (deleteConfirmBusy) return;
-                deleteConfirmBusy = true;
-                const noun = (selected.collapsed ? descendants.length : hiddenCount);
-                let ok = false;
-                try {
-                    ok = await showConfirm({
-                        title: 'Delete collapsed branch?',
-                        message: `“${selected.text}” will also remove ${noun} hidden node${noun === 1 ? '' : 's'}.`,
-                        confirmText: 'Delete branch',
-                        cancelText: 'Cancel',
-                        isDanger: true
-                    });
-                } finally {
-                    deleteConfirmBusy = false;
-                }
-                if (!ok || !nodes[selectedNodeId]) return;
-            }
+            const toastBranch = typeof MindmapHistory !== 'undefined'
+                && MindmapHistory.shouldToastBranchDelete(selected, nodes);
             const toRemove = getDescendants(selectedNodeId);
             toRemove.forEach(dId => delete nodes[dId]);
             const parentId = selected.parentId;
@@ -11078,6 +11673,7 @@
             renderTree();
             syncFromMap();
             triggerAutoSave();
+            if (toastBranch) showBranchDeletedToast();
         }
 
         // Keyboard shortcuts
@@ -11098,7 +11694,28 @@
                     return;
                 }
             }
+            if (typeof MindmapHistory !== 'undefined' && MindmapHistory.reconcileEditingFlags) {
+                const editing = MindmapHistory.reconcileEditingFlags(e.target, {
+                    inlineEditing: isInlineEditing,
+                    editingDecoration: !!editingDecorationId
+                });
+                if (isInlineEditing && !editing.inlineEditing) isInlineEditing = false;
+                if (editingDecorationId && !editing.editingDecoration) editingDecorationId = null;
+            }
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingDecorationId) return;
+
+            if (!isUndoBlockedByOverlay() && typeof MindmapHistory !== 'undefined') {
+                const undoDecision = MindmapHistory.shouldHandleUndoShortcut(e, {
+                    inlineEditing: isInlineEditing,
+                    editingDecoration: !!editingDecorationId
+                });
+                if (undoDecision.handle) {
+                    e.preventDefault();
+                    if (undoDecision.command === 'undo') undoMapEdit();
+                    else redoMapEdit();
+                    return;
+                }
+            }
 
             if (isArrowDrawingMode) {
                 if (e.key === 'Escape') {
@@ -11175,7 +11792,7 @@
                 const isRoot = nodes[selectedNodeId].parentId === null;
                 labelEl.innerHTML = `${isRoot ? '🌟 ' : '○ '}<span class="font-semibold">${escapeHtml(value)}</span>`;
                 syncFromMap();
-                triggerAutoSave();
+                triggerAutoSave({ coalesceKey: 'text:' + selectedNodeId });
             }
         }
 
@@ -11219,7 +11836,7 @@
             document.getElementById('prop-font-size').value = sz;
             document.getElementById('prop-font-size-val').textContent = sz + 'px';
             renderTree();
-            triggerAutoSave();
+            triggerAutoSave({ coalesceKey: 'font:' + selectedNodeId });
         }
 
         // Toggle bold
@@ -12237,7 +12854,7 @@
             if (autoFit) {
                 fitView();
             }
-            triggerAutoSave();
+            triggerAutoSave(advCodeHistoryOpen ? { coalesceKey: 'adv-code' } : undefined);
             setSaveStatus('saved', '✓ Advanced Code Rendered');
             setAdvRenderHint('done');
         } catch (err) {
@@ -12364,6 +12981,7 @@
 
         // Live rendering & keyboard listener for Advanced Code
         function scheduleLiveAdvRender(immediate = false) {
+            advCodeHistoryOpen = true;
             advCodeDirty = true;
             if (immediate) advRenderWantsFit = true;
             if (advRenderDebounceTimer) {
@@ -12555,7 +13173,735 @@
             }
         }
 
+        // --- MOVE MAPS: old domain → www.omnimindmap.app ---
+        // Handover: the Move button calls window.open in the tap handler, then sends
+        // the backup as acknowledged postMessage chunks. A form POST cannot land on
+        // static Vercel hosting, and a URL hash is too small for attachments.
+        // iOS Safari only allows the new tab if open() runs before any await.
+        // Each side checks event.source and event.origin. Production accepts only
+        // https://omnimind-alpha.vercel.app → https://www.omnimindmap.app.
+        // Local testing: open http://127.0.0.1:<port>/?moveHost=old.
+        // The button opens http://localhost:<port>/?moveHost=new#import (a different origin).
+        const MOVE_OLD_ORIGIN = 'https://omnimind-alpha.vercel.app';
+        const MOVE_NEW_ORIGIN = 'https://www.omnimindmap.app';
+        const MOVE_DONE_KEY = 'omnimind_move_completed_v1';
+        const MOVE_CHUNK_CHARS = 180000;
+        let moveTransferChild = null;
+        let moveTransferReady = false;
+        let moveReadyWait = null;
+        let moveAckWait = null;
+        let moveDoneWait = null;
+        let moveSending = false;
+        let moveInbound = null;
+        let movePingTimer = null;
+
+        function moveSimMode() {
+            try {
+                const flag = new URLSearchParams(location.search).get('moveHost');
+                if (flag === 'old' || flag === 'new') return flag;
+            } catch (e) {}
+            return '';
+        }
+
+        function isOldMoveHost() {
+            if (location.hostname === 'omnimind-alpha.vercel.app') return true;
+            return moveSimMode() === 'old';
+        }
+
+        function isNewMoveHost() {
+            const host = location.hostname;
+            if (host === 'www.omnimindmap.app' || host === 'omnimindmap.app') return true;
+            return moveSimMode() === 'new';
+        }
+
+        function isImportMovePage() {
+            if (!isNewMoveHost()) return false;
+            return location.hash === '#import' || location.hash.indexOf('#import') === 0;
+        }
+
+        function isLocalMoveTest() {
+            const host = location.hostname;
+            return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || !!moveSimMode();
+        }
+
+        function isLocalHostname(hostname) {
+            return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+        }
+
+        function originHostname(origin) {
+            try { return new URL(origin).hostname; } catch (e) { return ''; }
+        }
+
+        function trustedMoveSenderOrigin(origin) {
+            if (origin === MOVE_OLD_ORIGIN) return true;
+            return isLocalMoveTest() && isLocalHostname(location.hostname) && isLocalHostname(originHostname(origin));
+        }
+
+        function trustedMoveReceiverOrigin(origin) {
+            if (origin === MOVE_NEW_ORIGIN || origin === 'https://omnimindmap.app') return true;
+            return isLocalMoveTest() && isLocalHostname(location.hostname) && isLocalHostname(originHostname(origin));
+        }
+
+        function moveChildUrl() {
+            if (location.hostname === 'omnimind-alpha.vercel.app') return MOVE_NEW_ORIGIN + '/#import';
+            const url = new URL(location.href);
+            url.searchParams.set('moveHost', 'new');
+            url.hash = 'import';
+            // 127.0.0.1 and localhost are different origins, so a local rehearsal
+            // copies storage the same way the two public domains will.
+            if (location.hostname === '127.0.0.1') url.hostname = 'localhost';
+            else if (location.hostname === 'localhost') url.hostname = '127.0.0.1';
+            return url.toString();
+        }
+
+        function moveChildOrigin() {
+            if (location.hostname === 'omnimind-alpha.vercel.app') return MOVE_NEW_ORIGIN;
+            try { return new URL(moveChildUrl()).origin; } catch (e) { return location.origin; }
+        }
+
+        function moveOpenerOrigin() {
+            if (location.hostname === 'www.omnimindmap.app' || location.hostname === 'omnimindmap.app') return MOVE_OLD_ORIGIN;
+            const port = location.port ? ':' + location.port : '';
+            if (location.hostname === 'localhost') return location.protocol + '//127.0.0.1' + port;
+            if (location.hostname === '127.0.0.1') return location.protocol + '//localhost' + port;
+            return location.origin;
+        }
+
+        function setMoveStatus(text) {
+            const el = document.getElementById('move-domain-status');
+            if (!el) return;
+            el.textContent = text || '';
+            el.classList.toggle('is-open', !!text);
+            syncMoveBannerHeight();
+        }
+
+        function syncMoveBannerHeight() {
+            const banner = document.getElementById('move-domain-banner');
+            const root = document.documentElement;
+            if (!banner || !banner.classList.contains('is-open')) {
+                root.classList.remove('move-banner-open');
+                root.style.removeProperty('--move-banner-h');
+                return;
+            }
+            const height = Math.ceil(banner.getBoundingClientRect().height);
+            root.style.setProperty('--move-banner-h', height + 'px');
+            root.classList.add('move-banner-open');
+        }
+
+        function renderMoveBanner() {
+            const banner = document.getElementById('move-domain-banner');
+            if (!banner) return;
+            if (!isOldMoveHost()) {
+                banner.classList.remove('is-open', 'is-done');
+                syncMoveBannerHeight();
+                return;
+            }
+            banner.classList.add('is-open');
+            let done = false;
+            try { done = !!localStorage.getItem(MOVE_DONE_KEY); } catch (e) {}
+            banner.classList.toggle('is-done', done);
+            const offer = document.getElementById('move-domain-offer');
+            const doneRow = document.getElementById('move-domain-done');
+            if (offer) offer.classList.toggle('is-hidden', done);
+            if (doneRow) doneRow.classList.toggle('is-hidden', !done);
+            syncMoveBannerHeight();
+        }
+
+        function stableStringify(value) {
+            if (value === null || typeof value !== 'object') return JSON.stringify(value);
+            if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+            const keys = Object.keys(value).sort();
+            return '{' + keys.map(key => JSON.stringify(key) + ':' + stableStringify(value[key])).join(',') + '}';
+        }
+
+        function asProjectData(value) {
+            if (!value) return null;
+            if (typeof value === 'string') {
+                try { value = JSON.parse(value); } catch (e) { return null; }
+            }
+            if (typeof value !== 'object' || !value.nodes || typeof value.nodes !== 'object') return null;
+            return value;
+        }
+
+        function projectStamp(data, meta) {
+            let stamp = 0;
+            if (data && typeof data.savedAt === 'number') stamp = data.savedAt;
+            if (meta && typeof meta.updatedAt === 'number') stamp = Math.max(stamp, meta.updatedAt);
+            return stamp;
+        }
+
+        function readRegistryFromBag(bag) {
+            const raw = bag && bag.omnimind_project_index_v1;
+            if (!raw) return { activeId: null, projects: [] };
+            try {
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (parsed && Array.isArray(parsed.projects)) {
+                    return { activeId: parsed.activeId || null, projects: parsed.projects.filter(item => item && item.id) };
+                }
+            } catch (e) {}
+            return { activeId: null, projects: [] };
+        }
+
+        function collectOmniLocalStorage() {
+            const bag = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || key.indexOf('omnimind_') !== 0 || key === MOVE_DONE_KEY) continue;
+                bag[key] = localStorage.getItem(key);
+            }
+            return bag;
+        }
+
+        async function idbGetAll() {
+            const db = await getIndexedDB();
+            if (!db) return {};
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(DB_STORE, 'readonly');
+                    const out = {};
+                    const req = tx.objectStore(DB_STORE).openCursor();
+                    req.onsuccess = () => {
+                        const cursor = req.result;
+                        if (!cursor) { resolve(out); return; }
+                        out[String(cursor.key)] = cursor.value;
+                        cursor.continue();
+                    };
+                    req.onerror = () => resolve(out);
+                } catch (e) {
+                    resolve({});
+                }
+            });
+        }
+
+        function projectIdsInBackup(localBag, idbBag) {
+            const ids = new Set();
+            readRegistryFromBag(localBag).projects.forEach(item => ids.add(item.id));
+            Object.keys(localBag || {}).forEach(key => {
+                if (key.indexOf('omnimind_proj_data_') === 0) ids.add(key.slice('omnimind_proj_data_'.length));
+            });
+            Object.keys(idbBag || {}).forEach(key => {
+                if (key.indexOf('omnimind_idb_proj_') === 0) ids.add(key.slice('omnimind_idb_proj_'.length));
+            });
+            return ids;
+        }
+
+        function metaById(registry) {
+            const map = {};
+            (registry.projects || []).forEach(item => { if (item && item.id) map[item.id] = item; });
+            return map;
+        }
+
+        function pickFullerProject(localValue, idbValue, meta) {
+            const fromLocal = asProjectData(localValue);
+            const fromIdb = asProjectData(idbValue);
+            if (fromLocal && fromIdb) {
+                const localPick = { data: fromLocal, stamp: projectStamp(fromLocal, meta) };
+                const idbPick = { data: fromIdb, stamp: projectStamp(fromIdb, meta) };
+                if (localPick.stamp > idbPick.stamp) return localPick;
+                if (idbPick.stamp > localPick.stamp) return idbPick;
+                return stableStringify(fromIdb).length >= stableStringify(fromLocal).length ? idbPick : localPick;
+            }
+            const data = fromIdb || fromLocal;
+            return data ? { data, stamp: projectStamp(data, meta) } : null;
+        }
+
+        async function buildMoveBackup() {
+            const localBag = collectOmniLocalStorage();
+            const idbBag = await idbGetAll();
+            return {
+                kind: 'omnimind-move',
+                version: 1,
+                exportedAt: Date.now(),
+                origin: location.origin,
+                localStorage: localBag,
+                indexedDB: idbBag
+            };
+        }
+
+        function normalizeMovePayload(parsed) {
+            if (!parsed || typeof parsed !== 'object') return null;
+            if (parsed.kind === 'omnimind-move' && parsed.localStorage && typeof parsed.localStorage === 'object') {
+                return {
+                    kind: 'omnimind-move',
+                    version: 1,
+                    exportedAt: parsed.exportedAt || Date.now(),
+                    localStorage: parsed.localStorage,
+                    indexedDB: (parsed.indexedDB && typeof parsed.indexedDB === 'object') ? parsed.indexedDB : {}
+                };
+            }
+            if (parsed.version === 'MM_V4_MULTI' && parsed.projectsData && typeof parsed.projectsData === 'object') {
+                const localBag = {};
+                const idbBag = {};
+                if (parsed.registry) localBag.omnimind_project_index_v1 = JSON.stringify(parsed.registry);
+                Object.keys(parsed.projectsData).forEach(id => {
+                    const data = parsed.projectsData[id];
+                    idbBag['omnimind_idb_proj_' + id] = data;
+                    try { localBag['omnimind_proj_data_' + id] = JSON.stringify(data); } catch (e) {}
+                });
+                if (parsed.imageAssets && typeof parsed.imageAssets === 'object') {
+                    idbBag[ASSETS_STORAGE_KEY] = parsed.imageAssets;
+                    try { localBag[ASSETS_STORAGE_KEY] = JSON.stringify(parsed.imageAssets); } catch (e) {}
+                }
+                return { kind: 'omnimind-move', version: 1, exportedAt: parsed.exportedAt || Date.now(), localStorage: localBag, indexedDB: idbBag };
+            }
+            return null;
+        }
+
+        function mergeAssetMaps(current, incoming) {
+            const out = Object.assign({}, current || {});
+            let changed = false;
+            Object.keys(incoming || {}).forEach(key => {
+                const next = incoming[key];
+                if (typeof next !== 'string' || !next) return;
+                const prev = out[key];
+                if (!prev || (prev !== next && next.length > String(prev).length)) {
+                    out[key] = next;
+                    changed = true;
+                }
+            });
+            return { assets: out, changed };
+        }
+
+        async function writeStoredProject(id, data) {
+            await idbSave(getProjectIDBKey(id), data);
+            const json = JSON.stringify(data);
+            try {
+                localStorage.setItem(getProjectStorageKey(id), json);
+            } catch (e) {
+                try {
+                    const light = Object.assign({}, data, { isLightweight: true });
+                    delete light.canvasImageAssets;
+                    localStorage.setItem(getProjectStorageKey(id), JSON.stringify(light));
+                } catch (e2) {}
+            }
+        }
+
+        async function applyMoveBackup(rawPayload) {
+            storageWriteEpoch += 1;
+            clearTimeout(saveTimeout);
+            const payload = normalizeMovePayload(rawPayload);
+            if (!payload) throw new Error('This file is not an OmniMind maps backup.');
+            const sourceBag = payload.localStorage || {};
+            const sourceIdb = payload.indexedDB || {};
+            const sourceRegistry = readRegistryFromBag(sourceBag);
+            const sourceMeta = metaById(sourceRegistry);
+            const destBag = collectOmniLocalStorage();
+            const destIdb = await idbGetAll();
+            const destRegistry = readRegistryFromBag(destBag);
+            const destMeta = metaById(destRegistry);
+            const result = { added: 0, updated: 0, skipped: 0, proCopied: false };
+            const ids = projectIdsInBackup(sourceBag, sourceIdb);
+
+            const decisions = [];
+            ids.forEach(id => {
+                const source = pickFullerProject(sourceBag['omnimind_proj_data_' + id], sourceIdb['omnimind_idb_proj_' + id], sourceMeta[id]);
+                const dest = pickFullerProject(destBag['omnimind_proj_data_' + id], destIdb['omnimind_idb_proj_' + id], destMeta[id]);
+                if (!source) return;
+                let winner = 'source';
+                if (dest) {
+                    const sourceJson = stableStringify(source.data);
+                    const destJson = stableStringify(dest.data);
+                    if (sourceJson === destJson) winner = 'same';
+                    else if (source.stamp < dest.stamp) winner = 'dest';
+                    else if (source.stamp === dest.stamp && sourceJson.length <= destJson.length) winner = 'dest';
+                }
+                decisions.push({ id, source, winner });
+            });
+
+            let assets = {};
+            function absorbSide(bag, idbBag) {
+                assets = mergeAssetMaps(assets, asAssetMap(idbBag[ASSETS_STORAGE_KEY])).assets;
+                assets = mergeAssetMaps(assets, asAssetMap(bag[ASSETS_STORAGE_KEY])).assets;
+                projectIdsInBackup(bag, idbBag).forEach(id => {
+                    [idbBag['omnimind_idb_proj_' + id], bag['omnimind_proj_data_' + id]].forEach(raw => {
+                        const data = asProjectData(raw);
+                        if (data && data.canvasImageAssets) assets = mergeAssetMaps(assets, data.canvasImageAssets).assets;
+                    });
+                });
+            }
+            absorbSide(destBag, destIdb);
+            absorbSide(sourceBag, sourceIdb);
+
+            for (const decision of decisions) {
+                if (decision.winner === 'same' || decision.winner === 'dest') {
+                    result.skipped += 1;
+                    continue;
+                }
+                const existed = !!destMeta[decision.id] || !!destBag['omnimind_proj_data_' + decision.id] || !!destIdb['omnimind_idb_proj_' + decision.id];
+                await writeStoredProject(decision.id, decision.source.data);
+                const stamp = decision.source.stamp || payload.exportedAt || Date.now();
+                const previous = sourceMeta[decision.id] || destMeta[decision.id] || {};
+                const rootNode = decision.source.data.nodes
+                    ? Object.values(decision.source.data.nodes).find(node => node && !node.parentId)
+                    : null;
+                const rootTitle = rootNode && rootNode.text
+                    ? String(rootNode.text).replace(/^[^\w\sÀ-ſ]+/, '').trim()
+                    : '';
+                const nodeCount = decision.source.data.nodes ? Object.keys(decision.source.data.nodes).length : (previous.nodeCount || 0);
+                destMeta[decision.id] = {
+                    id: decision.id,
+                    name: previous.name || decision.source.data.name || rootTitle || 'Imported map',
+                    createdAt: previous.createdAt || stamp,
+                    updatedAt: stamp,
+                    nodeCount
+                };
+                if (!destRegistry.projects.some(item => item.id === decision.id)) destRegistry.projects.push(destMeta[decision.id]);
+                else {
+                    const index = destRegistry.projects.findIndex(item => item.id === decision.id);
+                    destRegistry.projects[index] = destMeta[decision.id];
+                }
+                if (existed) result.updated += 1;
+                else result.added += 1;
+            }
+
+            if (decisions.length) {
+                const incomingIds = new Set(decisions.map(decision => decision.id));
+                const starterIds = destRegistry.projects.filter(meta => {
+                    if (!meta || incomingIds.has(meta.id)) return false;
+                    const flagged = meta.autoStarter === true;
+                    const legacyFactory = meta.autoStarter !== true && meta.name === 'Master Idea';
+                    if (!flagged && !legacyFactory) return false;
+                    if (meta.id === currentProjectId && !canvasMatchesFactoryStarter()) return false;
+                    const stored = pickFullerProject(destBag['omnimind_proj_data_' + meta.id], destIdb['omnimind_idb_proj_' + meta.id], meta);
+                    if (!stored) return flagged;
+                    return dataMatchesFactoryStarter(stored.data);
+                }).map(meta => meta.id);
+                for (const starterId of starterIds) {
+                    destRegistry.projects = destRegistry.projects.filter(meta => meta.id !== starterId);
+                    delete destMeta[starterId];
+                    try { localStorage.removeItem(getProjectStorageKey(starterId)); } catch (e) {}
+                    await idbDelete(getProjectIDBKey(starterId));
+                }
+            }
+
+            if (!destRegistry.projects.some(meta => meta.id === destRegistry.activeId)) {
+                const importedActive = sourceRegistry.activeId && destMeta[sourceRegistry.activeId] ? sourceRegistry.activeId : '';
+                destRegistry.activeId = importedActive || (destRegistry.projects[0] ? destRegistry.projects[0].id : null);
+            } else if (!destRegistry.activeId && destRegistry.projects[0]) {
+                destRegistry.activeId = destRegistry.projects[0].id;
+            }
+            try {
+                localStorage.setItem(PROJECT_REGISTRY_KEY, JSON.stringify(destRegistry));
+            } catch (e) {}
+            await idbSave(PROJECT_REGISTRY_KEY, destRegistry);
+
+            canvasImageAssets = assets;
+            await idbSave(ASSETS_STORAGE_KEY, assets);
+            try { localStorage.setItem(ASSETS_STORAGE_KEY, JSON.stringify(assets)); } catch (e) {}
+
+            const activeData = destMeta[destRegistry.activeId]
+                ? asProjectData(localStorage.getItem(getProjectStorageKey(destRegistry.activeId)))
+                : null;
+            if (activeData) {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(activeData)); } catch (e) {}
+            }
+
+            if (sourceBag.omnimind_pro_code && !localStorage.getItem('omnimind_pro_code')) {
+                localStorage.setItem('omnimind_pro_code', sourceBag.omnimind_pro_code);
+                result.proCopied = true;
+            }
+            Object.keys(sourceBag).forEach(key => {
+                if (key === MOVE_DONE_KEY || key === 'omnimind_pro_code' || key === PROJECT_REGISTRY_KEY || key === STORAGE_KEY || key === ASSETS_STORAGE_KEY) return;
+                if (key.indexOf('omnimind_proj_data_') === 0) return;
+                if (key.indexOf('omnimind_') !== 0) return;
+                if (!localStorage.getItem(key) && typeof sourceBag[key] === 'string') {
+                    try { localStorage.setItem(key, sourceBag[key]); } catch (e) {}
+                }
+            });
+
+            loadProjectRegistry();
+            if (currentProjectId) loadFromStorage(currentProjectId);
+            if (typeof renderTree === 'function') renderTree();
+            if (typeof renderDecorations === 'function') renderDecorations();
+            if (typeof applyTransform === 'function') applyTransform();
+            if (typeof syncFromMap === 'function') syncFromMap(true);
+            if (typeof updatePropertiesPanel === 'function') updatePropertiesPanel();
+            if (typeof updateProjectHeaderUI === 'function') updateProjectHeaderUI();
+            if (typeof renderProjectList === 'function') renderProjectList();
+            if (typeof renderHomepage === 'function') renderHomepage();
+            try {
+                Promise.resolve(fetchUserQuota(currentCloudUser)).then(() => {
+                    if (typeof updateCloudAuthUI === 'function') updateCloudAuthUI();
+                });
+            } catch (e) {}
+            return result;
+        }
+
+        function asAssetMap(value) {
+            if (!value) return null;
+            if (typeof value === 'string') {
+                try { value = JSON.parse(value); } catch (e) { return null; }
+            }
+            if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+            return value;
+        }
+
+        function importMoveBackupFile(event) {
+            const input = event && event.target;
+            const file = input && input.files && input.files[0];
+            if (input) input.value = '';
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const parsed = JSON.parse(String(reader.result || ''));
+                    const result = await applyMoveBackup(parsed);
+                    const proNote = result.proCopied ? ' Pro status carried over.' : '';
+                    showUiToast('Maps imported. ' + result.added + ' new, ' + result.updated + ' updated, ' + result.skipped + ' unchanged.' + proNote, 'success', 4200);
+                } catch (err) {
+                    alert(err && err.message ? err.message : 'Could not read that backup.');
+                }
+            };
+            reader.onerror = () => alert('Could not read that backup.');
+            reader.readAsText(file);
+        }
+
+        function downloadMoveBackup(event) {
+            const link = (event && event.currentTarget && event.currentTarget.matches && event.currentTarget.matches('[data-move-backup]'))
+                ? event.currentTarget
+                : document.querySelector('[data-move-backup]');
+            if (link && link.dataset.ready === '1') {
+                if (!event || event.isTrusted !== true || link.dataset.armed === '1') {
+                    if (link.dataset.armed === '1' && event && event.isTrusted) link.dataset.armed = '0';
+                    return;
+                }
+                document.querySelectorAll('[data-move-backup]').forEach(item => {
+                    item.dataset.ready = '0';
+                    item.dataset.armed = '0';
+                    item.textContent = item.getAttribute('data-label') || 'Download a backup';
+                });
+            }
+            if (event) event.preventDefault();
+            setMoveStatus('Preparing backup…');
+            buildMoveBackup().then(payload => {
+                const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                document.querySelectorAll('[data-move-backup]').forEach(item => {
+                    item.href = url;
+                    item.download = 'omnimind-maps-backup.json';
+                    item.dataset.ready = '1';
+                    item.dataset.armed = '1';
+                    item.textContent = item.getAttribute('data-label') === 'Backup' ? 'Save' : 'Save backup file';
+                });
+                if (link) link.click();
+                setMoveStatus('If the file did not save, tap Save.');
+                setTimeout(() => URL.revokeObjectURL(url), 120000);
+            }).catch(() => setMoveStatus('Could not build the backup.'));
+        }
+
+        function waitForMoveReady(ms) {
+            if (moveTransferReady) return Promise.resolve(true);
+            return new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    if (moveReadyWait) moveReadyWait = null;
+                    resolve(false);
+                }, ms);
+                moveReadyWait = () => {
+                    clearTimeout(timer);
+                    resolve(true);
+                };
+            });
+        }
+
+        function waitForMoveAck(transferId, index, ms) {
+            return new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    if (moveAckWait && moveAckWait.transferId === transferId && moveAckWait.index === index) moveAckWait = null;
+                    resolve(false);
+                }, ms);
+                moveAckWait = {
+                    transferId,
+                    index,
+                    resolve: (ok) => {
+                        clearTimeout(timer);
+                        resolve(ok);
+                    }
+                };
+            });
+        }
+
+        function waitForMoveDone(transferId, ms) {
+            return new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    if (moveDoneWait && moveDoneWait.transferId === transferId) moveDoneWait = null;
+                    resolve(null);
+                }, ms);
+                moveDoneWait = {
+                    transferId,
+                    resolve: (message) => {
+                        clearTimeout(timer);
+                        resolve(message);
+                    }
+                };
+            });
+        }
+
+        function startDomainMove() {
+            if (!isOldMoveHost() || moveSending) return;
+            const child = window.open(moveChildUrl(), 'omnimind-move');
+            if (!child) {
+                setMoveStatus('Allow pop-ups for this site, then tap Move my maps again.');
+                return;
+            }
+            moveTransferChild = child;
+            moveTransferReady = false;
+            moveSending = true;
+            document.querySelectorAll('[data-move-maps]').forEach(button => { button.disabled = true; });
+            setMoveStatus('Opening omnimindmap.app…');
+            runDomainMove(child);
+        }
+
+        async function runDomainMove(child) {
+            try {
+                setMoveStatus('Packing your maps…');
+                const payload = await buildMoveBackup();
+                const json = JSON.stringify(payload);
+                const chunks = [];
+                for (let i = 0; i < json.length; i += MOVE_CHUNK_CHARS) chunks.push(json.slice(i, i + MOVE_CHUNK_CHARS));
+                if (!chunks.length) chunks.push('{}');
+                const ready = await waitForMoveReady(25000);
+                if (!ready) throw new Error('omnimindmap.app did not open. Allow pop-ups and tap Move my maps again.');
+                const transferId = 'mv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+                const origin = moveChildOrigin();
+                for (let i = 0; i < chunks.length; i++) {
+                    let acked = false;
+                    for (let attempt = 0; attempt < 8 && !acked; attempt++) {
+                        if (child.closed) throw new Error('The new tab was closed before the move finished.');
+                        child.postMessage({
+                            type: 'omnimind-move-chunk',
+                            transferId,
+                            index: i,
+                            total: chunks.length,
+                            chunk: chunks[i]
+                        }, origin);
+                        acked = await waitForMoveAck(transferId, i, 3000);
+                    }
+                    if (!acked) throw new Error('The new tab stopped responding. Keep it open and tap Move my maps again.');
+                    setMoveStatus('Sending maps… ' + (i + 1) + ' / ' + chunks.length);
+                }
+                const done = await waitForMoveDone(transferId, 60000);
+                if (!done) throw new Error('The new tab did not finish importing. Tap Move my maps again.');
+                if (done.type === 'omnimind-move-error') throw new Error(done.message || 'Import failed.');
+                localStorage.setItem(MOVE_DONE_KEY, JSON.stringify({ at: Date.now(), result: done.result || null }));
+                setMoveStatus('');
+                renderMoveBanner();
+            } catch (err) {
+                setMoveStatus(err && err.message ? err.message : 'The move did not finish.');
+            } finally {
+                moveSending = false;
+                document.querySelectorAll('[data-move-maps]').forEach(button => { button.disabled = false; });
+            }
+        }
+
+        function startMoveReadyPing() {
+            if (!isImportMovePage() || !window.opener) return;
+            if (movePingTimer) {
+                clearInterval(movePingTimer);
+                movePingTimer = null;
+            }
+            const target = moveOpenerOrigin();
+            const ping = () => {
+                try {
+                    if (!window.opener || window.opener.closed) return;
+                    window.opener.postMessage({ type: 'omnimind-move-ready' }, target);
+                } catch (e) {}
+            };
+            ping();
+            movePingTimer = setInterval(ping, 500);
+            setTimeout(() => {
+                if (movePingTimer) {
+                    clearInterval(movePingTimer);
+                    movePingTimer = null;
+                }
+            }, 30000);
+        }
+
+        async function receiveMoveChunk(event, data) {
+            if (movePingTimer) {
+                clearInterval(movePingTimer);
+                movePingTimer = null;
+            }
+            const total = data.total | 0;
+            const index = data.index | 0;
+            if (!data.transferId || total < 1 || total > 8000 || index < 0 || index >= total || typeof data.chunk !== 'string' || data.chunk.length > 250000) {
+                event.source.postMessage({ type: 'omnimind-move-error', transferId: data.transferId || '', message: 'That transfer was not valid.' }, event.origin);
+                return;
+            }
+            if (!moveInbound || moveInbound.transferId !== data.transferId) {
+                moveInbound = { transferId: data.transferId, total, parts: new Array(total), got: 0, bytes: 0 };
+            }
+            if (moveInbound.parts[index] == null) {
+                moveInbound.bytes += data.chunk.length;
+                if (moveInbound.bytes > 120000000) {
+                    moveInbound = null;
+                    event.source.postMessage({ type: 'omnimind-move-error', transferId: data.transferId, message: 'That backup is too large to move in the browser. Download a backup and use Import maps.' }, event.origin);
+                    return;
+                }
+                moveInbound.parts[index] = data.chunk;
+                moveInbound.got += 1;
+            }
+            event.source.postMessage({ type: 'omnimind-move-ack', transferId: data.transferId, index }, event.origin);
+            if (!moveInbound || moveInbound.got !== moveInbound.total) return;
+            const inbound = moveInbound;
+            moveInbound = null;
+            try {
+                const parsed = JSON.parse(inbound.parts.join(''));
+                const result = await applyMoveBackup(parsed);
+                event.source.postMessage({ type: 'omnimind-move-done', transferId: inbound.transferId, result }, event.origin);
+                if (location.hash.indexOf('import') !== -1) {
+                    history.replaceState(null, '', location.pathname + location.search);
+                }
+            } catch (err) {
+                event.source.postMessage({ type: 'omnimind-move-error', transferId: inbound.transferId, message: (err && err.message) || 'Import failed.' }, event.origin);
+            }
+        }
+
+        function onMoveChannelMessage(event) {
+            const data = event.data;
+            if (!data || typeof data.type !== 'string' || data.type.indexOf('omnimind-move-') !== 0) return;
+            if (isOldMoveHost()) {
+                if (!trustedMoveReceiverOrigin(event.origin)) return;
+                if (!moveTransferChild || event.source !== moveTransferChild) return;
+                if (data.type === 'omnimind-move-ready') {
+                    moveTransferReady = true;
+                    if (moveReadyWait) {
+                        const wake = moveReadyWait;
+                        moveReadyWait = null;
+                        wake();
+                    }
+                    return;
+                }
+                if (data.type === 'omnimind-move-ack' && moveAckWait && data.transferId === moveAckWait.transferId && data.index === moveAckWait.index) {
+                    const waiter = moveAckWait;
+                    moveAckWait = null;
+                    waiter.resolve(true);
+                    return;
+                }
+                if ((data.type === 'omnimind-move-done' || data.type === 'omnimind-move-error') && moveDoneWait && data.transferId === moveDoneWait.transferId) {
+                    const waiter = moveDoneWait;
+                    moveDoneWait = null;
+                    waiter.resolve(data);
+                }
+                return;
+            }
+            if (!isImportMovePage()) return;
+            if (!trustedMoveSenderOrigin(event.origin)) return;
+            if (!window.opener || event.source !== window.opener) return;
+            if (data.type === 'omnimind-move-chunk') receiveMoveChunk(event, data);
+        }
+
+        function initDomainMove() {
+            window.addEventListener('message', onMoveChannelMessage);
+            window.addEventListener('resize', syncMoveBannerHeight);
+            window.addEventListener('hashchange', () => {
+                if (isImportMovePage()) startMoveReadyPing();
+            });
+            renderMoveBanner();
+            startMoveReadyPing();
+        }
+
         // Boot
+        initDomainMove();
         init();
     </script>
 </body>
