@@ -2079,13 +2079,15 @@
                         <p id="paypal-pro-status" class="text-[0.7rem] text-slate-500"></p>
                     </div>
                 </div>
-                <form id="pro-activate-form" onsubmit="activateOmniMindPro(event)" class="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex flex-col gap-2">
-                    <p class="font-bold text-slate-800">Already paid? Enter the email and code</p>
-                    <input id="pro-activate-email" type="email" required autocomplete="email" placeholder="PayPal email" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
-                    <input id="pro-activate-code" type="text" required autocomplete="off" placeholder="OMNI-XXXX-XXXX" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono uppercase">
-                    <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">Activate OmniMind Pro</button>
-                    <p id="pro-activate-status" class="text-[0.7rem] text-slate-600 min-h-[1rem]"></p>
-                </form>
+                <div id="pro-activate-panel" class="hidden">
+                    <form id="pro-activate-form" onsubmit="activateOmniMindPro(event)" class="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex flex-col gap-2">
+                        <p class="font-bold text-slate-800">Already paid? Enter the email and code</p>
+                        <input id="pro-activate-email" type="email" required autocomplete="email" placeholder="PayPal email" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
+                        <input id="pro-activate-code" type="text" required autocomplete="off" placeholder="OMNI-XXXX-XXXX" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono uppercase">
+                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">Activate OmniMind Pro</button>
+                        <p id="pro-activate-status" class="text-[0.7rem] text-slate-600 min-h-[1rem]"></p>
+                    </form>
+                </div>
                 <p class="text-center text-[0.7rem] text-slate-400">
                     <a href="/legal/terms.html" class="underline hover:text-slate-700">Terms</a>
                     · <a href="/legal/privacy.html" class="underline hover:text-slate-700">Privacy</a>
@@ -4159,6 +4161,7 @@
             const amount = document.getElementById('pro-modal-amount');
             const note = document.getElementById('pro-modal-price-note');
             const checkout = document.getElementById('pro-checkout-panel');
+            const activate = document.getElementById('pro-activate-panel');
             const footer = document.getElementById('home-footer-pro-line');
             const quotaLabel = document.getElementById('quota-upgrade-label');
             if (!open) {
@@ -4170,6 +4173,7 @@
                 if (priceRow) priceRow.classList.add('hidden');
                 if (amount) amount.textContent = '';
                 if (checkout) checkout.classList.add('hidden');
+                if (activate) activate.classList.add('hidden');
                 if (footer) footer.textContent = 'OmniMind · OmniMind Pro, coming soon';
                 if (quotaLabel) quotaLabel.textContent = '⭐ OmniMind Pro, coming soon';
                 return;
@@ -4183,6 +4187,7 @@
             if (amount) amount.textContent = price;
             if (note) note.textContent = 'One-time · ' + OMNIMIND_PRO.currency;
             if (checkout) checkout.classList.remove('hidden');
+            if (activate) activate.classList.remove('hidden');
             if (footer) footer.textContent = 'OmniMind · OmniMind Pro is a one-time ' + price + ' purchase. No subscription.';
             if (quotaLabel) quotaLabel.textContent = '⭐ Upgrade to OmniMind Pro (' + price + ' · 50 Slots)';
         }
@@ -7277,13 +7282,13 @@
 
         function createFactoryStarterNodes() {
             return {
-                'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!' },
-                'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170 },
-                'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝' },
-                'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold' },
-                'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490 },
-                'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨' }
+                'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold', branchDirection: 'right' },
+                'n1': { id: 'n1', parentId: 'root', text: 'Free Placement', x: 500, y: 170, tag: 'Try moving me!', branchDirection: 'right' },
+                'n1_1': { id: 'n1_1', parentId: 'n1', text: 'Children follow automatically', x: 800, y: 170, branchDirection: 'right' },
+                'n2': { id: 'n2', parentId: 'root', text: 'Markdown Parsing', x: 500, y: 330, flag: '📝', branchDirection: 'right' },
+                'root2': { id: 'root2', parentId: null, text: '📋 Second Root', x: 200, y: 550, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold', branchDirection: 'right' },
+                'n3': { id: 'n3', parentId: 'root2', text: 'Independent Tree', x: 500, y: 490, branchDirection: 'right' },
+                'n4': { id: 'n4', parentId: 'root2', text: 'Drag me separately!', x: 500, y: 610, flag: '✨', branchDirection: 'right' }
             };
         }
 
@@ -10874,11 +10879,34 @@
             return { view, cW, cH, pad, topInset, bottomInset: pad };
         }
 
-        // Screen box of every visible bubble, including a painted fold badge.
-        // Zones, stickies, cards, and other decorations are not part of this box.
+        // Grouping zones are design frames. Stickies, cards, arrows, and images stay
+        // out of Fit so a note does not pull the view, matching the fold-badge fit.
+        function isGroupingZone(dec) {
+            return !!(dec && dec.type === 'shape' && dec.shapeType === 'zone'
+                && typeof dec.x === 'number' && typeof dec.y === 'number'
+                && (dec.width || 0) > 1 && (dec.height || 0) > 1);
+        }
+
+        function groupingZoneWorldBox(dec) {
+            if (!isGroupingZone(dec)) return null;
+            return { x: dec.x, y: dec.y, w: dec.width, h: dec.height };
+        }
+
+        function unionScreenRect(box, rect) {
+            if (!rect || (rect.width < 1 && rect.height < 1)) return box;
+            return {
+                minL: Math.min(box.minL, rect.left),
+                minT: Math.min(box.minT, rect.top),
+                maxR: Math.max(box.maxR, rect.right),
+                maxB: Math.max(box.maxB, rect.bottom),
+                count: box.count + 1
+            };
+        }
+
+        // Screen box of every visible bubble, including a painted fold badge,
+        // plus the full bounds of each grouping zone.
         function visibleNodesScreenBox() {
-            let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
-            let count = 0;
+            let box = { minL: Infinity, minT: Infinity, maxR: -Infinity, maxB: -Infinity, count: 0 };
             Object.values(nodes).forEach(node => {
                 if (!node || isNodeConcealed(node) || !node.el) return;
                 const parts = [node.el];
@@ -10887,17 +10915,16 @@
                     parts.push(part);
                 });
                 parts.forEach(part => {
-                    const r = part.getBoundingClientRect();
-                    if (!r || (r.width < 1 && r.height < 1)) return;
-                    minL = Math.min(minL, r.left);
-                    minT = Math.min(minT, r.top);
-                    maxR = Math.max(maxR, r.right);
-                    maxB = Math.max(maxB, r.bottom);
-                    count += 1;
+                    box = unionScreenRect(box, part.getBoundingClientRect());
                 });
             });
-            if (!count || !isFinite(minL)) return null;
-            return { minL, minT, maxR, maxB };
+            document.querySelectorAll('.canvas-decoration').forEach(el => {
+                const dec = (typeof canvasDecorations !== 'undefined') ? canvasDecorations[el.dataset.id] : null;
+                if (!isGroupingZone(dec)) return;
+                box = unionScreenRect(box, el.getBoundingClientRect());
+            });
+            if (!box.count || !isFinite(box.minL)) return null;
+            return { minL: box.minL, minT: box.minT, maxR: box.maxR, maxB: box.maxB };
         }
 
         // The first pass can miss a counter-scaled fold badge, or a node whose
@@ -11043,7 +11070,12 @@
                 const box = visibleNodeBounds(n);
                 if (box) allItems.push(box);
             });
-            // Empty frames, stickies, and other decorations are not part of the fit.
+            // Grouping zones are included so a frame larger than its nodes is fully
+            // on screen. Stickies, cards, and other decorations still are not.
+            Object.values(canvasDecorations || {}).forEach(dec => {
+                const box = groupingZoneWorldBox(dec);
+                if (box) allItems.push(box);
+            });
             if (allItems.length === 0) {
                 restoreScroll();
                 return;
@@ -11265,13 +11297,30 @@
         }
 
         // 4-Way Orientation Detection.
-        // Siblings in a tree share a row, so an average x-offset (or a selected
-        // child used as the origin) used to highlight Right after a Tree layout.
+        // A saved branchDirection wins. Otherwise siblings in a tree share a row,
+        // so an average x-offset used to highlight Right after a Tree layout.
         function getBranchDirection(nodeId) {
+            if (typeof MindmapHistory !== 'undefined' && MindmapHistory.branchDirection) {
+                return MindmapHistory.branchDirection(nodes, nodeId);
+            }
             if (typeof MindmapHistory !== 'undefined') {
                 return MindmapHistory.inferBranchDirection(nodes, nodeId);
             }
             return 'right';
+        }
+
+        function inheritBranchDirection(node, source) {
+            const dir = source && source.branchDirection;
+            if (dir === 'right' || dir === 'down' || dir === 'left' || dir === 'up') node.branchDirection = dir;
+        }
+
+        function rememberBranchDirection(rootId, direction) {
+            if (!nodes[rootId]) return;
+            if (direction !== 'right' && direction !== 'down' && direction !== 'left' && direction !== 'up') return;
+            nodes[rootId].branchDirection = direction;
+            getDescendants(rootId).forEach(id => {
+                if (nodes[id]) nodes[id].branchDirection = direction;
+            });
         }
 
         // Transpose a branch to a specific direction or cycle between counterparts
@@ -11344,10 +11393,12 @@
                 });
             }
 
+            rememberBranchDirection(target.id, targetDirection);
             renderTree();
             syncFromMap();
             updatePropertiesPanel();
             triggerAutoSave();
+            saveCurrentProjectImmediate();
 
             const dirLabels = {
                 right: 'Right-Facing ➔',
@@ -11452,11 +11503,15 @@
                 autoLayoutAllRootsUp(200, 600);
             }
 
+            Object.keys(nodes).forEach(id => {
+                if (nodes[id] && nodes[id].parentId == null) rememberBranchDirection(id, targetDir);
+            });
             renderTree();
             syncFromMap();
             updatePropertiesPanel();
             fitView();
             triggerAutoSave();
+            saveCurrentProjectImmediate();
 
             const dirLabels = {
                 right: 'Right-Facing ➔',
@@ -11535,8 +11590,15 @@
             let slopeY = 0; // vertical slope component
             let isVertical = false;
             let dirY = 1; // 1 = down, -1 = up
+            const savedDir = (parent.branchDirection === 'right' || parent.branchDirection === 'left' || parent.branchDirection === 'down' || parent.branchDirection === 'up')
+                ? parent.branchDirection
+                : (typeof getBranchDirection === 'function' ? getBranchDirection(parentId) : null);
 
-            if (parent.parentId && nodes[parent.parentId]) {
+            if (savedDir === 'down' || savedDir === 'up' || savedDir === 'left' || savedDir === 'right') {
+                isVertical = savedDir === 'down' || savedDir === 'up';
+                dirY = savedDir === 'up' ? -1 : 1;
+                dirX = savedDir === 'left' ? -1 : (savedDir === 'right' ? 1 : 0);
+            } else if (parent.parentId && nodes[parent.parentId]) {
                 // Parent has an incoming edge line from grandparent: detect line orientation!
                 const grandParent = nodes[parent.parentId];
                 const lineDx = parent.x - grandParent.x;
@@ -11659,6 +11721,7 @@
             const id = 'n_' + Date.now();
             const pos = getNewChildPosition(selectedNodeId);
             nodes[id] = { id, parentId: selectedNodeId, text: 'New Bubble', x: pos.x, y: pos.y };
+            inheritBranchDirection(nodes[id], nodes[selectedNodeId]);
             renderTree();
             selectNode(id);
             syncFromMap();
@@ -11686,6 +11749,7 @@
                 const parent = nodes[selected.parentId];
                 const pos = getNewSiblingPosition(selected.id);
                 nodes[id] = { id, parentId: parent.id, text: 'New Bubble', x: pos.x, y: pos.y };
+                inheritBranchDirection(nodes[id], parent);
             }
             renderTree();
             selectNode(id);

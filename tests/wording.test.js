@@ -43,6 +43,9 @@ test('footer, legal contact, and public PayPal client id are present', () => {
     assert.match(html, /AfLUWmx3V0glGmHJI9Lwq2vSeYMP4HWrdlrjnmx9UPtK7ssmgO8AldGDFOr5KrX17Usx8W_gyl9v6lT8/);
     assert.match(html, /id="paypal-pro-button"/);
     assert.match(html, /id="pro-checkout-panel" class="hidden"/);
+    assert.match(html, /id="pro-activate-panel" class="hidden"/);
+    assert.match(html, /getElementById\('pro-activate-panel'\)/);
+    assert.match(html, /Already paid\? Enter the email and code/);
     assert.match(html, /OmniMind Pro, coming soon/);
     const config = read('pro-config.js');
     assert.match(config, /priceUsd:/);
