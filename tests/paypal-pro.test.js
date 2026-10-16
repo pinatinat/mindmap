@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { generateProCode, issueProCode, activateProCode, MAX_DEVICES } = require('../api/lib/pro-store');
 const { fulfillPurchase } = require('../api/lib/fulfill');
-const { createProOrder, assertProPrice, PRO_PRICE } = require('../api/lib/paypal');
+const { createProOrder, assertProPrice, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice } = require('../api/lib/paypal');
 const { handleCreateOrder } = require('../api/paypal/create-order');
 const { handleCaptureOrder } = require('../api/paypal/capture-order');
 const { handleWebhook } = require('../api/paypal/webhook');
@@ -27,7 +27,7 @@ function completedOrder(overrides = {}) {
                 captures: [{
                     id: 'CAP1',
                     status: 'COMPLETED',
-                    amount: { currency_code: 'USD', value: '9.00' }
+                    amount: { currency_code: 'USD', value: OMNIMIND_PRO.priceUsd }
                 }]
             }
         }],
@@ -60,7 +60,7 @@ test('codes look like OMNI-XXXX-XXXX and avoid ambiguous characters', () => {
 
 test('issueProCode is idempotent per capture id', async () => {
     const db = createMemoryDb();
-    const purchase = { captureId: 'CAP1', orderId: 'ORDER1', email: 'a@b.co', value: '9.00', currency: 'USD' };
+    const purchase = { captureId: 'CAP1', orderId: 'ORDER1', email: 'a@b.co', value: OMNIMIND_PRO.priceUsd, currency: OMNIMIND_PRO.currency };
     let n = 0;
     const gen = () => `OMNI-TEST-${String(++n).padStart(4, '0')}`;
     const first = await issueProCode(db, purchase, gen);
@@ -73,7 +73,7 @@ test('issueProCode is idempotent per capture id', async () => {
 
 test('activation allows 3 devices and rejects a fourth', async () => {
     const db = createMemoryDb();
-    const purchase = { captureId: 'CAP1', email: 'buyer@example.com', value: '9.00', currency: 'USD' };
+    const purchase = { captureId: 'CAP1', email: 'buyer@example.com', value: OMNIMIND_PRO.priceUsd, currency: OMNIMIND_PRO.currency };
     const issued = await issueProCode(db, purchase, () => 'OMNI-ABCD-2345');
     for (let i = 1; i <= MAX_DEVICES; i++) {
         const result = await activateProCode(db, {
@@ -104,29 +104,43 @@ test('activation allows 3 devices and rejects a fourth', async () => {
     assert.equal(mismatch.status, 403);
 });
 
-test('assertProPrice rejects anything other than 9.00 USD', () => {
-    assert.throws(() => assertProPrice({ captureId: 'C', email: 'a@b.co', value: '8.00', currency: 'USD' }), /9\.00/);
-    assert.throws(() => assertProPrice({ captureId: 'C', email: 'a@b.co', value: '9.00', currency: 'PHP' }), /9\.00/);
-    assert.equal(assertProPrice({ captureId: 'C', email: 'a@b.co', value: PRO_PRICE, currency: 'USD' }).email, 'a@b.co');
+test('assertProPrice uses the configured price', () => {
+    const label = formatOmniMindProPrice(OMNIMIND_PRO);
+    assert.throws(() => assertProPrice({ captureId: 'C', email: 'a@b.co', value: '8.00', currency: 'USD' }), new RegExp(label.replace('$', '\\$')));
+    assert.throws(() => assertProPrice({ captureId: 'C', email: 'a@b.co', value: PRO_PRICE, currency: 'PHP' }), new RegExp(label.replace('$', '\\$')));
+    assert.equal(assertProPrice({ captureId: 'C', email: 'a@b.co', value: PRO_PRICE, currency: OMNIMIND_PRO.currency }).email, 'a@b.co');
+    const custom = { priceUsd: '12.50', currency: 'USD', checkoutEnabled: true };
+    assert.equal(assertProPrice({ captureId: 'C', email: 'a@b.co', value: '12.50', currency: 'USD' }, custom).value, '12.50');
 });
 
-test('create order always asks PayPal for 9.00 USD', async () => {
+test('create order uses pro-config and stays closed while checkout is off', async () => {
+    let calls = 0;
     let orderBody;
     const fetchImpl = async (url, options = {}) => {
+        calls += 1;
         if (String(url).includes('/v1/oauth2/token')) {
             return { ok: true, json: async () => ({ access_token: 'tok' }) };
         }
         orderBody = JSON.parse(options.body);
         return { ok: true, json: async () => ({ id: 'ORDER9' }) };
     };
-    const order = await createProOrder(config, fetchImpl);
+    const closed = mockRes();
+    await handleCreateOrder({ method: 'POST' }, closed, { config, fetchImpl });
+    assert.equal(closed.statusCode, 403);
+    assert.equal(calls, 0);
+    assert.equal(OMNIMIND_PRO.checkoutEnabled, false);
+
+    const custom = { priceUsd: '12.50', currency: 'USD', checkoutEnabled: true };
+    const order = await createProOrder(config, fetchImpl, custom);
     assert.equal(order.id, 'ORDER9');
-    assert.equal(orderBody.purchase_units[0].amount.value, '9.00');
+    assert.equal(orderBody.purchase_units[0].amount.value, '12.50');
     assert.equal(orderBody.purchase_units[0].amount.currency_code, 'USD');
-    const res = mockRes();
-    await handleCreateOrder({ method: 'POST' }, res, { config, fetchImpl });
-    assert.equal(res.statusCode, 200);
-    assert.equal(res.json.id, 'ORDER9');
+
+    const open = mockRes();
+    await handleCreateOrder({ method: 'POST' }, open, { config, fetchImpl, pro: OMNIMIND_PRO.checkoutEnabled ? OMNIMIND_PRO : Object.assign({}, OMNIMIND_PRO, { checkoutEnabled: true }) });
+    assert.equal(open.statusCode, 200);
+    assert.equal(orderBody.purchase_units[0].amount.value, OMNIMIND_PRO.priceUsd);
+    assert.equal(orderBody.purchase_units[0].amount.currency_code, OMNIMIND_PRO.currency);
 });
 
 test('capture fulfills once and capture plus webhook share the code', async () => {
@@ -174,8 +188,8 @@ test('capture fulfills once and capture plus webhook share the code', async () =
             captureId: 'CAP1',
             orderId: 'ORDER1',
             email: 'buyer@example.com',
-            value: '9.00',
-            currency: 'USD'
+            value: OMNIMIND_PRO.priceUsd,
+            currency: OMNIMIND_PRO.currency
         },
         fetchImpl,
         resendKey: 're_test'
@@ -201,7 +215,7 @@ test('capture fulfills once and capture plus webhook share the code', async () =
             resource: {
                 id: 'CAP1',
                 status: 'COMPLETED',
-                amount: { currency_code: 'USD', value: '9.00' },
+                amount: { currency_code: OMNIMIND_PRO.currency, value: OMNIMIND_PRO.priceUsd },
                 supplementary_data: { related_ids: { order_id: 'ORDER1' } }
             }
         }
@@ -252,8 +266,8 @@ test('activate endpoint returns the server decision', async () => {
     await issueProCode(db, {
         captureId: 'CAP1',
         email: 'buyer@example.com',
-        value: '9.00',
-        currency: 'USD'
+        value: OMNIMIND_PRO.priceUsd,
+        currency: OMNIMIND_PRO.currency
     }, () => 'OMNI-ZZZZ-9999');
     const res = mockRes();
     await handleActivate({

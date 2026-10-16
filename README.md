@@ -1,6 +1,6 @@
 # OmniMind
 
-Browser mind map. OmniMind Pro is a one-time **$9** purchase through PayPal Checkout (sandbox first). There is no subscription.
+Browser mind map. OmniMind Pro is a one-time purchase through PayPal Checkout. There is no subscription. The price and the PayPal button stay hidden until `checkoutEnabled` is turned on in `pro-config.js`.
 
 `index.html` and `MINDMAP.html` are the same app and must stay identical.
 
@@ -28,7 +28,7 @@ The page embeds the public sandbox client id so the PayPal button can load. That
 1. In the PayPal developer dashboard, open the sandbox app and copy the client id and secret into `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`.
 2. Set `PAYPAL_ENV=sandbox`.
 3. Add a webhook for `https://<your-domain>/api/paypal/webhook` subscribed to `PAYMENT.CAPTURE.COMPLETED`. Copy its webhook id into `PAYPAL_WEBHOOK_ID`.
-4. Checkout calls `POST /api/paypal/create-order` and `POST /api/paypal/capture-order`. The server creates a $9.00 USD order and captures it. The browser cannot choose the amount.
+4. Checkout calls `POST /api/paypal/create-order` and `POST /api/paypal/capture-order`. The server creates an order for `priceUsd` in `pro-config.js` and captures it. The browser cannot choose the amount. While `checkoutEnabled` is false, create-order refuses and the app says “OmniMind Pro, coming soon”.
 5. The webhook verifies the PayPal signature, then issues the same code for that capture id. Repeating the capture or the webhook does not mint a second code or send a second email.
 
 ## Firebase

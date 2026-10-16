@@ -1,7 +1,7 @@
 {
   "name": "omnimind",
   "private": true,
-  "description": "OmniMind mind map. OmniMind Pro is a one-time $9 purchase via PayPal.",
+  "description": "OmniMind mind map. OmniMind Pro is a one-time purchase via PayPal.",
   "scripts": {
     "test": "node --test tests/*.js"
   },

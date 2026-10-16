@@ -20,10 +20,10 @@
     <p class="muted"><a href="/">OmniMind</a></p>
     <h1>Refund Policy</h1>
     <p class="muted">Last updated October 14, 2026</p>
-    <p>OmniMind Pro is a one-time $9 digital purchase. It is not a subscription, so there is nothing to cancel later. Email <a href="mailto:support@omnimindmap.app">support@omnimindmap.app</a> and include the PayPal buyer email.</p>
+    <p id="pro-refund-intro">OmniMind Pro, coming soon. It is a one-time digital purchase, not a subscription, so there is nothing to cancel later. Email <a href="mailto:support@omnimindmap.app">support@omnimindmap.app</a> and include the PayPal buyer email.</p>
 
     <h2>When we refund</h2>
-    <p>If you email us within 14 days of payment and the code has not been activated on a device, we refund the $9 through PayPal. If the code never arrived, write to us and we will resend it or refund the payment.</p>
+    <p id="pro-refund-window">If you email us within 14 days of payment and the code has not been activated on a device, we refund the purchase through PayPal. If the code never arrived, write to us and we will resend it or refund the payment.</p>
 
     <h2>After a code is activated</h2>
     <p>Once a code has been used on a device, the purchase is delivered. We still read every request. A refund after activation is limited to cases where the app did not provide the Pro features that purchase includes.</p>
@@ -35,5 +35,15 @@
         <a href="/legal/privacy.html">Privacy Policy</a>
     </nav>
 </main>
+<script src="../pro-config.js"></script>
+<script>
+    if (window.OMNIMIND_PRO && OMNIMIND_PRO.checkoutEnabled) {
+        var price = formatOmniMindProPrice(OMNIMIND_PRO);
+        var intro = document.getElementById('pro-refund-intro');
+        var windowEl = document.getElementById('pro-refund-window');
+        if (intro) intro.textContent = 'OmniMind Pro is a one-time ' + price + ' digital purchase. It is not a subscription, so there is nothing to cancel later. Email support@omnimindmap.app and include the PayPal buyer email.';
+        if (windowEl) windowEl.textContent = 'If you email us within 14 days of payment and the code has not been activated on a device, we refund the ' + price + ' through PayPal. If the code never arrived, write to us and we will resend it or refund the payment.';
+    }
+</script>
 </body>
 </html>

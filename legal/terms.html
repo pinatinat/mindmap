@@ -26,7 +26,7 @@
     <p>OmniMind lets you create mind maps in the browser. Free use includes local maps and a small cloud quota when you sign in. OmniMind Pro is a separate one-time purchase.</p>
 
     <h2>OmniMind Pro</h2>
-    <p>OmniMind Pro costs $9 USD, paid once through PayPal. There is no subscription and no renewal. After PayPal confirms the payment we email a code to the PayPal buyer address. Enter that email and code in the app to turn on Pro on that device. One code works on up to 3 devices. Keep the code private. We can refuse a code that was shared beyond that cap or obtained without payment.</p>
+    <p id="pro-terms-offer">OmniMind Pro, coming soon. It is a one-time purchase through PayPal, with no subscription and no renewal. After PayPal confirms the payment we email a code to the PayPal buyer address. Enter that email and code in the app to turn on Pro on that device. One code works on up to 3 devices. Keep the code private. We can refuse a code that was shared beyond that cap or obtained without payment.</p>
 
     <h2>Your maps</h2>
     <p>You keep the content you create. Local maps stay in your browser until you delete them. Cloud maps are stored in Firebase so you can open them on other devices and share a link. Do not upload anything you do not have the right to store, and do not use OmniMind to break the law or attack other people’s accounts.</p>
@@ -41,5 +41,15 @@
         <a href="/legal/refund.html">Refund Policy</a>
     </nav>
 </main>
+<script src="../pro-config.js"></script>
+<script>
+    if (window.OMNIMIND_PRO && OMNIMIND_PRO.checkoutEnabled) {
+        var price = formatOmniMindProPrice(OMNIMIND_PRO);
+        var offer = document.getElementById('pro-terms-offer');
+        if (offer) {
+            offer.textContent = 'OmniMind Pro costs ' + price + ' ' + OMNIMIND_PRO.currency + ', paid once through PayPal. There is no subscription and no renewal. After PayPal confirms the payment we email a code to the PayPal buyer address. Enter that email and code in the app to turn on Pro on that device. One code works on up to 3 devices. Keep the code private. We can refuse a code that was shared beyond that cap or obtained without payment.';
+        }
+    }
+</script>
 </body>
 </html>

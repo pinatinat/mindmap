@@ -245,7 +245,7 @@ test('history keeps a bounded stack and redo is dropped after a new edit', () =>
     assert.equal(h.present().nodes.a.text, 'fresh');
 });
 
-test('the editor page wires undo without changing the Pro gate', () => {
+test('the editor page wires undo and keeps the verified Pro gate', () => {
     const root = path.join(__dirname, '..');
     const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const twin = fs.readFileSync(path.join(root, 'MINDMAP.html'), 'utf8');
@@ -270,7 +270,7 @@ test('the editor page wires undo without changing the Pro gate', () => {
     assert.match(index, /overlayInsets/);
     assert.match(index, /reconcileEditingFlags/);
     assert.match(index, /save\(\) \{ triggerAutoSave\(\); \}/);
-    assert.match(index, /function isPro\(\) \{\s*return true;\s*\}/);
+    assert.match(index, /function isPro\(\) \{\s*return !!\(isUserOmniMindPro \|\| readLocalProActivation\(\)\);\s*\}/);
     assert.doesNotMatch(index, /Delete collapsed branch/);
 });
 

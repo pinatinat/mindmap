@@ -42,8 +42,18 @@ test('footer, legal contact, and public PayPal client id are present', () => {
     assert.match(html, /support@omnimindmap\.app/);
     assert.match(html, /AfLUWmx3V0glGmHJI9Lwq2vSeYMP4HWrdlrjnmx9UPtK7ssmgO8AldGDFOr5KrX17Usx8W_gyl9v6lT8/);
     assert.match(html, /id="paypal-pro-button"/);
-    assert.match(html, /OmniMind Pro/);
-    assert.match(html, /\$9/);
+    assert.match(html, /id="pro-checkout-panel" class="hidden"/);
+    assert.match(html, /OmniMind Pro, coming soon/);
+    const config = read('pro-config.js');
+    assert.match(config, /priceUsd:/);
+    assert.match(config, /checkoutEnabled:\s*false/);
+    assert.equal((config.match(/priceUsd:/g) || []).length, 1);
+    const priceHits = [];
+    for (const rel of ['index.html', 'MINDMAP.html', 'README.md', 'legal/terms.html', 'legal/privacy.html', 'legal/refund.html', 'package.json']) {
+        const text = read(rel);
+        if (/\$\d+(?:\.\d+)?(?!")/.test(text)) priceHits.push(rel);
+    }
+    assert.deepEqual(priceHits, []);
     for (const page of ['legal/terms.html', 'legal/privacy.html', 'legal/refund.html']) {
         assert.match(read(page), /support@omnimindmap\.app/);
     }

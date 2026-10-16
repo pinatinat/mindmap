@@ -1,4 +1,4 @@
-const { paypalConfig, createProOrder } = require('../lib/paypal');
+const { paypalConfig, createProOrder, OMNIMIND_PRO } = require('../lib/paypal');
 const { sendJson, run } = require('../lib/http');
 
 async function handleCreateOrder(req, res, deps = {}) {
@@ -10,10 +10,15 @@ async function handleCreateOrder(req, res, deps = {}) {
         sendJson(res, 405, { ok: false, error: 'Method not allowed' });
         return;
     }
+    const pro = deps.pro || OMNIMIND_PRO;
+    if (!pro.checkoutEnabled) {
+        sendJson(res, 403, { ok: false, error: 'OmniMind Pro checkout is not open yet' });
+        return;
+    }
     await run(res, async () => {
         const config = deps.config || paypalConfig();
         const fetchImpl = deps.fetchImpl || fetch;
-        const order = await createProOrder(config, fetchImpl);
+        const order = await createProOrder(config, fetchImpl, pro);
         sendJson(res, 200, { id: order.id });
     });
 }

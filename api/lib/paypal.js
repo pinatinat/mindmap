@@ -1,5 +1,6 @@
-const PRO_PRICE = '9.00';
-const PRO_CURRENCY = 'USD';
+const { OMNIMIND_PRO, formatOmniMindProPrice } = require('../../pro-config');
+const PRO_PRICE = OMNIMIND_PRO.priceUsd;
+const PRO_CURRENCY = OMNIMIND_PRO.currency;
 const PRO_DESCRIPTION = 'OmniMind Pro (one-time)';
 
 function paypalApiBase(env) {
@@ -38,7 +39,8 @@ async function getAccessToken(config, fetchImpl) {
     return data.access_token;
 }
 
-async function createProOrder(config, fetchImpl) {
+async function createProOrder(config, fetchImpl, pro) {
+    const offer = pro || OMNIMIND_PRO;
     const token = await getAccessToken(config, fetchImpl);
     const res = await fetchImpl(`${config.base}/v2/checkout/orders`, {
         method: 'POST',
@@ -51,7 +53,7 @@ async function createProOrder(config, fetchImpl) {
             purchase_units: [{
                 description: PRO_DESCRIPTION,
                 custom_id: 'omnimind_pro',
-                amount: { currency_code: PRO_CURRENCY, value: PRO_PRICE }
+                amount: { currency_code: offer.currency || PRO_CURRENCY, value: String(offer.priceUsd) }
             }]
         })
     });
@@ -116,9 +118,12 @@ function readCompletedPurchase(order) {
     };
 }
 
-function assertProPrice(purchase) {
-    if (!purchase || purchase.value !== PRO_PRICE || purchase.currency !== PRO_CURRENCY) {
-        const err = new Error('Payment amount is not OmniMind Pro ($9.00 USD)');
+function assertProPrice(purchase, pro) {
+    const offer = pro || OMNIMIND_PRO;
+    const price = String(offer.priceUsd);
+    const currency = offer.currency || PRO_CURRENCY;
+    if (!purchase || purchase.value !== price || purchase.currency !== currency) {
+        const err = new Error('Payment amount is not OmniMind Pro (' + formatOmniMindProPrice(offer) + ' ' + currency + ')');
         err.status = 400;
         throw err;
     }
@@ -191,6 +196,8 @@ async function verifyWebhookSignature(config, fetchImpl, headers, event) {
 }
 
 module.exports = {
+    OMNIMIND_PRO,
+    formatOmniMindProPrice,
     PRO_PRICE,
     PRO_CURRENCY,
     PRO_DESCRIPTION,

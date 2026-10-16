@@ -29,7 +29,7 @@
     <p>If you sign in, Firebase Authentication handles the sign-in and Firestore stores your cloud maps under your user id. Share links let other signed-in people open a map you chose to share. Guest sessions use anonymous Firebase auth.</p>
 
     <h2>OmniMind Pro payments</h2>
-    <p>PayPal processes the $9 one-time payment. We do not store your card number. After a verified payment our server stores the PayPal capture id, the buyer email from PayPal, and the Pro code. When you activate a code we also store up to 3 device ids for that code. Those records are not readable by the browser; only our server can read and write them.</p>
+    <p id="pro-privacy-offer">PayPal processes the one-time payment when checkout is open. We do not store your card number. After a verified payment our server stores the PayPal capture id, the buyer email from PayPal, and the Pro code. When you activate a code we also store up to 3 device ids for that code. Those records are not readable by the browser; only our server can read and write them.</p>
 
     <h2>Email</h2>
     <p>We send the Pro code with Resend from support@omnimindmap.app to the PayPal buyer email. That message contains the code and the buyer email.</p>
@@ -44,5 +44,13 @@
         <a href="/legal/refund.html">Refund Policy</a>
     </nav>
 </main>
+<script src="../pro-config.js"></script>
+<script>
+    if (window.OMNIMIND_PRO && OMNIMIND_PRO.checkoutEnabled) {
+        var price = formatOmniMindProPrice(OMNIMIND_PRO);
+        var offer = document.getElementById('pro-privacy-offer');
+        if (offer) offer.textContent = 'PayPal processes the ' + price + ' one-time payment. We do not store your card number. After a verified payment our server stores the PayPal capture id, the buyer email from PayPal, and the Pro code. When you activate a code we also store up to 3 device ids for that code. Those records are not readable by the browser; only our server can read and write them.';
+    }
+</script>
 </body>
 </html>

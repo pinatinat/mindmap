@@ -1778,7 +1778,7 @@
         </main>
         <footer class="mt-auto border-t border-slate-200 bg-white px-4 md:px-8 py-5 text-xs text-slate-500">
             <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <p>OmniMind · OmniMind Pro is a one-time $9 purchase. No subscription.</p>
+                <p id="home-footer-pro-line">OmniMind · OmniMind Pro, coming soon</p>
                 <nav class="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <a href="/legal/terms.html" class="hover:text-slate-800 underline">Terms of Service</a>
                     <a href="/legal/privacy.html" class="hover:text-slate-800 underline">Privacy Policy</a>
@@ -2032,11 +2032,13 @@
                     </span>
                     <button type="button" onclick="closeOmniMindProModal()" class="text-white/60 hover:text-white p-1.5 rounded-full hover:bg-white/10 text-sm transition-colors leading-none">✕</button>
                 </div>
-                <h2 class="text-2xl font-black mt-3 tracking-tight">OmniMind Pro</h2>
-                <p class="text-xs text-purple-200 mt-1 max-w-sm">One-time $9 purchase. No subscription.</p>
-                <div class="mt-4 flex items-baseline gap-2">
-                    <span class="text-3xl sm:text-4xl font-black text-white">$9</span>
-                    <span class="text-xs text-purple-200 font-medium">One-time · USD</span>
+                <h2 id="pro-modal-title" class="text-2xl font-black mt-3 tracking-tight">OmniMind Pro, coming soon</h2>
+                <p id="pro-modal-tagline" class="text-xs text-purple-200 mt-1 max-w-sm hidden"></p>
+                <div id="pro-modal-price" class="hidden">
+                    <div class="mt-4 flex items-baseline gap-2">
+                        <span id="pro-modal-amount" class="text-3xl sm:text-4xl font-black text-white"></span>
+                        <span id="pro-modal-price-note" class="text-xs text-purple-200 font-medium"></span>
+                    </div>
                 </div>
             </div>
             <div class="p-6 text-xs flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
@@ -2070,10 +2072,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
-                    <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Pay with PayPal</span>
-                    <div id="paypal-pro-button" class="min-h-[45px]"></div>
-                    <p id="paypal-pro-status" class="text-[0.7rem] text-slate-500"></p>
+                <div id="pro-checkout-panel" class="hidden">
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
+                        <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Pay with PayPal</span>
+                        <div id="paypal-pro-button" class="min-h-[45px]"></div>
+                        <p id="paypal-pro-status" class="text-[0.7rem] text-slate-500"></p>
+                    </div>
                 </div>
                 <form id="pro-activate-form" onsubmit="activateOmniMindPro(event)" class="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex flex-col gap-2">
                     <p class="font-bold text-slate-800">Already paid? Enter the email and code</p>
@@ -2119,7 +2123,7 @@
             <!-- Action Options -->
             <div class="flex flex-col gap-2">
                 <button type="button" onclick="closeQuotaExceededModal(); openOmniMindProModal('quota_limit');" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <span>⭐ Upgrade to OmniMind Pro ($9 • 50 Slots)</span>
+                    <span id="quota-upgrade-label">⭐ OmniMind Pro, coming soon</span>
                 </button>
                 <button type="button" onclick="closeQuotaExceededModal(); toggleProjectManagerModal(true); switchLibraryTab('cloud');" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors">
                     📁 Overwrite or Delete an Older Cloud Map
@@ -2434,6 +2438,7 @@
     <!-- ======================================================== -->
     <div id="omni-toast-container" class="fixed top-5 right-5 z-[110] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
 
+    <script src="pro-config.js"></script>
     <script src="js/mindmap-history.js"></script>
     <script>
         // ========================================================
@@ -3906,7 +3911,7 @@
                 'project-manager-modal',
                 'export-image-modal',
                 'cloud-config-modal',
-                'lifetime-pro-modal',
+                'omnimind-pro-modal',
                 'quota-exceeded-modal',
                 'share-team-modal',
                 'app-homepage-view'
@@ -4141,12 +4146,55 @@
             }
         }
 
+        function proCheckoutOpen() {
+            return typeof OMNIMIND_PRO !== 'undefined' && OMNIMIND_PRO.checkoutEnabled === true;
+        }
+
+        function applyProOfferCopy() {
+            const open = proCheckoutOpen();
+            const price = (open && typeof formatOmniMindProPrice === 'function') ? formatOmniMindProPrice(OMNIMIND_PRO) : '';
+            const title = document.getElementById('pro-modal-title');
+            const tagline = document.getElementById('pro-modal-tagline');
+            const priceRow = document.getElementById('pro-modal-price');
+            const amount = document.getElementById('pro-modal-amount');
+            const note = document.getElementById('pro-modal-price-note');
+            const checkout = document.getElementById('pro-checkout-panel');
+            const footer = document.getElementById('home-footer-pro-line');
+            const quotaLabel = document.getElementById('quota-upgrade-label');
+            if (!open) {
+                if (title) title.textContent = 'OmniMind Pro, coming soon';
+                if (tagline) {
+                    tagline.textContent = '';
+                    tagline.classList.add('hidden');
+                }
+                if (priceRow) priceRow.classList.add('hidden');
+                if (amount) amount.textContent = '';
+                if (checkout) checkout.classList.add('hidden');
+                if (footer) footer.textContent = 'OmniMind · OmniMind Pro, coming soon';
+                if (quotaLabel) quotaLabel.textContent = '⭐ OmniMind Pro, coming soon';
+                return;
+            }
+            if (title) title.textContent = 'OmniMind Pro';
+            if (tagline) {
+                tagline.textContent = 'One-time ' + price + ' purchase. No subscription.';
+                tagline.classList.remove('hidden');
+            }
+            if (priceRow) priceRow.classList.remove('hidden');
+            if (amount) amount.textContent = price;
+            if (note) note.textContent = 'One-time · ' + OMNIMIND_PRO.currency;
+            if (checkout) checkout.classList.remove('hidden');
+            if (footer) footer.textContent = 'OmniMind · OmniMind Pro is a one-time ' + price + ' purchase. No subscription.';
+            if (quotaLabel) quotaLabel.textContent = '⭐ Upgrade to OmniMind Pro (' + price + ' · 50 Slots)';
+        }
+
         function loadPayPalSdk() {
+            if (!proCheckoutOpen()) return Promise.reject(new Error('Checkout is not open'));
             if (window.paypal) return Promise.resolve(window.paypal);
             if (paypalSdkPromise) return paypalSdkPromise;
+            const currency = (typeof OMNIMIND_PRO !== 'undefined' && OMNIMIND_PRO.currency) ? OMNIMIND_PRO.currency : 'USD';
             paypalSdkPromise = new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(PAYPAL_CLIENT_ID) + '&currency=USD&intent=capture';
+                script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(PAYPAL_CLIENT_ID) + '&currency=' + encodeURIComponent(currency) + '&intent=capture';
                 script.async = true;
                 script.onload = () => resolve(window.paypal);
                 script.onerror = () => {
@@ -4159,6 +4207,7 @@
         }
 
         function renderPayPalButton() {
+            if (!proCheckoutOpen()) return;
             const container = document.getElementById('paypal-pro-button');
             const status = document.getElementById('paypal-pro-status');
             if (!container || container.dataset.ready === '1') return;
@@ -4222,6 +4271,7 @@
             if (emailInput && !emailInput.value) {
                 emailInput.value = (stored && stored.email) || (currentCloudUser && currentCloudUser.email) || '';
             }
+            applyProOfferCopy();
             modal.classList.remove('hidden');
             renderPayPalButton();
         }
@@ -7301,6 +7351,7 @@
             // Initialize Firebase Cloud if configured
             initFirebaseCloud();
             applyStoredProStatus();
+            applyProOfferCopy();
             renderHomepage();
             checkUrlForSharedMap();
 

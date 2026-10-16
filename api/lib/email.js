@@ -1,3 +1,5 @@
+const { OMNIMIND_PRO, formatOmniMindProPrice } = require('../../pro-config');
+
 async function sendProCodeEmail({ fetchImpl, apiKey, to, code }) {
     if (!apiKey) return { emailed: false, reason: 'RESEND_API_KEY is not set' };
     const res = await fetchImpl('https://api.resend.com/emails', {
@@ -11,7 +13,7 @@ async function sendProCodeEmail({ fetchImpl, apiKey, to, code }) {
             to: [to],
             subject: 'Your OmniMind Pro code',
             text: [
-                'Thanks for buying OmniMind Pro ($9, one-time).',
+                'Thanks for buying OmniMind Pro (' + formatOmniMindProPrice(OMNIMIND_PRO) + ', one-time).',
                 '',
                 `Your code: ${code}`,
                 `Buyer email: ${to}`,
