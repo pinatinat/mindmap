@@ -118,7 +118,7 @@ Requirements:
     - Cloud Sync & Realtime Database @ (860, 290) [Firestore]
     - Local-First Offline Cache @ (860, 360) [IndexedDB]
   - 📈 Phase 3: Go-to-Market & Monetization @ (540, 480) [Q3] {bg: #f0fdf4, fg: #166534, bold}
-    - Lifetime Pro One-Time Upgrade @ (860, 440) [PayMongo]
+    - OmniMind Pro One-Time Upgrade @ (860, 440) [PayPal]
     - Product Hunt & Community Launch @ (860, 520) [Viral Loop]
 
 # 🛡️ Governance & Risk Mitigation @ (200, 750) [Safety] {bg: #fffbeb, fg: #92400e, size: 20, bold}
@@ -132,7 +132,7 @@ Requirements:
 # Design Elements
 @zone "Core Engineering & Launch Pipeline" @ (500, 90, 430, 480) {layer: behind, z: 1, bg: rgba(238, 242, 255, 0.5), border: dashed #6366f1, radius: 20}
 @card "Governance Boundary" @ (160, 640, 760, 260) {layer: behind, z: 1, bg: rgba(254, 252, 232, 0.5), border: solid #fef08a, radius: 16}
-@sticky "📌 Launch Checklist\n• Finalize PayMongo Webhook\n• Verify Soft-Cap Cloud limits\n• Run mobile responsive smoke tests" @ (980, 240, 260, 180) {layer: front, z: 2, bg: #fef08a, color: #713f12}
+@sticky "📌 Launch Checklist\n• Finalize PayPal Webhook\n• Verify Soft-Cap Cloud limits\n• Run mobile responsive smoke tests" @ (980, 240, 260, 180) {layer: front, z: 2, bg: #fef08a, color: #713f12}
 ```
 
 ---

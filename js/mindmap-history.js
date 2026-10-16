@@ -265,22 +265,45 @@
         return dy >= 0 ? 'down' : 'up';
     }
 
+    function childNodes(nodes, parentId) {
+        return Object.keys(nodes)
+            .map((id) => nodes[id])
+            .filter((node) => node && node.parentId === parentId);
+    }
+
+    function layoutAnchor(nodes, nodeId) {
+        if (!nodes || !nodeId || !nodes[nodeId]) return null;
+        let anchor = nodes[nodeId];
+        let children = childNodes(nodes, anchor.id);
+        if (!children.length && anchor.parentId && nodes[anchor.parentId]) {
+            anchor = nodes[anchor.parentId];
+            children = childNodes(nodes, anchor.id);
+        }
+        return { anchor: anchor, children: children };
+    }
+
+    function isBranchDirection(value) {
+        return value === 'right' || value === 'down' || value === 'left' || value === 'up';
+    }
+
+    // A layout button writes branchDirection onto the branch. That choice is what
+    // the panel shows after a reload, even when a wide row would otherwise be
+    // inferred as a downward tree.
+    function branchDirection(nodes, nodeId) {
+        const located = layoutAnchor(nodes, nodeId);
+        const stored = located && located.anchor && located.anchor.branchDirection;
+        if (isBranchDirection(stored)) return stored;
+        return inferBranchDirection(nodes, nodeId);
+    }
+
     // Tree layouts put siblings on one row (or one column). Measuring the average
     // offset from a selected leaf, or from an off-center parent, used to report
     // "right" after a downward tree layout.
     function inferBranchDirection(nodes, nodeId) {
-        if (!nodes || !nodeId || !nodes[nodeId]) return 'right';
-        let anchor = nodes[nodeId];
-        let children = Object.keys(nodes)
-            .map((id) => nodes[id])
-            .filter((node) => node && node.parentId === anchor.id);
-        if (!children.length && anchor.parentId && nodes[anchor.parentId]) {
-            anchor = nodes[anchor.parentId];
-            children = Object.keys(nodes)
-                .map((id) => nodes[id])
-                .filter((node) => node && node.parentId === anchor.id);
-        }
-        if (!children.length) return 'right';
+        const located = layoutAnchor(nodes, nodeId);
+        if (!located || !located.children.length) return 'right';
+        const anchor = located.anchor;
+        const children = located.children;
 
         const dxs = children.map((child) => (child.x || 0) - (anchor.x || 0));
         const dys = children.map((child) => (child.y || 0) - (anchor.y || 0));
@@ -499,6 +522,7 @@
         overlayInsets,
         shouldToastBranchDelete,
         inferBranchDirection,
+        branchDirection,
         estimateNodeRect,
         diffFocusRects,
         panToRevealRects

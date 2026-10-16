@@ -230,6 +230,23 @@ test('tree layout is highlighted as down, including when a child is selected', (
     }, 'only'), 'right');
 });
 
+test('a saved branch direction is shown even when the row would infer as a tree', () => {
+    const nodes = {
+        root: { id: 'root', parentId: null, x: 200, y: 150, branchDirection: 'right' },
+        a: { id: 'a', parentId: 'root', x: 200, y: 290, branchDirection: 'right' },
+        b: { id: 'b', parentId: 'root', x: 500, y: 290, branchDirection: 'right' },
+        c: { id: 'c', parentId: 'root', x: 900, y: 290, branchDirection: 'right' }
+    };
+    assert.equal(history.inferBranchDirection(nodes, 'root'), 'down');
+    assert.equal(history.inferBranchDirection(nodes, 'c'), 'down');
+    assert.equal(history.branchDirection(nodes, 'root'), 'right');
+    assert.equal(history.branchDirection(nodes, 'c'), 'right');
+    assert.equal(history.branchDirection({
+        root: { id: 'root', parentId: null, x: 200, y: 150 },
+        a: { id: 'a', parentId: 'root', x: 480, y: 170 }
+    }, 'a'), 'right');
+});
+
 test('history keeps a bounded stack and redo is dropped after a new edit', () => {
     const h = history.createHistory({ limit: 3 });
     h.reset(snap({ a: { id: 'a', text: '0' } }));
@@ -245,7 +262,7 @@ test('history keeps a bounded stack and redo is dropped after a new edit', () =>
     assert.equal(h.present().nodes.a.text, 'fresh');
 });
 
-test('the editor page wires undo without changing the Pro gate', () => {
+test('the editor page wires undo and keeps the verified Pro gate', () => {
     const root = path.join(__dirname, '..');
     const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const twin = fs.readFileSync(path.join(root, 'MINDMAP.html'), 'utf8');
@@ -260,6 +277,8 @@ test('the editor page wires undo without changing the Pro gate', () => {
     assert.match(index, /function undoMapEdit\(/);
     assert.match(index, /function showBranchDeletedToast\(/);
     assert.match(index, /MindmapHistory\.inferBranchDirection/);
+    assert.match(index, /MindmapHistory\.branchDirection/);
+    assert.match(index, /function rememberBranchDirection/);
     assert.match(index, /coalesceKey: 'text:'/);
     assert.match(index, /coalesceKey: 'font:'/);
     assert.match(index, /coalesceKey: dragKey/);
@@ -270,7 +289,7 @@ test('the editor page wires undo without changing the Pro gate', () => {
     assert.match(index, /overlayInsets/);
     assert.match(index, /reconcileEditingFlags/);
     assert.match(index, /save\(\) \{ triggerAutoSave\(\); \}/);
-    assert.match(index, /function isPro\(\) \{\s*return true;\s*\}/);
+    assert.match(index, /function isPro\(\) \{\s*return !!\(isUserOmniMindPro \|\| readLocalProActivation\(\)\);\s*\}/);
     assert.doesNotMatch(index, /Delete collapsed branch/);
 });
 

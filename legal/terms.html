@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Terms of Service — OmniMind</title>
+    <style>
+        body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: #f8fafc; color: #0f172a; }
+        main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+        a { color: #5b21b6; }
+        h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+        h2 { font-size: 1.05rem; margin-top: 1.75rem; }
+        p, li { line-height: 1.6; font-size: 0.95rem; }
+        .muted { color: #64748b; font-size: 0.85rem; }
+        nav { margin-top: 2rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+<main>
+    <p class="muted"><a href="/">OmniMind</a></p>
+    <h1>Terms of Service</h1>
+    <p class="muted">Last updated October 14, 2026</p>
+    <p>These terms cover the OmniMind mind-mapping app at omnimindmap.app. By using OmniMind you agree to them. Questions go to <a href="mailto:support@omnimindmap.app">support@omnimindmap.app</a>.</p>
+
+    <h2>The product</h2>
+    <p>OmniMind lets you create mind maps in the browser. Free use includes local maps and a small cloud quota when you sign in. OmniMind Pro is a separate one-time purchase.</p>
+
+    <h2>OmniMind Pro</h2>
+    <p id="pro-terms-offer">OmniMind Pro, coming soon. It is a one-time purchase through PayPal, with no subscription and no renewal. After PayPal confirms the payment we email a code to the PayPal buyer address. Enter that email and code in the app to turn on Pro on that device. One code works on up to 3 devices. Keep the code private. We can refuse a code that was shared beyond that cap or obtained without payment.</p>
+
+    <h2>Your maps</h2>
+    <p>You keep the content you create. Local maps stay in your browser until you delete them. Cloud maps are stored in Firebase so you can open them on other devices and share a link. Do not upload anything you do not have the right to store, and do not use OmniMind to break the law or attack other people’s accounts.</p>
+
+    <h2>Availability</h2>
+    <p>The app is provided as-is. We may change features, fix bugs, or pause the service. A one-time Pro purchase does not create a support contract beyond the contact address above.</p>
+
+    <h2>Contact</h2>
+    <p><a href="mailto:support@omnimindmap.app">support@omnimindmap.app</a></p>
+    <nav>
+        <a href="/legal/privacy.html">Privacy Policy</a> ·
+        <a href="/legal/refund.html">Refund Policy</a>
+    </nav>
+</main>
+<script src="../pro-config.js"></script>
+<script>
+    if (window.OMNIMIND_PRO && OMNIMIND_PRO.checkoutEnabled) {
+        var price = formatOmniMindProPrice(OMNIMIND_PRO);
+        var offer = document.getElementById('pro-terms-offer');
+        if (offer) {
+            offer.textContent = 'OmniMind Pro costs ' + price + ' ' + OMNIMIND_PRO.currency + ', paid once through PayPal. There is no subscription and no renewal. After PayPal confirms the payment we email a code to the PayPal buyer address. Enter that email and code in the app to turn on Pro on that device. One code works on up to 3 devices. Keep the code private. We can refuse a code that was shared beyond that cap or obtained without payment.';
+        }
+    }
+</script>
+</body>
+</html>
