@@ -839,12 +839,8 @@
             <button type="button" onclick="zoomBy(1.1)" title="Zoom in (viewport center)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-bold shrink-0">+</button>
             <button type="button" onclick="openExportImageModal()" title="Export mind map as PNG, JPEG, or SVG image" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">🖼️ Export</button>
             <button type="button" onclick="exportJSON()" title="Export JSON file to your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium flex items-center gap-1 shrink-0">💾 JSON</button>
-            <label title="Import JSON file from your computer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
-                📂 Import <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
-            </label>
-            <label title="Import an OmniMind maps backup" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">
-                📥 Import maps <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
-            </label>
+            <button type="button" id="btn-toolbar-import" title="Import JSON file from your computer" onclick="openHeaderFilePicker(event, 'map-import-file')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">📂 Import</button>
+            <button type="button" id="btn-toolbar-import-maps" title="Import an OmniMind maps backup" onclick="openHeaderFilePicker(event, 'maps-backup-file')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[0.7rem] font-medium cursor-pointer flex items-center gap-1 shrink-0">📥 Import maps</button>
             <button type="button" onclick="resetToDefault()" title="Reset map to default" class="text-slate-400 hover:text-red-500 p-1 rounded-full text-xs shrink-0">🔄</button>
         </div>
 
@@ -901,12 +897,12 @@
                 <button type="button" onclick="exportJSON()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2">
                     <span>💾</span> Export JSON
                 </button>
-                <label class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
-                    <span>📂</span> Import JSON <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
-                </label>
-                <label onclick="event.stopPropagation()" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer">
-                    <span>📥</span> Import maps <input type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" class="hidden">
-                </label>
+                <button type="button" onclick="openHeaderFilePicker(event, 'map-import-file')" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer w-full">
+                    <span>📂</span> Import JSON
+                </button>
+                <button type="button" onclick="openHeaderFilePicker(event, 'maps-backup-file')" class="text-left px-3 py-2 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 cursor-pointer w-full">
+                    <span>📥</span> Import maps
+                </button>
                 <div class="h-px bg-slate-100 my-1"></div>
                 <button type="button" onclick="resetToDefault()" class="text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
                     <span>🔄</span> Reset to Default
@@ -914,6 +910,9 @@
             </div>
         </div>
     </header>
+    <!-- Not display:none and not inside the scrolling toolbar, so Import can open the file dialog. -->
+    <input id="map-import-file" type="file" accept=".json,application/json" onchange="importJSON(event)" tabindex="-1" aria-hidden="true" style="position:fixed;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;opacity:0;">
+    <input id="maps-backup-file" type="file" accept=".json,application/json" onchange="importMoveBackupFile(event)" tabindex="-1" aria-hidden="true" style="position:fixed;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;opacity:0;">
 
     <!-- Shown only on the old domain. Stays up after a move so maps can be sent again. -->
     <div id="move-domain-banner" role="region" aria-label="Move your maps">
@@ -6759,15 +6758,18 @@
                 }
             });
 
-            // 5. Dimension preview
+            // 5. Dimension preview — same pixel size the file will have
             try {
-                const bounds = calculateExportBounds(scope, includeDesign);
                 const previewEl = document.getElementById('export-dim-preview');
-                if (previewEl && bounds) {
-                    const numScale = (format === 'svg') ? 1 : parseInt(scale, 10);
-                    const w = Math.round(bounds.width * numScale);
-                    const h = Math.round(bounds.height * numScale);
-                    previewEl.textContent = `${w} × ${h} px ${format === 'svg' ? '(Vector)' : `(${numScale}x)`}`;
+                if (previewEl) {
+                    if (format === 'svg') {
+                        const bounds = calculateExportBounds(scope, includeDesign);
+                        previewEl.textContent = `${bounds.width} × ${bounds.height} px (Vector)`;
+                    } else {
+                        const numScale = parseInt(scale, 10) || 1;
+                        const frame = rasterExportFrame(scope, numScale, includeDesign);
+                        previewEl.textContent = `${frame.pixelWidth} × ${frame.pixelHeight} px (${numScale}x)`;
+                    }
                 }
             } catch (e) {
                 console.warn('Error updating export dimension preview:', e);
@@ -6844,6 +6846,153 @@
             });
         }
 
+        // Pixel size html2canvas will emit: floor(cssWidth * renderScale).
+        // Screen view is the visible viewport times the export scale, not the zoomed world size.
+        function rasterExportFrame(scope, exportScale, includeDesign) {
+            const scale = (typeof exportScale === 'number' && exportScale > 0) ? exportScale : 1;
+            if (scope === 'viewport') {
+                const rect = mapViewportRect();
+                const viewW = (rect.width > 50) ? rect.width : 1200;
+                const viewH = (rect.height > 50) ? rect.height : 800;
+                const zoomSafe = (typeof zoom === 'number' && zoom > 0) ? zoom : 1;
+                const pixelWidth = Math.max(1, Math.round(viewW * scale));
+                const pixelHeight = Math.max(1, Math.round(viewH * scale));
+                const renderScale = scale * zoomSafe;
+                return {
+                    bounds: {
+                        x: -panX / zoomSafe,
+                        y: -panY / zoomSafe,
+                        width: pixelWidth / renderScale,
+                        height: pixelHeight / renderScale
+                    },
+                    renderScale,
+                    pixelWidth,
+                    pixelHeight
+                };
+            }
+            const bounds = calculateExportBounds('all', includeDesign);
+            return {
+                bounds,
+                renderScale: scale,
+                pixelWidth: Math.max(1, Math.floor(bounds.width * scale)),
+                pixelHeight: Math.max(1, Math.floor(bounds.height * scale))
+            };
+        }
+
+        // html2canvas paints an SVG by snapshotting its CSS box and ignores overflow.
+        // A shifted viewBox also drops or misplaces connectors when that box is smaller
+        // than the viewport. Draw the edges into a canvas in world coordinates instead.
+        function paintExportEdges(bounds, pixelRatio) {
+            const svg = document.getElementById('edges-svg');
+            if (!svg || !bounds || !(bounds.width > 0) || !(bounds.height > 0)) return null;
+            const ratio = (pixelRatio > 0) ? pixelRatio : 1;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(bounds.width * ratio));
+            canvas.height = Math.max(1, Math.round(bounds.height * ratio));
+            canvas.setAttribute('data-export-edges', '1');
+            canvas.style.position = 'absolute';
+            canvas.style.left = bounds.x + 'px';
+            canvas.style.top = bounds.y + 'px';
+            canvas.style.width = bounds.width + 'px';
+            canvas.style.height = bounds.height + 'px';
+            canvas.style.zIndex = '10';
+            canvas.style.pointerEvents = 'none';
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return null;
+            ctx.scale(ratio, ratio);
+            ctx.translate(-bounds.x, -bounds.y);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            svg.querySelectorAll('path.edge').forEach((p) => {
+                const d = p.getAttribute('d');
+                if (!d) return;
+                ctx.strokeStyle = p.getAttribute('stroke') || getEdgeStrokeColor();
+                ctx.lineWidth = parseFloat(p.getAttribute('stroke-width')) || 3;
+                ctx.stroke(new Path2D(d));
+            });
+            const prevVisibility = svg.style.visibility;
+            svg.style.visibility = 'hidden';
+            svg.insertAdjacentElement('afterend', canvas);
+            return { canvas, svg, prevVisibility };
+        }
+
+        function removeExportEdges(painted) {
+            if (!painted) return;
+            if (painted.canvas && painted.canvas.parentNode) painted.canvas.parentNode.removeChild(painted.canvas);
+            if (painted.svg) painted.svg.style.visibility = painted.prevVisibility || '';
+        }
+
+        // shadow-md's negative spread becomes a grey veil in html2canvas. Drop only that
+        // shadow. Keep the fill, the border width, and the centering transform.
+        // Unselected pills use a transparent border, so the shadow was their only edge.
+        function crispExportNodes(clonedDoc) {
+            const view = clonedDoc.defaultView;
+            clonedDoc.querySelectorAll('.bubble-node').forEach((el) => {
+                el.style.setProperty('box-shadow', 'none', 'important');
+                const cs = view.getComputedStyle(el);
+                const borderColor = cs.borderTopColor || '';
+                const transparent = borderColor === 'transparent' || /rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\s*\)/.test(borderColor);
+                if (transparent) {
+                    el.style.setProperty('border-style', 'solid', 'important');
+                    el.style.setProperty('border-color', 'rgba(15, 23, 42, 0.28)', 'important');
+                }
+                if (el.style.backgroundColor) {
+                    el.style.setProperty('background-color', el.style.backgroundColor, 'important');
+                }
+                // html2canvas draws the label too low inside the line box. The miss is the
+                // extra leading (line-height minus font-size): 8px at 1x, 16px at 2x for the
+                // default 16/24 text. Shift only the label row; the pill box stays put.
+                const span = el.querySelector('.node-text-span');
+                if (!span) return;
+                const labelStyle = view.getComputedStyle(span);
+                const fontSize = parseFloat(labelStyle.fontSize);
+                const lineHeight = parseFloat(labelStyle.lineHeight);
+                if (!Number.isFinite(fontSize) || !Number.isFinite(lineHeight)) return;
+                const nudge = fontSize - lineHeight;
+                if (!nudge) return;
+                const row = span.parentElement;
+                if (!row || row === el) return;
+                row.style.position = 'relative';
+                row.style.top = nudge + 'px';
+            });
+        }
+
+        // Toast and preview must match the encoded file, not a rounded estimate.
+        function imageSizeFromDataUrl(dataUrl) {
+            try {
+                const comma = dataUrl.indexOf(',');
+                if (comma < 0) return null;
+                const header = dataUrl.slice(0, comma);
+                const binary = atob(dataUrl.slice(comma + 1));
+                const n = binary.length;
+                const bytes = new Uint8Array(n);
+                for (let i = 0; i < n; i++) bytes[i] = binary.charCodeAt(i);
+                if (header.indexOf('image/png') !== -1 && n >= 24) {
+                    const w = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
+                    const h = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+                    if (w > 0 && h > 0) return { width: w, height: h };
+                }
+                if (header.indexOf('image/jpeg') !== -1) {
+                    let i = 2;
+                    while (i + 8 < n) {
+                        if (bytes[i] !== 0xff) { i++; continue; }
+                        const marker = bytes[i + 1];
+                        if (marker === 0xd8 || marker === 0xd9) { i += 2; continue; }
+                        const len = (bytes[i + 2] << 8) | bytes[i + 3];
+                        const sof = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+                        if (sof) {
+                            const h = (bytes[i + 5] << 8) | bytes[i + 6];
+                            const w = (bytes[i + 7] << 8) | bytes[i + 8];
+                            if (w > 0 && h > 0) return { width: w, height: h };
+                        }
+                        if (!len) break;
+                        i += 2 + len;
+                    }
+                }
+            } catch (e) {}
+            return null;
+        }
+
         async function exportMindMapAsRaster(opts = {}) {
             await ensureHtml2CanvasLoaded();
 
@@ -6875,10 +7024,12 @@
                 if (frontLayer) frontLayer.style.display = 'none';
             }
 
-            const bounds = calculateExportBounds(scope, includeDesign);
+            const frame = rasterExportFrame(scope, scale, includeDesign);
+            const bounds = frame.bounds;
             const container = document.getElementById('pan-zoom-container');
             const origTransform = container.style.transform;
             container.style.transform = 'translate(0px, 0px) scale(1)';
+            const paintedEdges = paintExportEdges(bounds, frame.renderScale);
 
             try {
                 const canvas = await html2canvas(container, {
@@ -6887,24 +7038,29 @@
                     width: bounds.width,
                     height: bounds.height,
                     backgroundColor: bgColor,
-                    scale: scale,
+                    scale: frame.renderScale,
                     useCORS: true,
                     logging: false,
-                    allowTaint: true
+                    allowTaint: true,
+                    onclone: (clonedDoc) => {
+                        crispExportNodes(clonedDoc);
+                    }
                 });
 
                 const mime = (format === 'jpeg') ? 'image/jpeg' : 'image/png';
                 const dataUrl = canvas.toDataURL(mime, (format === 'jpeg') ? 0.92 : 1.0);
+                const encoded = imageSizeFromDataUrl(dataUrl);
 
                 return {
                     dataUrl,
-                    width: canvas.width,
-                    height: canvas.height,
+                    width: encoded ? encoded.width : canvas.width,
+                    height: encoded ? encoded.height : canvas.height,
                     format,
                     bounds
                 };
             } finally {
                 container.style.transform = origTransform;
+                removeExportEdges(paintedEdges);
                 if (!includeDesign) {
                     if (backLayer) backLayer.style.display = '';
                     if (frontLayer) frontLayer.style.display = '';
@@ -7106,6 +7262,17 @@
             downloadAnchor.click();
             downloadAnchor.remove();
             setSaveStatus('saved', `✓ Exported "${projName}"`);
+        }
+
+        function openHeaderFilePicker(event, inputId) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const input = document.getElementById(inputId);
+            if (input) input.click();
+            const menu = document.getElementById('mobile-overflow-menu');
+            if (menu && !menu.classList.contains('hidden')) toggleMobileOverflowMenu(false);
         }
 
         function importJSON(event) {
