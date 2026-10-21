@@ -6939,6 +6939,21 @@
                 if (el.style.backgroundColor) {
                     el.style.setProperty('background-color', el.style.backgroundColor, 'important');
                 }
+                // html2canvas draws the label too low inside the line box. The miss is the
+                // extra leading (line-height minus font-size): 8px at 1x, 16px at 2x for the
+                // default 16/24 text. Shift only the label row; the pill box stays put.
+                const span = el.querySelector('.node-text-span');
+                if (!span) return;
+                const labelStyle = view.getComputedStyle(span);
+                const fontSize = parseFloat(labelStyle.fontSize);
+                const lineHeight = parseFloat(labelStyle.lineHeight);
+                if (!Number.isFinite(fontSize) || !Number.isFinite(lineHeight)) return;
+                const nudge = fontSize - lineHeight;
+                if (!nudge) return;
+                const row = span.parentElement;
+                if (!row || row === el) return;
+                row.style.position = 'relative';
+                row.style.top = nudge + 'px';
             });
         }
 
