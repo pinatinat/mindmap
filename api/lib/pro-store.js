@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { PRO_REDEEM_ERRORS } = require('../../js/pro-redeem');
 
 const MAX_DEVICES = 3;
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -70,17 +71,17 @@ async function activateProCode(db, { email, code, deviceId }) {
     const ref = db.collection('pro_codes').doc(cleanCode);
     return db.runTransaction(async (tx) => {
         const snap = await tx.get(ref);
-        if (!snap.exists) return { ok: false, status: 404, error: 'Code not found' };
+        if (!snap.exists) return { ok: false, status: 404, error: PRO_REDEEM_ERRORS.notFound };
         const data = snap.data() || {};
         if (normalizeEmail(data.email) !== cleanEmail) {
-            return { ok: false, status: 403, error: 'Email does not match this code' };
+            return { ok: false, status: 403, error: PRO_REDEEM_ERRORS.emailMismatch };
         }
         const devices = Array.isArray(data.devices) ? data.devices.slice() : [];
         if (devices.some((device) => device && device.id === cleanDevice)) {
             return { ok: true, status: 200, email: cleanEmail, code: cleanCode, already: true };
         }
         if (devices.length >= MAX_DEVICES) {
-            return { ok: false, status: 409, error: 'This code is already active on 3 devices' };
+            return { ok: false, status: 409, error: PRO_REDEEM_ERRORS.deviceLimit };
         }
         devices.push({ id: cleanDevice, activatedAt: new Date().toISOString() });
         tx.update(ref, { devices });
@@ -90,6 +91,7 @@ async function activateProCode(db, { email, code, deviceId }) {
 
 module.exports = {
     MAX_DEVICES,
+    PRO_REDEEM_ERRORS,
     generateProCode,
     normalizeEmail,
     normalizeCode,

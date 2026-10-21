@@ -2080,7 +2080,8 @@
                 </div>
                 <div id="pro-activate-panel" class="hidden">
                     <form id="pro-activate-form" onsubmit="activateOmniMindPro(event)" class="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex flex-col gap-2">
-                        <p class="font-bold text-slate-800">Already paid? Enter the email and code</p>
+                        <p id="pro-activate-heading" class="font-bold text-slate-800">Already paid? Enter the email and code</p>
+                        <p id="pro-activate-hint" class="text-[0.68rem] text-slate-500 hidden"></p>
                         <input id="pro-activate-email" type="email" required autocomplete="email" placeholder="PayPal email" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
                         <input id="pro-activate-code" type="text" required autocomplete="off" placeholder="OMNI-XXXX-XXXX" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono uppercase">
                         <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">Activate OmniMind Pro</button>
@@ -2440,6 +2441,7 @@
     <div id="omni-toast-container" class="fixed top-5 right-5 z-[110] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
 
     <script src="pro-config.js"></script>
+    <script src="js/pro-redeem.js"></script>
     <script src="js/mindmap-history.js"></script>
     <script>
         // ========================================================
@@ -4161,8 +4163,13 @@
             const note = document.getElementById('pro-modal-price-note');
             const checkout = document.getElementById('pro-checkout-panel');
             const activate = document.getElementById('pro-activate-panel');
+            const heading = document.getElementById('pro-activate-heading');
+            const hint = document.getElementById('pro-activate-hint');
+            const emailInput = document.getElementById('pro-activate-email');
             const footer = document.getElementById('home-footer-pro-line');
             const quotaLabel = document.getElementById('quota-upgrade-label');
+            // The redeem form stays available either way. Price and PayPal stay hidden until checkout is on.
+            if (activate) activate.classList.remove('hidden');
             if (!open) {
                 if (title) title.textContent = 'OmniMind Pro, coming soon';
                 if (tagline) {
@@ -4171,8 +4178,14 @@
                 }
                 if (priceRow) priceRow.classList.add('hidden');
                 if (amount) amount.textContent = '';
+                if (note) note.textContent = '';
                 if (checkout) checkout.classList.add('hidden');
-                if (activate) activate.classList.add('hidden');
+                if (heading) heading.textContent = 'Have a Pro code?';
+                if (hint) {
+                    hint.textContent = 'Enter the email this code was made for.';
+                    hint.classList.remove('hidden');
+                }
+                if (emailInput) emailInput.placeholder = 'Email';
                 if (footer) footer.textContent = 'OmniMind · OmniMind Pro, coming soon';
                 if (quotaLabel) quotaLabel.textContent = '⭐ OmniMind Pro, coming soon';
                 return;
@@ -4186,7 +4199,12 @@
             if (amount) amount.textContent = price;
             if (note) note.textContent = 'One-time · ' + OMNIMIND_PRO.currency;
             if (checkout) checkout.classList.remove('hidden');
-            if (activate) activate.classList.remove('hidden');
+            if (heading) heading.textContent = 'Already paid? Enter the email and code';
+            if (hint) {
+                hint.textContent = '';
+                hint.classList.add('hidden');
+            }
+            if (emailInput) emailInput.placeholder = 'PayPal email';
             if (footer) footer.textContent = 'OmniMind · OmniMind Pro is a one-time ' + price + ' purchase. No subscription.';
             if (quotaLabel) quotaLabel.textContent = '⭐ Upgrade to OmniMind Pro (' + price + ' · 50 Slots)';
         }
@@ -4267,6 +4285,21 @@
             });
         }
 
+        function openQuotaExceededModal(quota, count) {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (!modal) return;
+            const subtitle = document.getElementById('quota-modal-subtitle');
+            if (subtitle && typeof quota === 'number' && typeof count === 'number') {
+                subtitle.textContent = 'You are using ' + count + ' of ' + quota + ' cloud maps.';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeQuotaExceededModal() {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
         function openOmniMindProModal(source) {
             const modal = document.getElementById('omnimind-pro-modal');
             if (!modal) return;
@@ -4276,8 +4309,27 @@
                 emailInput.value = (stored && stored.email) || (currentCloudUser && currentCloudUser.email) || '';
             }
             applyProOfferCopy();
+            const statusEl = document.getElementById('pro-activate-status');
+            if (stored && statusEl && !statusEl.textContent) statusEl.textContent = "You're Pro ✓";
             modal.classList.remove('hidden');
             renderPayPalButton();
+        }
+
+        function openProCodeFromUrl() {
+            if (typeof consumeCodeQuery !== 'function') return;
+            const parsed = consumeCodeQuery(window.location.search || '');
+            if (!parsed.hadCode) return;
+            try {
+                history.replaceState(null, '', window.location.pathname + parsed.search + window.location.hash);
+            } catch (e) {}
+            if (!parsed.code) return;
+            openOmniMindProModal('url_code');
+            const codeInput = document.getElementById('pro-activate-code');
+            if (codeInput) codeInput.value = parsed.code;
+            const emailInput = document.getElementById('pro-activate-email');
+            if (emailInput && !emailInput.value) {
+                try { emailInput.focus(); } catch (e) {}
+            }
         }
 
         function closeOmniMindProModal() {
@@ -4293,40 +4345,49 @@
             const email = emailEl ? emailEl.value.trim() : '';
             const code = codeEl ? codeEl.value.trim() : '';
             if (statusEl) statusEl.textContent = 'Checking code…';
+            let data = {};
             try {
                 const res = await fetch('/api/pro/activate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, code: code, deviceId: getProDeviceId() })
                 });
-                const data = await res.json().catch(() => ({}));
+                data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.ok) {
-                    if (statusEl) statusEl.textContent = data.error || 'Activation failed';
+                    const fallback = (typeof proRedeemErrorText === 'function')
+                        ? proRedeemErrorText(res.status, data.error)
+                        : (data.error || 'Activation failed');
+                    if (statusEl) statusEl.textContent = fallback;
                     return;
                 }
-                localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
-                    verified: true,
-                    email: data.email,
-                    code: data.code,
-                    deviceId: getProDeviceId()
-                }));
-                isUserOmniMindPro = true;
-                currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
-                if (statusEl) statusEl.textContent = 'OmniMind Pro is active on this device.';
+            } catch (e) {
+                if (statusEl) statusEl.textContent = 'Could not reach the activation server.';
+                return;
+            }
+            localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
+                verified: true,
+                email: data.email,
+                code: data.code,
+                deviceId: getProDeviceId()
+            }));
+            isUserOmniMindPro = true;
+            currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
+            if (statusEl) statusEl.textContent = "You're Pro ✓";
+            try {
                 closeOmniMindProModal();
                 closeQuotaExceededModal();
                 renderCloudMapsList();
                 renderHomepage();
                 updateCloudAuthUI();
-                showAlert({
-                    title: 'OmniMind Pro activated',
-                    icon: '🎉',
-                    message: 'Cloud storage is now ' + PRO_CLOUD_MAPS + ' maps. This code works on up to 3 devices.',
-                    type: 'success'
-                });
             } catch (e) {
-                if (statusEl) statusEl.textContent = 'Could not reach the activation server.';
+                console.warn('Pro activation saved, but the screen did not refresh:', e);
             }
+            showAlert({
+                title: "You're Pro ✓",
+                icon: '✓',
+                message: "You're Pro ✓ This device is activated. Cloud storage is now " + PRO_CLOUD_MAPS + " maps. This code works on up to 3 devices.",
+                type: 'success'
+            });
         }
 
         function initFirebaseCloud() {
@@ -4398,6 +4459,7 @@
                 if (notConfigCard) notConfigCard.classList.remove('hidden');
                 if (authCard) authCard.classList.add('hidden');
                 if (loggedInContainer) loggedInContainer.classList.add('hidden');
+                refreshProEntryButtons();
                 return;
             }
 
@@ -4439,7 +4501,11 @@
                 if (loggedInContainer) loggedInContainer.classList.add('hidden');
             }
 
-            // Update top canvas and library header buttons regardless of auth state
+            refreshProEntryButtons();
+            renderHomepage();
+        }
+
+        function refreshProEntryButtons() {
             const isProGlobal = isUserOmniMindPro || currentCloudUserQuota > DEFAULT_MAX_CLOUD_MAPS;
             const btnHeaderPro = document.getElementById('btn-header-pro');
             const btnHeaderProText = document.getElementById('btn-header-pro-text');
@@ -4464,7 +4530,6 @@
                     btnLibraryPro.className = "px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-purple-600 text-white font-bold text-[0.68rem] shadow-xs hover:shadow transition-transform active:scale-95 flex items-center gap-1 cursor-pointer";
                 }
             }
-            renderHomepage();
         }
 
         function switchLibraryTab(tab) {
@@ -7665,6 +7730,7 @@
             applyProOfferCopy();
             renderHomepage();
             checkUrlForSharedMap();
+            openProCodeFromUrl();
 
             const isSharedUrl = window.location.search.includes('share=');
             if (isSharedUrl) {

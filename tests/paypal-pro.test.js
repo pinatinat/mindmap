@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { generateProCode, issueProCode, activateProCode, MAX_DEVICES } = require('../api/lib/pro-store');
+const { generateProCode, issueProCode, activateProCode, MAX_DEVICES, PRO_REDEEM_ERRORS } = require('../api/lib/pro-store');
+const { proRedeemErrorText, consumeCodeQuery } = require('../js/pro-redeem');
 const { fulfillPurchase } = require('../api/lib/fulfill');
 const { createProOrder, assertProPrice, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice } = require('../api/lib/paypal');
 const { handleCreateOrder } = require('../api/paypal/create-order');
@@ -259,6 +260,83 @@ test('webhook rejects a signature that PayPal does not mark SUCCESS', async () =
     }, res, { config, fetchImpl, db, resendKey: '' });
     assert.equal(res.statusCode, 401);
     assert.equal(db.docs.size, 0);
+});
+
+test('a hand-made code doc without payment fields still activates', async () => {
+    const db = createMemoryDb();
+    db.docs.set('pro_codes/OMNI-TEST-0001', {
+        code: 'OMNI-TEST-0001',
+        email: 'tester@example.com',
+        devices: []
+    });
+    const result = await activateProCode(db, {
+        email: 'Tester@Example.com',
+        code: 'omni-test-0001',
+        deviceId: 'laptop-1'
+    });
+    assert.equal(result.ok, true, result.error);
+    assert.equal(result.already, false);
+    const stored = db.docs.get('pro_codes/OMNI-TEST-0001');
+    assert.equal(stored.devices.length, 1);
+    assert.equal(stored.devices[0].id, 'laptop-1');
+    assert.equal(stored.captureId, undefined);
+    assert.equal(stored.orderId, undefined);
+    assert.equal(stored.amount, undefined);
+    assert.equal(stored.currency, undefined);
+
+    const mismatch = mockRes();
+    await handleActivate({
+        method: 'POST',
+        body: { email: 'wrong@example.com', code: 'OMNI-TEST-0001', deviceId: 'phone-2' }
+    }, mismatch, { db });
+    assert.equal(mismatch.statusCode, 403);
+    assert.equal(mismatch.json.error, PRO_REDEEM_ERRORS.emailMismatch);
+
+    const unknown = mockRes();
+    await handleActivate({
+        method: 'POST',
+        body: { email: 'tester@example.com', code: 'OMNI-NOPE-0000', deviceId: 'phone-2' }
+    }, unknown, { db });
+    assert.equal(unknown.statusCode, 404);
+    assert.equal(unknown.json.error, PRO_REDEEM_ERRORS.notFound);
+
+    await activateProCode(db, { email: 'tester@example.com', code: 'OMNI-TEST-0001', deviceId: 'tablet-2' });
+    await activateProCode(db, { email: 'tester@example.com', code: 'OMNI-TEST-0001', deviceId: 'phone-3' });
+    const fourth = mockRes();
+    await handleActivate({
+        method: 'POST',
+        body: { email: 'tester@example.com', code: 'OMNI-TEST-0001', deviceId: 'extra-4' }
+    }, fourth, { db });
+    assert.equal(fourth.statusCode, 409);
+    assert.equal(fourth.json.error, PRO_REDEEM_ERRORS.deviceLimit);
+    assert.equal(db.docs.get('pro_codes/OMNI-TEST-0001').devices.length, MAX_DEVICES);
+});
+
+test('redeem errors and ?code= links stay specific', () => {
+    assert.equal(proRedeemErrorText(404, 'Code not found'), PRO_REDEEM_ERRORS.notFound);
+    assert.match(PRO_REDEEM_ERRORS.notFound, /Unknown code/);
+    assert.equal(proRedeemErrorText(403, ''), PRO_REDEEM_ERRORS.emailMismatch);
+    assert.match(PRO_REDEEM_ERRORS.emailMismatch, /email does not match/i);
+    assert.equal(proRedeemErrorText(409, ''), PRO_REDEEM_ERRORS.deviceLimit);
+    assert.match(PRO_REDEEM_ERRORS.deviceLimit, /3 devices/);
+    assert.equal(proRedeemErrorText(500, 'Server down'), 'Server down');
+    assert.equal(proRedeemErrorText(400, ''), 'Activation failed');
+
+    const withShare = consumeCodeQuery('?code=omni-test-0001&share=abc');
+    assert.equal(withShare.hadCode, true);
+    assert.equal(withShare.code, 'OMNI-TEST-0001');
+    assert.equal(withShare.search, '?share=abc');
+    const onlyCode = consumeCodeQuery('?code=OMNI-ABCD-2345');
+    assert.equal(onlyCode.code, 'OMNI-ABCD-2345');
+    assert.equal(onlyCode.search, '');
+    const empty = consumeCodeQuery('?code=');
+    assert.equal(empty.hadCode, true);
+    assert.equal(empty.code, '');
+    assert.equal(empty.search, '');
+    const untouched = consumeCodeQuery('?share=abc');
+    assert.equal(untouched.hadCode, false);
+    assert.equal(untouched.code, '');
+    assert.equal(untouched.search, '?share=abc');
 });
 
 test('activate endpoint returns the server decision', async () => {
