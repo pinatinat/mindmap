@@ -6844,6 +6844,61 @@
             });
         }
 
+        // html2canvas 1.4.1 draws an SVG from its CSS box and ignores overflow:visible.
+        // #edges-svg is only the viewport, so connectors past that box never reach the image.
+        function snapshotEdgesSvg(edgesSvg) {
+            if (!edgesSvg) return null;
+            return {
+                left: edgesSvg.style.left,
+                top: edgesSvg.style.top,
+                width: edgesSvg.style.width,
+                height: edgesSvg.style.height,
+                right: edgesSvg.style.right,
+                bottom: edgesSvg.style.bottom,
+                viewBox: edgesSvg.getAttribute('viewBox')
+            };
+        }
+
+        function sizeEdgesSvgForExport(edgesSvg, bounds) {
+            if (!edgesSvg) return;
+            edgesSvg.style.right = 'auto';
+            edgesSvg.style.bottom = 'auto';
+            edgesSvg.style.left = bounds.x + 'px';
+            edgesSvg.style.top = bounds.y + 'px';
+            edgesSvg.style.width = bounds.width + 'px';
+            edgesSvg.style.height = bounds.height + 'px';
+            edgesSvg.setAttribute('viewBox', bounds.x + ' ' + bounds.y + ' ' + bounds.width + ' ' + bounds.height);
+        }
+
+        function restoreEdgesSvg(edgesSvg, snapshot) {
+            if (!edgesSvg || !snapshot) return;
+            edgesSvg.style.left = snapshot.left;
+            edgesSvg.style.top = snapshot.top;
+            edgesSvg.style.width = snapshot.width;
+            edgesSvg.style.height = snapshot.height;
+            edgesSvg.style.right = snapshot.right;
+            edgesSvg.style.bottom = snapshot.bottom;
+            if (snapshot.viewBox == null) edgesSvg.removeAttribute('viewBox');
+            else edgesSvg.setAttribute('viewBox', snapshot.viewBox);
+        }
+
+        // Tailwind shadow-md uses a negative spread. html2canvas paints that as a grey
+        // veil over the lower half of each pill. The centering translate also lands on
+        // a fractional pixel, which softens the label. Both are clone-only.
+        function crispExportNodes(clonedDoc) {
+            clonedDoc.querySelectorAll('.bubble-node').forEach((el) => {
+                el.style.boxShadow = 'none';
+                const left = parseFloat(el.style.left);
+                const top = parseFloat(el.style.top);
+                const w = el.offsetWidth;
+                const h = el.offsetHeight;
+                if (!Number.isFinite(left) || !Number.isFinite(top) || !w || !h) return;
+                el.style.transform = 'none';
+                el.style.left = Math.round(left - w / 2) + 'px';
+                el.style.top = Math.round(top - h / 2) + 'px';
+            });
+        }
+
         async function exportMindMapAsRaster(opts = {}) {
             await ensureHtml2CanvasLoaded();
 
@@ -6877,8 +6932,11 @@
 
             const bounds = calculateExportBounds(scope, includeDesign);
             const container = document.getElementById('pan-zoom-container');
+            const edgesSvg = document.getElementById('edges-svg');
             const origTransform = container.style.transform;
+            const edgesSnapshot = snapshotEdgesSvg(edgesSvg);
             container.style.transform = 'translate(0px, 0px) scale(1)';
+            sizeEdgesSvgForExport(edgesSvg, bounds);
 
             try {
                 const canvas = await html2canvas(container, {
@@ -6890,7 +6948,10 @@
                     scale: scale,
                     useCORS: true,
                     logging: false,
-                    allowTaint: true
+                    allowTaint: true,
+                    onclone: (clonedDoc) => {
+                        crispExportNodes(clonedDoc);
+                    }
                 });
 
                 const mime = (format === 'jpeg') ? 'image/jpeg' : 'image/png';
@@ -6905,6 +6966,7 @@
                 };
             } finally {
                 container.style.transform = origTransform;
+                restoreEdgesSvg(edgesSvg, edgesSnapshot);
                 if (!includeDesign) {
                     if (backLayer) backLayer.style.display = '';
                     if (frontLayer) frontLayer.style.display = '';
