@@ -6922,6 +6922,141 @@
             if (painted.svg) painted.svg.style.visibility = painted.prevVisibility || '';
         }
 
+        // How far to shift a line so the ink center lands on the box center, once
+        // html2canvas has added its baseline. For a 16px label on a 24px line this is
+        // font-size minus line-height (-8). The collapsed count does not reduce to that,
+        // because its own line-height is 1.
+        function exportInkNudge(boxTop, boxHeight, textTop, baseline, ascent, descent) {
+            if (![boxTop, boxHeight, textTop, baseline, ascent, descent].every(Number.isFinite)) return 0;
+            if (!(boxHeight > 0)) return 0;
+            const boxCenter = boxTop + boxHeight / 2;
+            const inkCenter = textTop + baseline - (ascent - descent) / 2;
+            const nudge = boxCenter - inkCenter;
+            return Number.isFinite(nudge) ? nudge : 0;
+        }
+
+        // html2canvas 1.4.1 measures this from a 1px image on the alphabetic baseline.
+        // The sample inherits the page line-height, so a badge with line-height 1 is
+        // still drawn too low.
+        function html2canvasTextBaseline(fontFamily, fontSize) {
+            const cache = html2canvasTextBaseline.cache || (html2canvasTextBaseline.cache = Object.create(null));
+            const key = String(fontSize) + '\n' + fontFamily;
+            if (key in cache) return cache[key];
+            const container = document.createElement('div');
+            const img = document.createElement('img');
+            const span = document.createElement('span');
+            container.style.visibility = 'hidden';
+            container.style.fontFamily = fontFamily;
+            container.style.fontSize = fontSize;
+            container.style.margin = '0';
+            container.style.padding = '0';
+            container.style.whiteSpace = 'nowrap';
+            let baseline = 0;
+            try {
+                document.body.appendChild(container);
+                img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                img.width = 1;
+                img.height = 1;
+                img.style.margin = '0';
+                img.style.padding = '0';
+                img.style.verticalAlign = 'baseline';
+                span.style.fontFamily = fontFamily;
+                span.style.fontSize = fontSize;
+                span.style.margin = '0';
+                span.style.padding = '0';
+                span.appendChild(document.createTextNode('Hidden Text'));
+                container.appendChild(span);
+                container.appendChild(img);
+                baseline = img.offsetTop - span.offsetTop + 2;
+            } finally {
+                if (container.parentNode) container.parentNode.removeChild(container);
+            }
+            if (!Number.isFinite(baseline)) return 0;
+            cache[key] = baseline;
+            return baseline;
+        }
+
+        // Untransformed copy of the dark count pill. Ancestor zoom scales the live badge,
+        // and html2canvas drops those transforms before it paints, so the nudge is taken
+        // from this copy rather than from the on-screen rect.
+        function collapsedCountNudge(face) {
+            const view = face.ownerDocument && face.ownerDocument.defaultView;
+            if (!view || !document.body) return 0;
+            const cs = view.getComputedStyle(face);
+            const text = (face.textContent || '').trim();
+            const fontSize = parseFloat(cs.fontSize);
+            if (!text || !Number.isFinite(fontSize) || !(fontSize > 0)) return 0;
+            const probe = document.createElement('span');
+            probe.setAttribute('data-export-probe', '1');
+            probe.textContent = text;
+            probe.style.position = 'fixed';
+            probe.style.left = '0';
+            probe.style.top = '0';
+            probe.style.visibility = 'hidden';
+            probe.style.pointerEvents = 'none';
+            probe.style.transform = 'none';
+            probe.style.display = 'flex';
+            probe.style.alignItems = 'center';
+            probe.style.justifyContent = 'center';
+            probe.style.boxSizing = 'border-box';
+            probe.style.whiteSpace = 'nowrap';
+            probe.style.width = cs.width;
+            probe.style.height = cs.height;
+            probe.style.padding = cs.padding;
+            probe.style.borderStyle = 'solid';
+            probe.style.borderTopWidth = cs.borderTopWidth;
+            probe.style.borderRightWidth = cs.borderRightWidth;
+            probe.style.borderBottomWidth = cs.borderBottomWidth;
+            probe.style.borderLeftWidth = cs.borderLeftWidth;
+            probe.style.fontFamily = cs.fontFamily;
+            probe.style.fontSize = cs.fontSize;
+            probe.style.fontWeight = cs.fontWeight;
+            probe.style.letterSpacing = cs.letterSpacing;
+            probe.style.lineHeight = cs.lineHeight;
+            let nudge = 0;
+            try {
+                document.body.appendChild(probe);
+                const box = probe.getBoundingClientRect();
+                const range = document.createRange();
+                range.selectNodeContents(probe);
+                const textRect = range.getBoundingClientRect();
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx || !(box.height > 0) || !(textRect.height > 0)) return 0;
+                ctx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+                const metrics = ctx.measureText(text);
+                nudge = exportInkNudge(
+                    box.top,
+                    box.height,
+                    textRect.top,
+                    html2canvasTextBaseline(cs.fontFamily, cs.fontSize),
+                    metrics.actualBoundingBoxAscent || 0,
+                    metrics.actualBoundingBoxDescent || 0
+                );
+            } finally {
+                if (probe.parentNode) probe.parentNode.removeChild(probe);
+            }
+            return nudge;
+        }
+
+        function nudgeCollapsedCountBadges(clonedDoc) {
+            const seen = Object.create(null);
+            clonedDoc.querySelectorAll('.collapse-toggle.is-collapsed .collapse-toggle-face').forEach((face) => {
+                const text = (face.textContent || '').trim();
+                if (!text) return;
+                const cs = clonedDoc.defaultView.getComputedStyle(face);
+                const key = [text, cs.width, cs.height, cs.fontSize, cs.fontWeight, cs.lineHeight, cs.letterSpacing, cs.padding, cs.fontFamily].join('\n');
+                if (!(key in seen)) seen[key] = collapsedCountNudge(face);
+                const nudge = seen[key];
+                if (!nudge) return;
+                const wrap = clonedDoc.createElement('span');
+                wrap.style.position = 'relative';
+                wrap.style.top = nudge + 'px';
+                while (face.firstChild) wrap.appendChild(face.firstChild);
+                face.appendChild(wrap);
+            });
+        }
+
         // shadow-md's negative spread becomes a grey veil in html2canvas. Drop only that
         // shadow. Keep the fill, the border width, and the centering transform.
         // Unselected pills use a transparent border, so the shadow was their only edge.
@@ -6955,6 +7090,10 @@
                 row.style.position = 'relative';
                 row.style.top = nudge + 'px';
             });
+            // The label shift above is font-size minus line-height. The collapsed count
+            // ("+8") is line-height 1, so that shift is 0 and the digits stay low in the
+            // dark pill. Move only the count, on the clone, by the same baseline miss.
+            nudgeCollapsedCountBadges(clonedDoc);
         }
 
         // Toast and preview must match the encoded file, not a rounded estimate.
