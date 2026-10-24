@@ -36,6 +36,12 @@ function classList(initial) {
     return {
         add() { Array.from(arguments).forEach((name) => names.add(name)); },
         remove() { Array.from(arguments).forEach((name) => names.delete(name)); },
+        toggle(name, force) {
+            const on = force === undefined ? !names.has(name) : !!force;
+            if (on) names.add(name);
+            else names.delete(name);
+            return on;
+        },
         contains(name) { return names.has(name); }
     };
 }
@@ -47,7 +53,11 @@ function element() {
 test('the redeem panel stays visible while checkout is off', () => {
     assert.equal(html, fs.readFileSync(path.join(root, 'MINDMAP.html'), 'utf8'));
     const apply = new Function(
-        extractFunction(html, 'proCheckoutOpen') + '\n' + extractFunction(html, 'applyProOfferCopy') + '\nreturn applyProOfferCopy;'
+        [
+            extractFunction(html, 'proCheckoutOpen'),
+            extractFunction(html, 'syncQuotaUpgradeOffer'),
+            extractFunction(html, 'applyProOfferCopy')
+        ].join('\n') + '\nreturn applyProOfferCopy;'
     )();
     const ids = [
         'pro-modal-title',
@@ -58,18 +68,22 @@ test('the redeem panel stays visible while checkout is off', () => {
         'pro-checkout-panel',
         'pro-activate-panel',
         'home-footer-pro-line',
-        'quota-upgrade-label'
+        'quota-upgrade-label',
+        'quota-upgrade-btn'
     ];
     const nodes = {};
     ids.forEach((id) => { nodes[id] = element(); });
     nodes['pro-activate-panel'].classList.add('hidden');
     nodes['pro-checkout-panel'].classList.add('hidden');
+    nodes['quota-upgrade-btn'].classList.add('hidden');
     global.document = { getElementById(id) { return nodes[id] || null; } };
     global.OMNIMIND_PRO = { checkoutEnabled: false, priceUsd: '9.00', currency: 'USD' };
     global.formatOmniMindProPrice = () => '$9';
     apply();
     assert.equal(nodes['pro-activate-panel'].classList.contains('hidden'), false);
     assert.equal(nodes['pro-checkout-panel'].classList.contains('hidden'), true);
+    assert.equal(nodes['quota-upgrade-btn'].classList.contains('hidden'), true);
+    assert.equal(nodes['quota-upgrade-label'].textContent, '');
     assert.match(html, /await currentUser\.getIdToken\(\)/);
     assert.match(html, /That code and email don't match\. Check both and try again\./);
     assert.match(html, /Too many tries\. Wait a minute and try again\./);
@@ -78,7 +92,7 @@ test('the redeem panel stays visible while checkout is off', () => {
 test('a signed-in redeem request sends the Firebase ID token', async () => {
     global.getProDeviceId = () => 'device-1';
     global.PRO_CLOUD_MAPS = 50;
-    global.currentCloudUserQuota = 3;
+    global.currentCloudUserQuota = 5;
     global.isUserOmniMindPro = false;
     global.PRO_ACTIVATION_STORAGE_KEY = 'omnimind_pro_activation';
     global.localStorage = { setItem() {} };
@@ -132,6 +146,8 @@ test('a successful redeem shows You\'re Pro, and the 5 of 5 quota dialog opens a
     assert.match(html, /Remove one from the cloud/);
     assert.match(html, /You're Pro ✓/);
     const source = [
+        extractFunction(html, 'proCheckoutOpen'),
+        extractFunction(html, 'syncQuotaUpgradeOffer'),
         extractFunction(html, 'openQuotaExceededModal'),
         extractFunction(html, 'closeQuotaExceededModal'),
         extractFunction(html, 'closeOmniMindProModal'),
@@ -161,6 +177,7 @@ test('a successful redeem shows You\'re Pro, and the 5 of 5 quota dialog opens a
     global.currentCloudUserQuota = 5;
     global.isUserOmniMindPro = false;
     global.PRO_ACTIVATION_STORAGE_KEY = 'omnimind_pro_activation';
+    global.OMNIMIND_PRO = { checkoutEnabled: false, priceUsd: '9.00', currency: 'USD' };
     global.fbAuth = { currentUser: null };
     const stored = [];
     global.localStorage = { setItem(key, value) { stored.push(key + '=' + value); } };
@@ -201,4 +218,97 @@ test('a successful redeem shows You\'re Pro, and the 5 of 5 quota dialog opens a
     assert.equal(status.textContent, 'Could not reach the activation server.');
     assert.equal(alerts.length, 0);
     assert.equal(refreshed, 0);
+});
+
+test('a free account at 5 cloud maps sees only the quota dialog', async () => {
+    assert.match(html, /const DEFAULT_MAX_CLOUD_MAPS = 5;/);
+    assert.match(html, /const PRO_CLOUD_MAPS = 50;/);
+    assert.doesNotMatch(html, /DEFAULT_MAX_CLOUD_MAPS = 3/);
+    assert.match(html, /top 5 maps/);
+    assert.match(html, /0 of 5 cloud slots used/);
+    assert.match(html, /0 \/ 5 Maps/);
+    assert.match(html, /Expand from 5 free cloud maps to 50/);
+    assert.doesNotMatch(html, /top 3 maps/);
+    assert.doesNotMatch(html, /from 3 free maps/);
+    assert.doesNotMatch(html, /0 of 3 cloud/);
+    assert.match(fs.readFileSync(path.join(root, 'api/lib/pro-store.js'), 'utf8'), /maxMaps: 50/);
+    const rules = fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8');
+    assert.doesNotMatch(rules, /maxMaps\s*(==|<=|>=|<|>)\s*[0-9]/);
+    const saveSource = extractFunction(html, 'saveActiveMapToCloud');
+    assert.match(saveSource, /openQuotaExceededModal\(currentCloudUserQuota, cloudMapsCache\.length\)/);
+    assert.doesNotMatch(saveSource, /openOmniMindProModal/);
+    assert.doesNotMatch(saveSource, /Cloud Storage Limit Reached/);
+    assert.doesNotMatch(extractFunction(html, 'setSaveStatus'), /openOmniMindProModal/);
+
+    const quotaModal = element();
+    quotaModal.classList.add('hidden');
+    const subtitle = element();
+    const upgradeBtn = element();
+    upgradeBtn.classList.add('hidden');
+    const upgradeLabel = element();
+    const proModal = element();
+    proModal.classList.add('hidden');
+    const nodes = {
+        'quota-exceeded-modal': quotaModal,
+        'quota-modal-subtitle': subtitle,
+        'quota-upgrade-btn': upgradeBtn,
+        'quota-upgrade-label': upgradeLabel,
+        'omnimind-pro-modal': proModal
+    };
+    global.document = { getElementById(id) { return nodes[id] || null; } };
+    global.OMNIMIND_PRO = { checkoutEnabled: false, priceUsd: '9.00', currency: 'USD' };
+    global.formatOmniMindProPrice = () => '$9';
+    const alerts = [];
+    global.alert = (message) => { alerts.push(message); };
+    const proOpens = [];
+    global.openOmniMindProModal = (source) => {
+        proOpens.push(source);
+        proModal.classList.remove('hidden');
+    };
+    const statuses = [];
+    global.setSaveStatus = (state, message) => { statuses.push(state + ':' + message); };
+    global.cleanNodesForStorage = () => ({});
+    global.cleanDecorationsForStorage = () => [];
+    global.getCurrentProjectMeta = () => ({ id: 'map-new', name: 'New idea' });
+    global.nodes = {};
+    global.canvasDecorations = [];
+    global.fbDb = { collection() { throw new Error('should not write'); } };
+    global.currentCloudUser = { uid: 'free-user' };
+    global.cloudMapsCache = [1, 2, 3, 4, 5].map((n) => ({ id: 'map-' + n }));
+    global.currentCloudUserQuota = 5;
+
+    const api = new Function(
+        [
+            extractFunction(html, 'proCheckoutOpen'),
+            extractFunction(html, 'syncQuotaUpgradeOffer'),
+            extractFunction(html, 'openQuotaExceededModal'),
+            extractFunction(html, 'closeQuotaExceededModal'),
+            extractFunction(html, 'upgradeFromQuotaDialog'),
+            saveSource
+        ].join('\n') + '\nreturn { saveActiveMapToCloud, upgradeFromQuotaDialog, openQuotaExceededModal };'
+    )();
+
+    await api.saveActiveMapToCloud(null, false);
+    assert.equal(quotaModal.classList.contains('hidden'), false);
+    assert.equal(subtitle.textContent, '5 of 5 cloud maps');
+    assert.equal(upgradeBtn.classList.contains('hidden'), true);
+    assert.equal(alerts.length, 0);
+    assert.deepEqual(proOpens, []);
+    assert.equal(proModal.classList.contains('hidden'), true);
+    assert.equal(statuses.length, 2);
+    assert.match(statuses[1], /5 of 5 cloud maps/);
+
+    api.upgradeFromQuotaDialog();
+    assert.deepEqual(proOpens, []);
+    assert.equal(proModal.classList.contains('hidden'), true);
+    assert.equal(quotaModal.classList.contains('hidden'), false);
+
+    global.OMNIMIND_PRO = { checkoutEnabled: true, priceUsd: '9.00', currency: 'USD' };
+    api.openQuotaExceededModal(5, 5);
+    assert.equal(upgradeBtn.classList.contains('hidden'), false);
+    assert.equal(upgradeLabel.textContent, '⭐ Upgrade to OmniMind Pro ($9 · 5 free cloud maps to 50)');
+    api.upgradeFromQuotaDialog();
+    assert.deepEqual(proOpens, ['quota_limit']);
+    assert.equal(quotaModal.classList.contains('hidden'), true);
+    assert.equal(proModal.classList.contains('hidden'), false);
 });
