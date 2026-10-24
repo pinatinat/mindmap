@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { generateProCode, issueProCode, activateProCode, MAX_DEVICES } = require('../api/lib/pro-store');
 const { fulfillPurchase } = require('../api/lib/fulfill');
-const { createProOrder, assertProPrice, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice } = require('../api/lib/paypal');
+const { createProOrder, assertProPrice, readCompletedPurchase, purchaseFromCaptureEvent, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice } = require('../api/lib/paypal');
 const { handleCreateOrder } = require('../api/paypal/create-order');
 const { handleCaptureOrder } = require('../api/paypal/capture-order');
 const { handleWebhook } = require('../api/paypal/webhook');
@@ -23,6 +23,7 @@ function completedOrder(overrides = {}) {
         status: 'COMPLETED',
         payer: { email_address: 'Buyer@Example.com' },
         purchase_units: [{
+            custom_id: 'omnimind_pro',
             payments: {
                 captures: [{
                     id: 'CAP1',
@@ -135,12 +136,69 @@ test('create order uses pro-config and stays closed while checkout is off', asyn
     assert.equal(order.id, 'ORDER9');
     assert.equal(orderBody.purchase_units[0].amount.value, '12.50');
     assert.equal(orderBody.purchase_units[0].amount.currency_code, 'USD');
+    assert.equal(orderBody.purchase_units[0].custom_id, 'omnimind_pro');
 
     const open = mockRes();
     await handleCreateOrder({ method: 'POST' }, open, { config, fetchImpl, pro: OMNIMIND_PRO.checkoutEnabled ? OMNIMIND_PRO : Object.assign({}, OMNIMIND_PRO, { checkoutEnabled: true }) });
     assert.equal(open.statusCode, 200);
     assert.equal(orderBody.purchase_units[0].amount.value, OMNIMIND_PRO.priceUsd);
     assert.equal(orderBody.purchase_units[0].amount.currency_code, OMNIMIND_PRO.currency);
+    assert.equal(orderBody.purchase_units[0].custom_id, 'omnimind_pro');
+});
+
+test('readCompletedPurchase accepts only custom_id omnimind_pro', () => {
+    const purchase = readCompletedPurchase(completedOrder());
+    assert.equal(purchase.captureId, 'CAP1');
+    assert.equal(purchase.email, 'buyer@example.com');
+    const missing = completedOrder();
+    delete missing.purchase_units[0].custom_id;
+    assert.equal(readCompletedPurchase(missing), null);
+    const wrong = completedOrder();
+    wrong.purchase_units[0].custom_id = 'something_else';
+    assert.equal(readCompletedPurchase(wrong), null);
+});
+
+test('a capture event without an order id still requires custom_id', async () => {
+    const fetchImpl = async () => { throw new Error('order lookup should not run'); };
+    const accepted = await purchaseFromCaptureEvent(config, fetchImpl, {
+        resource: {
+            id: 'CAP9',
+            status: 'COMPLETED',
+            custom_id: 'omnimind_pro',
+            amount: { currency_code: 'USD', value: OMNIMIND_PRO.priceUsd },
+            payer: { email_address: 'Buyer@Example.com' }
+        }
+    });
+    assert.equal(accepted.captureId, 'CAP9');
+    assert.equal(accepted.email, 'buyer@example.com');
+    const rejected = await purchaseFromCaptureEvent(config, fetchImpl, {
+        resource: {
+            id: 'CAP9',
+            status: 'COMPLETED',
+            amount: { currency_code: 'USD', value: OMNIMIND_PRO.priceUsd },
+            payer: { email_address: 'buyer@example.com' }
+        }
+    });
+    assert.equal(rejected, null);
+});
+
+test('capture rejects a completed order that is not OmniMind Pro', async () => {
+    const fetchImpl = async (url) => {
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        const order = completedOrder();
+        delete order.purchase_units[0].custom_id;
+        return { ok: true, json: async () => order };
+    };
+    const res = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: 'ORDER1' } },
+        res,
+        { config, fetchImpl, db: createMemoryDb(), resendKey: '' }
+    );
+    assert.equal(res.statusCode, 402);
+    assert.equal(res.headers['Cache-Control'], 'no-store');
 });
 
 test('capture fulfills once and capture plus webhook share the code', async () => {

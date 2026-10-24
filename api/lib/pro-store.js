@@ -60,7 +60,7 @@ async function issueProCode(db, purchase, generate) {
     });
 }
 
-async function activateProCode(db, { email, code, deviceId }) {
+async function activateProCode(db, { email, code, deviceId, uid }) {
     const cleanEmail = normalizeEmail(email);
     const cleanCode = normalizeCode(code);
     const cleanDevice = String(deviceId || '').trim();
@@ -68,23 +68,34 @@ async function activateProCode(db, { email, code, deviceId }) {
         return { ok: false, status: 400, error: 'Email, code, and device id are required' };
     }
     const ref = db.collection('pro_codes').doc(cleanCode);
+    const cleanUid = (typeof uid === 'string' && uid.trim() && !uid.includes('/')) ? uid.trim() : '';
     return db.runTransaction(async (tx) => {
         const snap = await tx.get(ref);
-        if (!snap.exists) return { ok: false, status: 404, error: 'Code not found' };
+        const userRef = cleanUid ? db.collection('users').doc(cleanUid) : null;
+        if (userRef) await tx.get(userRef);
+        if (!snap.exists) return { ok: false, status: 403, error: 'Invalid email or activation code' };
         const data = snap.data() || {};
         if (normalizeEmail(data.email) !== cleanEmail) {
-            return { ok: false, status: 403, error: 'Email does not match this code' };
+            return { ok: false, status: 403, error: 'Invalid email or activation code' };
         }
         const devices = Array.isArray(data.devices) ? data.devices.slice() : [];
-        if (devices.some((device) => device && device.id === cleanDevice)) {
-            return { ok: true, status: 200, email: cleanEmail, code: cleanCode, already: true };
-        }
-        if (devices.length >= MAX_DEVICES) {
+        const already = devices.some((device) => device && device.id === cleanDevice);
+        if (!already && devices.length >= MAX_DEVICES) {
             return { ok: false, status: 409, error: 'This code is already active on 3 devices' };
         }
-        devices.push({ id: cleanDevice, activatedAt: new Date().toISOString() });
-        tx.update(ref, { devices });
-        return { ok: true, status: 200, email: cleanEmail, code: cleanCode, already: false };
+        if (!already) {
+            devices.push({ id: cleanDevice, activatedAt: new Date().toISOString() });
+            tx.update(ref, { devices });
+        }
+        if (userRef) {
+            tx.set(userRef, {
+                plan: 'omnimind_pro',
+                maxMaps: 50,
+                codeUsed: cleanCode,
+                proActivatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+        return { ok: true, status: 200, email: cleanEmail, code: cleanCode, already };
     });
 }
 
