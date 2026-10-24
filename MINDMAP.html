@@ -2126,8 +2126,8 @@
                 <button type="button" onclick="closeQuotaExceededModal(); openOmniMindProModal('quota_limit');" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
                     <span id="quota-upgrade-label">⭐ OmniMind Pro, coming soon</span>
                 </button>
-                <button type="button" onclick="closeQuotaExceededModal(); toggleProjectManagerModal(true); switchLibraryTab('cloud');" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors">
-                    📁 Overwrite or Delete an Older Cloud Map
+                <button type="button" id="quota-remove-cloud-btn" onclick="closeQuotaExceededModal(); toggleProjectManagerModal(true); switchLibraryTab('cloud');" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors">
+                    Remove one from the cloud
                 </button>
                 <button type="button" onclick="closeQuotaExceededModal()" class="text-slate-400 hover:text-slate-600 text-xs py-1 transition-colors">
                     Keep Map in Local Browser Storage
@@ -4267,6 +4267,32 @@
             });
         }
 
+        function openQuotaExceededModal(quota, count) {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (!modal) return;
+            const used = Number(count);
+            const limit = Number(quota);
+            const subtitle = document.getElementById('quota-modal-subtitle');
+            if (subtitle && Number.isFinite(used) && Number.isFinite(limit)) {
+                subtitle.textContent = used + ' of ' + limit + ' cloud maps';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeQuotaExceededModal() {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function showYoureProConfirmation() {
+            showAlert({
+                title: "You're Pro ✓",
+                icon: '✓',
+                message: "You're Pro ✓ This device is activated. Cloud storage is now " + PRO_CLOUD_MAPS + " maps. This code works on up to 3 devices.",
+                type: 'success'
+            });
+        }
+
         function openOmniMindProModal(source) {
             const modal = document.getElementById('omnimind-pro-modal');
             if (!modal) return;
@@ -4276,6 +4302,8 @@
                 emailInput.value = (stored && stored.email) || (currentCloudUser && currentCloudUser.email) || '';
             }
             applyProOfferCopy();
+            const statusEl = document.getElementById('pro-activate-status');
+            if (stored && statusEl && !statusEl.textContent) statusEl.textContent = "You're Pro ✓";
             modal.classList.remove('hidden');
             renderPayPalButton();
         }
@@ -4293,6 +4321,7 @@
             const email = emailEl ? emailEl.value.trim() : '';
             const code = codeEl ? codeEl.value.trim() : '';
             if (statusEl) statusEl.textContent = 'Checking code…';
+            let data = {};
             try {
                 const headers = { 'Content-Type': 'application/json' };
                 const currentUser = (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) || null;
@@ -4307,7 +4336,7 @@
                     headers: headers,
                     body: JSON.stringify({ email: email, code: code, deviceId: getProDeviceId() })
                 });
-                const data = await res.json().catch(() => ({}));
+                data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.ok) {
                     if (statusEl) {
                         if (res.status === 403) statusEl.textContent = "That code and email don't match. Check both and try again.";
@@ -4316,29 +4345,25 @@
                     }
                     return;
                 }
-                localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
-                    verified: true,
-                    email: data.email,
-                    code: data.code,
-                    deviceId: getProDeviceId()
-                }));
-                isUserOmniMindPro = true;
-                currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
-                if (statusEl) statusEl.textContent = 'OmniMind Pro is active on this device.';
-                closeOmniMindProModal();
-                closeQuotaExceededModal();
-                renderCloudMapsList();
-                renderHomepage();
-                updateCloudAuthUI();
-                showAlert({
-                    title: 'OmniMind Pro activated',
-                    icon: '🎉',
-                    message: 'Cloud storage is now ' + PRO_CLOUD_MAPS + ' maps. This code works on up to 3 devices.',
-                    type: 'success'
-                });
             } catch (e) {
                 if (statusEl) statusEl.textContent = 'Could not reach the activation server.';
+                return;
             }
+            localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
+                verified: true,
+                email: data.email,
+                code: data.code,
+                deviceId: getProDeviceId()
+            }));
+            isUserOmniMindPro = true;
+            currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
+            if (statusEl) statusEl.textContent = "You're Pro ✓";
+            try { closeOmniMindProModal(); } catch (e) { console.warn('Pro modal did not close:', e); }
+            try { closeQuotaExceededModal(); } catch (e) { console.warn('Quota modal did not close:', e); }
+            try { renderCloudMapsList(); } catch (e) { console.warn('Cloud list did not refresh:', e); }
+            try { renderHomepage(); } catch (e) { console.warn('Homepage did not refresh:', e); }
+            try { updateCloudAuthUI(); } catch (e) { console.warn('Account header did not refresh:', e); }
+            showYoureProConfirmation();
         }
 
         function initFirebaseCloud() {

@@ -125,3 +125,80 @@ test('a signed-in redeem request sends the Firebase ID token', async () => {
     assert.equal(calls[2].options.headers.Authorization, undefined);
     assert.equal(status.textContent, 'Email, code, and device id are required');
 });
+
+test('a successful redeem shows You\'re Pro, and the 5 of 5 quota dialog opens and closes', async () => {
+    assert.match(html, /function openQuotaExceededModal\(/);
+    assert.match(html, /function closeQuotaExceededModal\(/);
+    assert.match(html, /Remove one from the cloud/);
+    assert.match(html, /You're Pro ✓/);
+    const source = [
+        extractFunction(html, 'openQuotaExceededModal'),
+        extractFunction(html, 'closeQuotaExceededModal'),
+        extractFunction(html, 'closeOmniMindProModal'),
+        extractFunction(html, 'showYoureProConfirmation'),
+        extractFunction(html, 'activateOmniMindPro')
+    ].join('\n');
+    const quotaModal = element();
+    quotaModal.classList.add('hidden');
+    const subtitle = element();
+    const proModal = element();
+    const status = element();
+    const email = element();
+    email.value = 'buyer@example.com';
+    const code = element();
+    code.value = 'OMNI-ZZZZ-9999';
+    const nodes = {
+        'quota-exceeded-modal': quotaModal,
+        'quota-modal-subtitle': subtitle,
+        'omnimind-pro-modal': proModal,
+        'pro-activate-status': status,
+        'pro-activate-email': email,
+        'pro-activate-code': code
+    };
+    global.document = { getElementById(id) { return nodes[id] || null; } };
+    global.getProDeviceId = () => 'device-1';
+    global.PRO_CLOUD_MAPS = 50;
+    global.currentCloudUserQuota = 5;
+    global.isUserOmniMindPro = false;
+    global.PRO_ACTIVATION_STORAGE_KEY = 'omnimind_pro_activation';
+    global.fbAuth = { currentUser: null };
+    const stored = [];
+    global.localStorage = { setItem(key, value) { stored.push(key + '=' + value); } };
+    const alerts = [];
+    global.showAlert = (opts) => { alerts.push(opts); };
+    let refreshed = 0;
+    global.renderCloudMapsList = () => { refreshed += 1; };
+    global.renderHomepage = () => { refreshed += 1; };
+    global.updateCloudAuthUI = () => { refreshed += 1; };
+    global.fetch = async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, email: 'buyer@example.com', code: 'OMNI-ZZZZ-9999' })
+    });
+    const api = new Function(source + '\nreturn { activateOmniMindPro, openQuotaExceededModal, closeQuotaExceededModal };')();
+    await api.activateOmniMindPro({ preventDefault() {} });
+    assert.equal(status.textContent, "You're Pro ✓");
+    assert.equal(alerts.length, 1);
+    assert.equal(alerts[0].title, "You're Pro ✓");
+    assert.match(alerts[0].message, /You're Pro ✓/);
+    assert.match(alerts[0].message, /50 maps/);
+    assert.equal(refreshed, 3);
+    assert.equal(global.isUserOmniMindPro, true);
+    assert.equal(global.currentCloudUserQuota, 50);
+    assert.equal(proModal.classList.contains('hidden'), true);
+    assert.equal(stored.length, 1);
+
+    api.openQuotaExceededModal(5, 5);
+    assert.equal(quotaModal.classList.contains('hidden'), false);
+    assert.equal(subtitle.textContent, '5 of 5 cloud maps');
+    api.closeQuotaExceededModal();
+    assert.equal(quotaModal.classList.contains('hidden'), true);
+
+    alerts.length = 0;
+    refreshed = 0;
+    global.fetch = async () => { throw new Error('offline'); };
+    await api.activateOmniMindPro({ preventDefault() {} });
+    assert.equal(status.textContent, 'Could not reach the activation server.');
+    assert.equal(alerts.length, 0);
+    assert.equal(refreshed, 0);
+});
