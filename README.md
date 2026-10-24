@@ -35,8 +35,9 @@ The page embeds the public sandbox client id so the PayPal button can load. That
 
 1. Firebase project `omnimindmap` (or the project in the page config).
 2. Download a service account JSON and set `FIREBASE_SERVICE_ACCOUNT` to the raw JSON string.
-3. Deploy `firestore.rules` (`firebase deploy --only firestore:rules`). Clients cannot read or write `pro_codes` or `pro_captures`. The Admin SDK bypasses those rules.
-4. Map documents under `users/{uid}/maps` stay readable and writable by any signed-in user, including anonymous guests, so share links and live collaboration keep working. User profile updates cannot change `plan`, `maxMaps`, or `codeUsed`.
+3. Deploy `firestore.rules` (`firebase deploy --only firestore:rules`). Clients cannot read or write `pro_codes`, `pro_captures`, or `rate_limits`. The Admin SDK bypasses those rules.
+4. `users/{uid}` can be read only by that user (`get`, never `list`). The owner may create and update the profile, but cannot set or change `plan`, `maxMaps`, `codeUsed`, or `proActivatedAt`. Those fields are written by the server.
+5. `users/{uid}/maps/{mapId}` is fully readable and writable by the owner, with basic type and size checks. A map with no `shareSettings` is owner-only. Signed-in users (including anonymous guests) can `get` a map, but never `list` someone else's maps, when `shareSettings.accessLevel` is `view` or `edit`. `restricted` also requires `email_verified` and a lower-cased address in `shareSettings.invitedEmails`. Collaborators can update only `data`, `nodeCount`, and `updatedAt`, and only when access is `edit` or their verified email is in `shareSettings.editorEmails`. They cannot create, delete, or change `shareSettings`, `name`, or `userId`.
 
 ## Email
 
@@ -58,7 +59,7 @@ Footer links:
 ## Tests
 
 ```bash
-node --test tests/
+npm test
 ```
 
-`firebase-admin` is a runtime dependency for the Vercel functions. The tests inject an in-memory database and do not need the service account.
+`npm test` starts the Firestore emulator and runs every `*.test.js` file in `test/` and `tests/`. `firebase-admin` is a runtime dependency for the Vercel functions. PayPal tests inject an in-memory database and do not need a service account. Rules tests talk only to the emulator.
