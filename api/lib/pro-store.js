@@ -73,10 +73,10 @@ async function activateProCode(db, { email, code, deviceId, uid }) {
         const snap = await tx.get(ref);
         const userRef = cleanUid ? db.collection('users').doc(cleanUid) : null;
         if (userRef) await tx.get(userRef);
-        if (!snap.exists) return { ok: false, status: 403, error: 'Invalid email or activation code' };
+        if (!snap.exists) return { ok: false, status: 403, error: "That code and email don't match. Check both and try again." };
         const data = snap.data() || {};
         if (normalizeEmail(data.email) !== cleanEmail) {
-            return { ok: false, status: 403, error: 'Invalid email or activation code' };
+            return { ok: false, status: 403, error: "That code and email don't match. Check both and try again." };
         }
         const devices = Array.isArray(data.devices) ? data.devices.slice() : [];
         const already = devices.some((device) => device && device.id === cleanDevice);

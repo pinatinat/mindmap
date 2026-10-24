@@ -9,18 +9,23 @@ function hashKey(prefix, value) {
     return prefix + digest;
 }
 
+function firstHeader(headers, name) {
+    let value = '';
+    Object.keys(headers || {}).forEach((key) => {
+        if (String(key).toLowerCase() === name) value = headers[key];
+    });
+    if (Array.isArray(value)) value = value[0];
+    const first = String(value || '').split(',')[0].trim();
+    return first;
+}
+
 function clientIp(req) {
     const headers = (req && req.headers) || {};
-    let forwarded = '';
-    Object.keys(headers).forEach((key) => {
-        if (String(key).toLowerCase() === 'x-forwarded-for') forwarded = headers[key];
-    });
-    if (forwarded) {
-        const first = String(forwarded).split(',')[0].trim();
-        if (first) return first;
-    }
-    const socketIp = req && req.socket && req.socket.remoteAddress;
-    return socketIp || 'unknown';
+    return firstHeader(headers, 'x-vercel-forwarded-for')
+        || firstHeader(headers, 'x-real-ip')
+        || firstHeader(headers, 'x-forwarded-for')
+        || (req && req.socket && req.socket.remoteAddress)
+        || 'unknown';
 }
 
 function nextBucket(current, now, windowMs) {

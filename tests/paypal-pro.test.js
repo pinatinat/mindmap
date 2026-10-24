@@ -70,6 +70,8 @@ test('issueProCode is idempotent per capture id', async () => {
     assert.equal(second.alreadyIssued, true);
     assert.equal(second.code, first.code);
     assert.equal(n, 1);
+    const captures = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(captures, ['pro_captures/CAP1']);
 });
 
 test('activation allows 3 devices and rejects a fourth', async () => {
@@ -106,6 +108,8 @@ test('activation allows 3 devices and rejects a fourth', async () => {
 });
 
 test('assertProPrice uses the configured price', () => {
+    assert.equal(OMNIMIND_PRO.priceUsd, '9.00');
+    assert.equal(OMNIMIND_PRO.currency, 'USD');
     const label = formatOmniMindProPrice(OMNIMIND_PRO);
     assert.throws(() => assertProPrice({ captureId: 'C', email: 'a@b.co', value: '8.00', currency: 'USD' }), new RegExp(label.replace('$', '\\$')));
     assert.throws(() => assertProPrice({ captureId: 'C', email: 'a@b.co', value: PRO_PRICE, currency: 'PHP' }), new RegExp(label.replace('$', '\\$')));

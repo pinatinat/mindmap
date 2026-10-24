@@ -68,7 +68,7 @@ test('unknown codes and wrong emails share one error', async () => {
     });
     assert.equal(unknown.status, 403);
     assert.equal(mismatch.status, 403);
-    assert.equal(unknown.error, 'Invalid email or activation code');
+    assert.equal(unknown.error, "That code and email don't match. Check both and try again.");
     assert.equal(mismatch.error, unknown.error);
     assert.equal(unknown.ok, false);
 });
@@ -174,7 +174,7 @@ test('the activate endpoint returns 429 from the shared limiter', async () => {
             body: { email: 'buyer@example.com', code: 'OMNI-NOPE-1111', deviceId: 'phone-' + i }
         }, res, { db, now: 5_000 });
         assert.equal(res.statusCode, 403, res.body);
-        assert.equal(res.json.error, 'Invalid email or activation code');
+        assert.equal(res.json.error, "That code and email don't match. Check both and try again.");
     }
     const limited = mockRes();
     await handleActivate({
@@ -184,6 +184,7 @@ test('the activate endpoint returns 429 from the shared limiter', async () => {
     }, limited, { db, now: 5_000 });
     assert.equal(limited.statusCode, 429);
     assert.equal(limited.json.ok, false);
+    assert.equal(limited.json.error, 'Too many tries. Wait a minute and try again.');
     assert.equal(db.docs.get('pro_codes/' + CODE).devices.length, 0);
 
     let called = 0;
@@ -199,9 +200,25 @@ test('the activate endpoint returns 429 from the shared limiter', async () => {
     assert.equal(injected.statusCode, 429);
 });
 
-test('clientIp uses the first forwarded address', () => {
-    assert.equal(clientIp({ headers: { 'X-Forwarded-For': '203.0.113.8, 10.1.1.1' }, socket: { remoteAddress: '127.0.0.1' } }), '203.0.113.8');
-    assert.equal(clientIp({ headers: {}, socket: { remoteAddress: '127.0.0.1' } }), '127.0.0.1');
+test('clientIp prefers Vercel, then the real IP, then the first forwarded address', () => {
+    const socket = { remoteAddress: '127.0.0.1' };
+    assert.equal(clientIp({
+        headers: {
+            'x-vercel-forwarded-for': '203.0.113.9',
+            'x-real-ip': '203.0.113.8',
+            'x-forwarded-for': '198.51.100.1, 10.0.0.1'
+        },
+        socket
+    }), '203.0.113.9');
+    assert.equal(clientIp({
+        headers: {
+            'X-Real-IP': '203.0.113.8',
+            'X-Forwarded-For': '198.51.100.1, 10.0.0.1'
+        },
+        socket
+    }), '203.0.113.8');
+    assert.equal(clientIp({ headers: { 'X-Forwarded-For': '203.0.113.8, 10.1.1.1' }, socket }), '203.0.113.8');
+    assert.equal(clientIp({ headers: {}, socket }), '127.0.0.1');
 });
 
 test('verifyIdToken does not run without a service account', async () => {

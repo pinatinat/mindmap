@@ -52,7 +52,7 @@ async function handleActivate(req, res, deps = {}) {
         const ip = (deps.clientIp || clientIp)(req);
         const decision = await limit(db, { ip, code: body.code, now: deps.now });
         if (!decision || decision.allowed === false) {
-            sendJson(res, 429, { ok: false, error: 'Too many attempts. Try again in a minute.' });
+            sendJson(res, 429, { ok: false, error: 'Too many tries. Wait a minute and try again.' });
             return;
         }
         const uid = await accountUidFromRequest(req, body.email, deps);

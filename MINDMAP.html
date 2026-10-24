@@ -4172,7 +4172,7 @@
                 if (priceRow) priceRow.classList.add('hidden');
                 if (amount) amount.textContent = '';
                 if (checkout) checkout.classList.add('hidden');
-                if (activate) activate.classList.add('hidden');
+                if (activate) activate.classList.remove('hidden');
                 if (footer) footer.textContent = 'OmniMind · OmniMind Pro, coming soon';
                 if (quotaLabel) quotaLabel.textContent = '⭐ OmniMind Pro, coming soon';
                 return;
@@ -4294,14 +4294,26 @@
             const code = codeEl ? codeEl.value.trim() : '';
             if (statusEl) statusEl.textContent = 'Checking code…';
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                const currentUser = (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) || null;
+                if (currentUser && typeof currentUser.getIdToken === 'function') {
+                    try {
+                        const idToken = await currentUser.getIdToken();
+                        if (idToken) headers.Authorization = 'Bearer ' + idToken;
+                    } catch (tokenErr) {}
+                }
                 const res = await fetch('/api/pro/activate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({ email: email, code: code, deviceId: getProDeviceId() })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.ok) {
-                    if (statusEl) statusEl.textContent = data.error || 'Activation failed';
+                    if (statusEl) {
+                        if (res.status === 403) statusEl.textContent = "That code and email don't match. Check both and try again.";
+                        else if (res.status === 429) statusEl.textContent = 'Too many tries. Wait a minute and try again.';
+                        else statusEl.textContent = data.error || 'Activation failed';
+                    }
                     return;
                 }
                 localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
