@@ -7627,14 +7627,16 @@
         }
 
         function sanitizeImageUrl(value) {
-            const raw = String(value || '').trim();
-            if (!raw || /[\u0000\s"'<>]/.test(raw)) return '';
+            let raw = String(value || '').trim();
+            if (!raw || /[\u0000"<>]/.test(raw) || /[\t\n\r\f\v]/.test(raw)) return '';
             const data = raw.match(/^data:image\/(png|jpe?g|gif|webp|bmp|avif);base64,([a-z0-9+/=]+)$/i);
             if (data) return 'data:image/' + data[1].toLowerCase() + ';base64,' + data[2];
+            if (/^data:/i.test(raw)) return '';
+            raw = raw.replace(/ /g, '%20').replace(/'/g, '%27');
             if (/^blob:/i.test(raw)) {
                 try {
                     const blobUrl = new URL(raw);
-                    if (blobUrl.protocol === 'blob:') return raw;
+                    if (blobUrl.protocol === 'blob:') return blobUrl.href;
                 } catch (e) {
                     return '';
                 }

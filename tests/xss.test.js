@@ -105,10 +105,14 @@ test('sanitizers accept safe colors and image links and reject active content', 
     assert.equal(window.sanitizeColor('Rebeccapurple'), 'rebeccapurple');
     assert.equal(window.sanitizeColor(BAD_COLOR), '');
     assert.equal(window.sanitizeImageUrl('https://cdn.example/a.png'), 'https://cdn.example/a.png');
+    assert.equal(window.sanitizeImageUrl('https://cdn.example/my photo.png'), 'https://cdn.example/my%20photo.png');
+    assert.equal(window.sanitizeImageUrl("https://cdn.example/o'brien.png"), 'https://cdn.example/o%27brien.png');
+    assert.equal(window.sanitizeImageUrl('https://cdn.example/already%20ok.png'), 'https://cdn.example/already%20ok.png');
     assert.equal(window.sanitizeImageUrl('blob:https://omnimind.test/11111111-1111-1111-1111-111111111111').startsWith('blob:'), true);
     assert.equal(window.sanitizeImageUrl(PNG_DATA), PNG_DATA);
     assert.equal(window.sanitizeImageUrl(SVG_DATA), '');
     assert.equal(window.sanitizeImageUrl(JS_URL), '');
+    assert.equal(window.sanitizeImageUrl('https://cdn.example/a.png" onerror="alert(1)'), '');
     assert.equal(window.sanitizeLinkUrl('https://photos.example/a'), 'https://photos.example/a');
     assert.equal(window.sanitizeLinkUrl(JS_URL), '');
     assert.equal(window.sanitizeLinkUrl('blob:https://omnimind.test/x'), '');
