@@ -7,5 +7,8 @@
   },
   "dependencies": {
     "firebase-admin": "^12.7.0"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
   }
 }
