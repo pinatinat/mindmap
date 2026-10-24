@@ -24,8 +24,15 @@ function createMemoryDb() {
                         data() { return clone(value); }
                     };
                 },
-                set(docRef, data) {
-                    writes.push(() => docs.set(docRef.path, clone(data)));
+                set(docRef, data, options) {
+                    writes.push(() => {
+                        if (options && options.merge) {
+                            const current = docs.get(docRef.path) || {};
+                            docs.set(docRef.path, Object.assign({}, current, clone(data)));
+                        } else {
+                            docs.set(docRef.path, clone(data));
+                        }
+                    });
                 },
                 update(docRef, data) {
                     writes.push(() => {

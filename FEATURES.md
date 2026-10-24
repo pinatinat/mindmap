@@ -235,7 +235,7 @@ Header badge (`#save-status`) displays real-time status:
   2. *Project Roadmap*
   3. *Decision Matrix*
   4. *Concept Study*
-- **Cloud Quota Meter:** Visual meter tracking free cloud slots ($X / 3$ used).
+- **Cloud Quota Meter:** Visual meter tracking free cloud slots ($X / 5$ used).
 
 ---
 

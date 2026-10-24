@@ -106,7 +106,8 @@ async function getOrder(config, fetchImpl, orderId, token) {
 function readCompletedPurchase(order) {
     if (!order || order.status !== 'COMPLETED') return null;
     const unit = order.purchase_units && order.purchase_units[0];
-    const capture = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
+    if (!unit || unit.custom_id !== 'omnimind_pro') return null;
+    const capture = unit.payments && unit.payments.captures && unit.payments.captures[0];
     if (!capture || capture.status !== 'COMPLETED') return null;
     const email = order.payer && order.payer.email_address;
     return {
@@ -156,6 +157,7 @@ async function purchaseFromCaptureEvent(config, fetchImpl, event) {
         const order = await getOrder(config, fetchImpl, orderId);
         return readCompletedPurchase(order);
     }
+    if (resource.custom_id !== 'omnimind_pro') return null;
     const payer = resource.payer || {};
     const email = payer.email_address || payer.email || '';
     return {
