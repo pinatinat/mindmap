@@ -941,6 +941,17 @@
         <button type="button" onclick="exitSharedMode()" class="text-slate-400 hover:text-slate-600 font-bold ml-1 text-xs" title="Return to your local maps">✕ Exit</button>
     </div>
 
+    <div id="private-map-gate" class="hidden fixed inset-0 z-50 bg-slate-50 items-center justify-center p-6">
+        <div class="max-w-md w-full bg-white border border-slate-200 rounded-3xl shadow-xl px-8 py-10 text-center">
+            <div class="text-4xl mb-3">🔒</div>
+            <p id="private-map-gate-message" class="text-base font-semibold text-slate-800 leading-relaxed">This map is private. Ask the owner to share it with you.</p>
+            <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2">
+                <button type="button" onclick="leavePrivateMapGate()" class="px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold">Go to my maps</button>
+                <button type="button" id="private-map-sign-in" onclick="signInFromPrivateMapGate()" class="hidden px-4 py-2 rounded-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-sm font-semibold">Sign in</button>
+            </div>
+        </div>
+    </div>
+
     <div class="flex flex-1 overflow-hidden relative">
         
         <!-- SIDEBAR -->
@@ -4612,6 +4623,7 @@
                 .then(result => {
                     setSaveStatus('saved', `✓ Signed in as ${result.user.displayName}`);
                     fetchCloudMaps();
+                    retryPendingPrivateShare();
                 })
                 .catch(err => {
                     alert('Google Sign-In notice: ' + err.message + '\n\nTip: In the Firebase console, make sure Google is enabled in Authentication -> Sign-in method.');
@@ -5811,6 +5823,18 @@
             renderShareMembersList(shareSettings.invitedMembers);
             emailInput.value = '';
 
+            const radios = document.getElementsByName('share-access-level');
+            let selectedAccess = '';
+            radios.forEach(r => {
+                if (r.checked) selectedAccess = r.value;
+            });
+            if (['restricted', 'view', 'edit'].indexOf(selectedAccess) < 0) {
+                radios.forEach(r => {
+                    r.checked = r.value === 'restricted';
+                });
+                syncShareAccessLabelStyles('restricted');
+            }
+
             await handleShareSettingsChanged();
         }
 
@@ -5853,6 +5877,58 @@
             container.innerHTML = html;
         }
 
+        let pendingPrivateShare = null;
+
+        function shareViewerIsSignedOut() {
+            const users = [];
+            if (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) users.push(fbAuth.currentUser);
+            if (typeof currentCloudUser !== 'undefined' && currentCloudUser) users.push(currentCloudUser);
+            if (!users.length) return true;
+            return users.every(user => !user || user.isAnonymous === true);
+        }
+
+        function isSharePermissionError(err) {
+            if (!err) return false;
+            if (err.code === 'permission-denied') return true;
+            const message = String(err.message || '').toLowerCase();
+            return message.includes('permission') || message.includes('insufficient');
+        }
+
+        function showPrivateMapGate() {
+            const gate = document.getElementById('private-map-gate');
+            if (!gate) return;
+            const signInBtn = document.getElementById('private-map-sign-in');
+            if (signInBtn) signInBtn.classList.toggle('hidden', !shareViewerIsSignedOut());
+            gate.classList.remove('hidden');
+            gate.classList.add('flex');
+            setSaveStatus('error', '🔒 This map is private');
+        }
+
+        function hidePrivateMapGate() {
+            const gate = document.getElementById('private-map-gate');
+            if (!gate) return;
+            gate.classList.add('hidden');
+            gate.classList.remove('flex');
+        }
+
+        function leavePrivateMapGate() {
+            pendingPrivateShare = null;
+            hidePrivateMapGate();
+            toggleHomepageView(true);
+        }
+
+        function signInFromPrivateMapGate() {
+            signInWithGoogle();
+        }
+
+        function retryPendingPrivateShare() {
+            if (!pendingPrivateShare) return;
+            const user = (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) || null;
+            if (!user || user.isAnonymous) return;
+            const pending = pendingPrivateShare;
+            loadSharedMap(pending.ownerUid, pending.mapId);
+        }
+
         // --- URL DETECTION & SHARED MAP LOADING ---
         function checkUrlForSharedMap() {
             const params = new URLSearchParams(window.location.search);
@@ -5879,6 +5955,7 @@
         }
 
         async function loadSharedMap(ownerUid, mapId) {
+            pendingPrivateShare = { ownerUid: ownerUid, mapId: mapId };
             toggleHomepageView(false);
             if (!fbDb) {
                 // If Firebase DB is not ready yet, initialize
@@ -5914,6 +5991,8 @@
                 const docSnap = await docRef.get();
 
                 if (!docSnap.exists) {
+                    pendingPrivateShare = null;
+                    hidePrivateMapGate();
                     alert('Shared mind map was not found or has been deleted by the owner.');
                     setSaveStatus('error', '⚠️ Shared map not found');
                     return;
@@ -5940,14 +6019,12 @@
                     const userEmail = currentCloudUser ? String(currentCloudUser.email || '').toLowerCase() : '';
                     const verified = !!(currentCloudUser && currentCloudUser.emailVerified);
                     if (!verified || invitedEmails.indexOf(userEmail) < 0) {
-                        alert('Access Restricted: This mind map is private. Sign in with the verified email invited by the owner.');
-                        setSaveStatus('error', '🔒 Access restricted');
+                        showPrivateMapGate();
                         return;
                     }
                     mode = editorEmails.indexOf(userEmail) >= 0 ? 'edit' : 'view';
                 } else {
-                    alert('This mind map is private to its owner.');
-                    setSaveStatus('error', '🔒 Owner only');
+                    showPrivateMapGate();
                     return;
                 }
 
@@ -6010,9 +6087,16 @@
                 subscribeToSharedMapLive(ownerUid, mapId);
 
                 // Status message
+                pendingPrivateShare = null;
+                hidePrivateMapGate();
                 setSaveStatus('saved', mode === 'view' ? '👁️ Viewing shared map (Read-Only)' : '⚡ Live Collaboration Active');
             } catch (err) {
                 console.error('Error loading shared map:', err);
+                if (isSharePermissionError(err)) {
+                    showPrivateMapGate();
+                    return;
+                }
+                pendingPrivateShare = null;
                 alert('Could not load shared map: ' + err.message);
                 setSaveStatus('error', '⚠️ Shared map error');
             }
