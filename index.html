@@ -4437,8 +4437,9 @@
                 if (headerUpgradeBtn) headerUpgradeBtn.classList.toggle('hidden', isPro);
 
                 if (avatarEl) {
-                    if (currentCloudUser.photoURL) {
-                        avatarEl.innerHTML = `<img src="${currentCloudUser.photoURL}" class="w-full h-full rounded-full object-cover" alt="avatar">`;
+                    const photo = sanitizeImageUrl(currentCloudUser.photoURL);
+                    if (photo) {
+                        avatarEl.innerHTML = `<img src="${escapeHtml(photo)}" class="w-full h-full rounded-full object-cover" alt="avatar">`;
                     } else {
                         avatarEl.textContent = displayName.charAt(0).toUpperCase();
                     }
@@ -4783,11 +4784,12 @@
                     const d = map.updatedAt.toDate ? map.updatedAt.toDate() : new Date(map.updatedAt);
                     updatedStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                 }
-                const count = map.nodeCount || (map.data && map.data.nodes ? Object.keys(map.data.nodes).length : 0);
+                const count = finiteNumber(map.nodeCount, (map.data && map.data.nodes ? Object.keys(map.data.nodes).length : 0));
 
+                const safeMapId = escapeHtml(map.id);
                 html += `
                 <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-all">
-                    <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onclick="loadCloudMap('${map.id}')">
+                    <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" data-omni-action="load-cloud-map" data-omni-id="${safeMapId}">
                         <div class="w-9 h-9 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-lg font-bold shadow-2xs">
                             ☁️
                         </div>
@@ -4801,19 +4803,19 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-1.5 ml-2">
-                        <button type="button" onclick="loadCloudMap('${map.id}')" class="px-2.5 py-1 text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg shadow-2xs transition-colors" title="Open this mind map">
+                        <button type="button" data-omni-action="load-cloud-map" data-omni-id="${safeMapId}" class="px-2.5 py-1 text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg shadow-2xs transition-colors" title="Open this mind map">
                             Open
                         </button>
-                        <button type="button" onclick="promptRenameCloudMap('${map.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename cloud map">
+                        <button type="button" data-omni-action="rename-cloud-map" data-omni-id="${safeMapId}" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename cloud map">
                             ✏️
                         </button>
-                        <button type="button" onclick="downloadCloudMapToLocal('${map.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save copy to Local Browser Maps">
+                        <button type="button" data-omni-action="download-cloud-map" data-omni-id="${safeMapId}" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save copy to Local Browser Maps">
                             ⬇️
                         </button>
-                        <button type="button" onclick="saveActiveMapToCloud('${map.id}', false)" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Overwrite cloud copy with active map">
+                        <button type="button" data-omni-action="overwrite-cloud-map" data-omni-id="${safeMapId}" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Overwrite cloud copy with active map">
                             🔄
                         </button>
-                        <button type="button" onclick="deleteCloudMap('${map.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete from Cloud">
+                        <button type="button" data-omni-action="delete-cloud-map" data-omni-id="${safeMapId}" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete from Cloud">
                             🗑️
                         </button>
                     </div>
@@ -5239,9 +5241,10 @@
                 if (currentCloudUser) {
                     const displayName = currentCloudUser.displayName || (currentCloudUser.isAnonymous ? 'Guest User' : 'Cloud User');
                     const isAnon = !!currentCloudUser.isAnonymous;
-                    const avatarHtml = currentCloudUser.photoURL
-                        ? `<img src="${currentCloudUser.photoURL}" class="w-6 h-6 rounded-full object-cover border border-slate-200" alt="avatar">`
-                        : `<div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-[0.65rem]">${displayName.charAt(0).toUpperCase()}</div>`;
+                    const photo = sanitizeImageUrl(currentCloudUser.photoURL);
+                    const avatarHtml = photo
+                        ? `<img src="${escapeHtml(photo)}" class="w-6 h-6 rounded-full object-cover border border-slate-200" alt="avatar">`
+                        : `<div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-[0.65rem]">${escapeHtml(displayName.charAt(0).toUpperCase())}</div>`;
 
                     authWidget.innerHTML = `
                         <div class="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full border border-slate-200 shadow-xs">
@@ -5396,14 +5399,11 @@
                     pillText = '☁️ Cloud';
                 }
 
-                let openClick = '';
-                if (isShared) {
-                    openClick = `loadSharedMap('${item.ownerUid}', '${item.id}'); toggleHomepageView(false);`;
-                } else if (isLocal) {
-                    openClick = `switchProject('${item.id}'); toggleHomepageView(false);`;
-                } else {
-                    openClick = `loadCloudMap('${item.id}'); toggleHomepageView(false);`;
-                }
+                const safeId = escapeHtml(item.id);
+                const safeOwner = escapeHtml(item.ownerUid || '');
+                let openAction = 'open-cloud-home';
+                if (isShared) openAction = 'open-shared-home';
+                else if (isLocal) openAction = 'open-local-home';
 
                 html += `
                 <div class="bg-white rounded-2xl border ${item.isActive ? 'border-purple-400 ring-2 ring-purple-100 shadow-md' : 'border-slate-200 hover:border-slate-300 shadow-xs hover:shadow-md'} transition-all flex flex-col overflow-hidden group">
@@ -5421,11 +5421,11 @@
                     <!-- Card Body -->
                     <div class="p-4 flex-1 flex flex-col justify-between">
                         <div>
-                            <h4 class="font-bold text-slate-800 text-sm group-hover:text-purple-600 transition-colors line-clamp-1 cursor-pointer" onclick="${openClick}" title="${escapeHtml(item.name)}">
+                            <h4 class="font-bold text-slate-800 text-sm group-hover:text-purple-600 transition-colors line-clamp-1 cursor-pointer" data-omni-action="${openAction}" data-omni-id="${safeId}" data-omni-owner="${safeOwner}" title="${escapeHtml(item.name)}">
                                 ${escapeHtml(item.name)}
                             </h4>
                             <div class="flex items-center gap-2 text-xs text-slate-400 mt-1.5 flex-wrap">
-                                <span>🫧 ${item.nodeCount} bubble${item.nodeCount === 1 ? '' : 's'}</span>
+                                <span>🫧 ${finiteNumber(item.nodeCount, 0)} bubble${finiteNumber(item.nodeCount, 0) === 1 ? '' : 's'}</span>
                                 <span>•</span>
                                 <span>${isShared ? `By ${escapeHtml(item.ownerEmail)}` : `Updated ${dateStr}`}</span>
                             </div>
@@ -5433,26 +5433,26 @@
 
                         <!-- Card Actions Footer -->
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-1">
-                            <button type="button" onclick="${openClick}" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1">
+                            <button type="button" data-omni-action="${openAction}" data-omni-id="${safeId}" data-omni-owner="${safeOwner}" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1">
                                 <span>🎨 Open</span>
                             </button>
 
                             <div class="flex items-center gap-1">
                                 ${isShared ? `
                                     ${item.allowCopy ? `
-                                        <button type="button" onclick="loadSharedMap('${item.ownerUid}', '${item.id}').then(() => forkSharedMapToLocal())" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Make a Copy to Local Library">📋</button>
+                                        <button type="button" data-omni-action="copy-shared-home" data-omni-id="${safeId}" data-omni-owner="${safeOwner}" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Make a Copy to Local Library">📋</button>
                                     ` : ''}
-                                    <button type="button" onclick="removeSharedMapFromHistory('${item.ownerUid}', '${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Remove from list">✕</button>
+                                    <button type="button" data-omni-action="remove-shared" data-omni-id="${safeId}" data-omni-owner="${safeOwner}" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Remove from list">✕</button>
                                 ` : isLocal ? `
-                                    <button type="button" onclick="promptRenameProject('${item.id}')" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-xs" title="Rename Map">✏️</button>
-                                    <button type="button" onclick="duplicateProject('${item.id}')" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-xs" title="Duplicate Map">📋</button>
-                                    <button type="button" onclick="exportLocalMapToCloud('${item.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Upload to Cloud (Max 3)">☁️</button>
-                                    <button type="button" onclick="deleteProject('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Delete Map">🗑️</button>
+                                    <button type="button" data-omni-action="rename-project" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-xs" title="Rename Map">✏️</button>
+                                    <button type="button" data-omni-action="duplicate-project" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-xs" title="Duplicate Map">📋</button>
+                                    <button type="button" data-omni-action="upload-project" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Upload to Cloud (Max 3)">☁️</button>
+                                    <button type="button" data-omni-action="delete-project" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Delete Map">🗑️</button>
                                 ` : `
-                                    <button type="button" onclick="promptRenameCloudMap('${item.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs" title="Rename Cloud Map">✏️</button>
-                                    <button type="button" onclick="downloadCloudMapToLocal('${item.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs" title="Download to Local Library">⬇️</button>
-                                    <button type="button" onclick="saveActiveMapToCloud('${item.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Overwrite cloud copy with active canvas">🔄</button>
-                                    <button type="button" onclick="deleteCloudMap('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Delete from Cloud">🗑️</button>
+                                    <button type="button" data-omni-action="rename-cloud-map" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs" title="Rename Cloud Map">✏️</button>
+                                    <button type="button" data-omni-action="download-cloud-map" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs" title="Download to Local Library">⬇️</button>
+                                    <button type="button" data-omni-action="overwrite-cloud-map-default" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs" title="Overwrite cloud copy with active canvas">🔄</button>
+                                    <button type="button" data-omni-action="delete-cloud-map" data-omni-id="${safeId}" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs" title="Delete from Cloud">🗑️</button>
                                 `}
                             </div>
                         </div>
@@ -5869,7 +5869,7 @@
                             <span class="text-[0.65rem] font-bold px-1.5 py-0.5 rounded ${isEdit ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">
                                 ${isEdit ? 'Editor' : 'Viewer'}
                             </span>
-                            <button type="button" onclick="removeTeammateInvite('${escapeHtml(m.email)}')" class="text-slate-400 hover:text-red-500 font-bold p-0.5 text-xs" title="Remove invitation">✕</button>
+                            <button type="button" data-omni-action="remove-invite" data-omni-email="${escapeHtml(m.email)}" class="text-slate-400 hover:text-red-500 font-bold p-0.5 text-xs" title="Remove invitation">✕</button>
                         </div>
                     </div>
                 `;
@@ -6330,9 +6330,11 @@
                 const dateStr = new Date(item.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' });
                 const isActive = (activeCollabMapId === item.id && activeCollabOwnerId === item.ownerUid);
 
+                const safeSharedId = escapeHtml(item.id);
+                const safeSharedOwner = escapeHtml(item.ownerUid || '');
                 html += `
                     <div class="p-3 bg-white border ${isActive ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200 hover:border-indigo-300'} rounded-xl shadow-xs transition-all flex items-center justify-between gap-3">
-                        <div class="flex-1 min-w-0 cursor-pointer" onclick="loadSharedMap('${item.ownerUid}', '${item.id}'); toggleProjectManagerModal(false);">
+                        <div class="flex-1 min-w-0 cursor-pointer" data-omni-action="open-shared-library" data-omni-id="${safeSharedId}" data-omni-owner="${safeSharedOwner}">
                             <div class="flex items-center gap-2">
                                 <span class="font-bold text-slate-800 text-xs truncate hover:text-indigo-600 transition-colors">${escapeHtml(item.name)}</span>
                                 <span class="text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ${isEdit ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'}">
@@ -6343,20 +6345,20 @@
                             <div class="text-[0.68rem] text-slate-400 mt-0.5 flex items-center gap-2">
                                 <span>Shared by ${escapeHtml(item.ownerEmail)}</span>
                                 <span>•</span>
-                                <span>🫧 ${item.nodeCount} bubbles</span>
+                                <span>🫧 ${finiteNumber(item.nodeCount, 0)} bubbles</span>
                                 <span>•</span>
                                 <span>${dateStr}</span>
                             </div>
                         </div>
 
                         <div class="flex items-center gap-1.5 shrink-0">
-                            <button type="button" onclick="loadSharedMap('${item.ownerUid}', '${item.id}'); toggleProjectManagerModal(false);" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-transform active:scale-95">
+                            <button type="button" data-omni-action="open-shared-library" data-omni-id="${safeSharedId}" data-omni-owner="${safeSharedOwner}" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-transform active:scale-95">
                                 Open
                             </button>
                             ${item.allowCopy ? `
-                                <button type="button" onclick="loadSharedMap('${item.ownerUid}', '${item.id}').then(() => forkSharedMapToLocal()); toggleProjectManagerModal(false);" class="p-1 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg text-xs" title="Make a copy to local library">📋</button>
+                                <button type="button" data-omni-action="copy-shared-library" data-omni-id="${safeSharedId}" data-omni-owner="${safeSharedOwner}" class="p-1 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg text-xs" title="Make a copy to local library">📋</button>
                             ` : ''}
-                            <button type="button" onclick="removeSharedMapFromHistory('${item.ownerUid}', '${item.id}')" class="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg text-xs" title="Remove from list">🗑️</button>
+                            <button type="button" data-omni-action="remove-shared" data-omni-id="${safeSharedId}" data-omni-owner="${safeSharedOwner}" class="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg text-xs" title="Remove from list">🗑️</button>
                         </div>
                     </div>
                 `;
@@ -6404,11 +6406,12 @@
                 const updatedDate = new Date(proj.updatedAt || proj.createdAt || Date.now()).toLocaleDateString([], {
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
-                const nodeCount = proj.nodeCount || 0;
+                const nodeCount = finiteNumber(proj.nodeCount, 0);
 
+                const safeProjId = escapeHtml(proj.id);
                 html += `
                 <div class="flex items-center justify-between p-3 rounded-xl border transition-all ${isActive ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-100 shadow-sm' : 'bg-white hover:bg-slate-50 border-slate-200'}">
-                    <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onclick="switchProject('${proj.id}')">
+                    <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" data-omni-action="switch-project" data-omni-id="${safeProjId}">
                         <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg ${isActive ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'}">
                             🗺️
                         </div>
@@ -6426,20 +6429,20 @@
                     </div>
                     <div class="flex items-center gap-1.5 ml-2">
                         ${!isActive ? `
-                            <button type="button" onclick="switchProject('${proj.id}')" class="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded-lg shadow-2xs transition-colors" title="Switch to this mind map">
+                            <button type="button" data-omni-action="switch-project" data-omni-id="${safeProjId}" class="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded-lg shadow-2xs transition-colors" title="Switch to this mind map">
                                 Open
                             </button>
                         ` : ''}
-                        <button type="button" onclick="exportLocalMapToCloud('${proj.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Upload this map to Cloud">
+                        <button type="button" data-omni-action="upload-project" data-omni-id="${safeProjId}" class="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-slate-100 rounded-lg transition-colors" title="Upload this map to Cloud">
                             ☁️
                         </button>
-                        <button type="button" onclick="promptRenameProject('${proj.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename map">
+                        <button type="button" data-omni-action="rename-project" data-omni-id="${safeProjId}" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename map">
                             ✏️
                         </button>
-                        <button type="button" onclick="duplicateProject('${proj.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors" title="Duplicate map">
+                        <button type="button" data-omni-action="duplicate-project" data-omni-id="${safeProjId}" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors" title="Duplicate map">
                             📑
                         </button>
-                        <button type="button" onclick="deleteProject('${proj.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete map">
+                        <button type="button" data-omni-action="delete-project" data-omni-id="${safeProjId}" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete map">
                             🗑️
                         </button>
                     </div>
@@ -7728,6 +7731,233 @@
             }[m]));
         }
 
+        function finiteNumber(value, fallback) {
+            if (value === null || value === undefined || value === '') return fallback;
+            const n = Number(value);
+            return Number.isFinite(n) ? n : fallback;
+        }
+
+        function sanitizeColor(value) {
+            const raw = String(value == null ? '' : value).trim();
+            if (!raw) return '';
+            if (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw)) return raw;
+            const rgb = raw.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i);
+            if (rgb) {
+                const channels = [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+                if (channels.some(channel => channel > 255)) return '';
+                if (rgb[4] !== undefined) {
+                    const alpha = Number(rgb[4]);
+                    if (!Number.isFinite(alpha) || alpha < 0 || alpha > 1) return '';
+                    return 'rgba(' + channels[0] + ', ' + channels[1] + ', ' + channels[2] + ', ' + alpha + ')';
+                }
+                return 'rgb(' + channels[0] + ', ' + channels[1] + ', ' + channels[2] + ')';
+            }
+            if (raw.toLowerCase() === 'transparent') return 'transparent';
+            if (/^[a-zA-Z]{1,30}$/.test(raw)) return raw.toLowerCase();
+            return '';
+        }
+
+        function hex6Color(value, fallback) {
+            const color = sanitizeColor(value);
+            return /^#[0-9a-fA-F]{6}$/.test(color) ? color : fallback;
+        }
+
+        function sanitizeBorderStyle(value) {
+            const key = String(value || '').toLowerCase();
+            if (key === 'solid' || key === 'dashed' || key === 'dotted' || key === 'double' || key === 'none') return key;
+            return 'none';
+        }
+
+        function sanitizeImageUrl(value) {
+            let raw = String(value || '').trim();
+            if (!raw || /[\u0000"<>]/.test(raw) || /[\t\n\r\f\v]/.test(raw)) return '';
+            const data = raw.match(/^data:image\/(png|jpe?g|gif|webp|bmp|avif);base64,([a-z0-9+/=]+)$/i);
+            if (data) return 'data:image/' + data[1].toLowerCase() + ';base64,' + data[2];
+            if (/^data:/i.test(raw)) return '';
+            raw = raw.replace(/ /g, '%20').replace(/'/g, '%27');
+            if (/^blob:/i.test(raw)) {
+                try {
+                    const blobUrl = new URL(raw);
+                    if (blobUrl.protocol === 'blob:') return blobUrl.href;
+                } catch (e) {
+                    return '';
+                }
+                return '';
+            }
+            try {
+                const url = new URL(raw);
+                if (url.protocol === 'http:' || url.protocol === 'https:') return url.href;
+            } catch (e) {}
+            return '';
+        }
+
+        function sanitizeLinkUrl(value) {
+            const raw = String(value || '').trim();
+            if (!raw || /[\u0000\s"'<>]/.test(raw)) return '';
+            try {
+                const url = new URL(raw);
+                if (url.protocol === 'http:' || url.protocol === 'https:') return url.href;
+            } catch (e) {}
+            return '';
+        }
+
+        function handleOmniClick(event) {
+            const el = event.target && event.target.closest ? event.target.closest('[data-omni-action]') : null;
+            if (!el) return;
+            const action = el.getAttribute('data-omni-action');
+            const id = el.getAttribute('data-omni-id') || '';
+            const owner = el.getAttribute('data-omni-owner') || '';
+            const email = el.getAttribute('data-omni-email') || '';
+            if (el.getAttribute('data-omni-stop') === '1') event.stopPropagation();
+            switch (action) {
+                case 'load-cloud-map':
+                    loadCloudMap(id);
+                    break;
+                case 'rename-cloud-map':
+                    promptRenameCloudMap(id);
+                    break;
+                case 'download-cloud-map':
+                    downloadCloudMapToLocal(id);
+                    break;
+                case 'overwrite-cloud-map':
+                    saveActiveMapToCloud(id, false);
+                    break;
+                case 'overwrite-cloud-map-default':
+                    saveActiveMapToCloud(id);
+                    break;
+                case 'delete-cloud-map':
+                    deleteCloudMap(id);
+                    break;
+                case 'open-shared-home':
+                    loadSharedMap(owner, id);
+                    toggleHomepageView(false);
+                    break;
+                case 'open-local-home':
+                    switchProject(id);
+                    toggleHomepageView(false);
+                    break;
+                case 'open-cloud-home':
+                    loadCloudMap(id);
+                    toggleHomepageView(false);
+                    break;
+                case 'copy-shared-home':
+                    loadSharedMap(owner, id).then(() => forkSharedMapToLocal());
+                    break;
+                case 'remove-shared':
+                    removeSharedMapFromHistory(owner, id);
+                    break;
+                case 'rename-project':
+                    promptRenameProject(id);
+                    break;
+                case 'duplicate-project':
+                    duplicateProject(id);
+                    break;
+                case 'upload-project':
+                    exportLocalMapToCloud(id);
+                    break;
+                case 'delete-project':
+                    deleteProject(id);
+                    break;
+                case 'open-shared-library':
+                    loadSharedMap(owner, id);
+                    toggleProjectManagerModal(false);
+                    break;
+                case 'copy-shared-library':
+                    loadSharedMap(owner, id).then(() => forkSharedMapToLocal());
+                    toggleProjectManagerModal(false);
+                    break;
+                case 'switch-project':
+                    switchProject(id);
+                    break;
+                case 'remove-invite':
+                    removeTeammateInvite(email);
+                    break;
+                case 'edit-decoration':
+                    startEditingDecoration(id);
+                    break;
+                case 'image-guide-url':
+                    promptImageGuideUrl(id);
+                    break;
+                case 'cycle-arrow-style':
+                    cycleArrowStyle(id);
+                    break;
+                case 'rotate-arrow':
+                    rotateArrow(id);
+                    break;
+                case 'flip-arrow':
+                    flipArrow(id);
+                    break;
+                case 'cycle-arrow-stroke':
+                    cycleArrowStroke(id);
+                    break;
+                case 'arrow-label':
+                    promptArrowLabel(id);
+                    break;
+                case 'detach-arrow':
+                    detachArrowFromNodes(id);
+                    break;
+                case 'decoration-back':
+                    moveDecorationLevelBehind(id);
+                    break;
+                case 'decoration-layer':
+                    toggleDecorationLayerNodeLevel(id);
+                    break;
+                case 'decoration-front':
+                    moveDecorationLevelInFront(id);
+                    break;
+                case 'duplicate-decoration':
+                    duplicateDecoration(id);
+                    break;
+                case 'delete-decoration':
+                    deleteDecoration(id);
+                    break;
+                case 'cycle-decoration-border':
+                    cycleDecorationBorder(id);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        function handleOmniChange(event) {
+            const el = event.target && event.target.closest ? event.target.closest('[data-omni-change]') : null;
+            if (!el) return;
+            const action = el.getAttribute('data-omni-change');
+            const id = el.getAttribute('data-omni-id') || '';
+            if (action === 'arrow-color') setDecorationArrowColor(id, el.value);
+            if (action === 'decoration-bg') setDecorationBg(id, el.value);
+        }
+
+        function handleOmniInput(event) {
+            const el = event.target && event.target.closest ? event.target.closest('[data-omni-input]') : null;
+            if (!el) return;
+            if (el.getAttribute('data-omni-input') === 'decoration-opacity') {
+                setDecorationOpacity(el.getAttribute('data-omni-id') || '', el.value);
+            }
+        }
+
+        function handleOmniBlur(event) {
+            const el = event.target && event.target.closest ? event.target.closest('[data-omni-blur]') : null;
+            if (!el || event.target !== el) return;
+            const action = el.getAttribute('data-omni-blur');
+            const id = el.getAttribute('data-omni-id') || '';
+            if (action === 'decoration-title') updateDecorationTitle(id, el.innerText);
+            if (action === 'decoration-text') {
+                updateDecorationText(id, el.innerText);
+                finishEditingDecoration();
+            }
+        }
+
+        function bindOmniActions() {
+            if (bindOmniActions.bound) return;
+            bindOmniActions.bound = true;
+            document.addEventListener('click', handleOmniClick);
+            document.addEventListener('change', handleOmniChange);
+            document.addEventListener('input', handleOmniInput);
+            document.addEventListener('focusout', handleOmniBlur);
+        }
+        bindOmniActions();
+
         function createFactoryStarterNodes() {
             return {
                 'root': { id: 'root', parentId: null, text: '🚀 Master Idea', x: 200, y: 250, bg: '#ffffff', fg: '#1e293b', size: 20, weight: 'bold', branchDirection: 'right' },
@@ -8142,12 +8372,12 @@
 
                 el.className = `bubble-node absolute shadow-md cursor-grab select-none transition-shadow hover:shadow-lg flex items-center justify-center border-2 bg-white ${bubbleShapeClass} ${node.collapsed ? 'is-branch-collapsed' : ''} ${reveal && reveal.has(node.id) ? 'fold-in' : ''} ${node.id === selectedNodeId ? 'border-blue-500 ring-4 ring-blue-200' : 'border-transparent'}`;
                 
-                el.style.left = node.x + 'px';
-                el.style.top = node.y + 'px';
+                el.style.left = finiteNumber(node.x, 0) + 'px';
+                el.style.top = finiteNumber(node.y, 0) + 'px';
                 el.style.transform = 'translate(-50%, -50%)';
-                el.style.backgroundColor = node.bg || '#ffffff';
-                el.style.color = node.fg || '#1e293b';
-                el.style.fontSize = (node.size || 16) + 'px';
+                el.style.backgroundColor = sanitizeColor(node.bg) || '#ffffff';
+                el.style.color = sanitizeColor(node.fg) || '#1e293b';
+                el.style.fontSize = finiteNumber(node.size, 16) + 'px';
                 el.style.fontWeight = node.weight || 'normal';
                 if (node.style === 'italic') el.style.fontStyle = 'italic';
                 if (isWrapped) {
@@ -8159,8 +8389,9 @@
 
                 // Render attachment (image shown inline, files as badge)
                 if (node.attachment) {
-                    if (isImageUrl(node.attachment)) {
-                        html += `<img src="${escapeHtml(node.attachment)}" class="bubble-img" alt="attachment" onerror="this.style.display='none'">`;
+                    const attachmentSrc = sanitizeImageUrl(node.attachment);
+                    if (attachmentSrc && isImageUrl(node.attachment)) {
+                        html += `<img src="${escapeHtml(attachmentSrc)}" class="bubble-img" alt="attachment" onerror="this.style.display='none'">`;
                     } else {
                         const fname = getFilenameFromUrl(node.attachment);
                         html += `<span class="bubble-file-badge">📎 ${escapeHtml(fname)}</span>`;
@@ -8431,23 +8662,25 @@
                     el.dataset.id = dec.id;
                     el.dataset.type = isSticky ? 'sticky' : dec.type;
                     el.className = `canvas-decoration absolute select-none flex flex-col ${isSelected ? 'selected' : ''} ${!isDesignSelectable ? 'locked' : ''} ${isEditing ? 'editing' : 'cursor-move'}`;
-                    el.style.left = dec.x + 'px';
-                    el.style.top = dec.y + 'px';
-                    el.style.width = dec.width + 'px';
-                    el.style.height = dec.height + 'px';
+                    const safeDecId = escapeHtml(dec.id);
+                    el.style.left = finiteNumber(dec.x, 0) + 'px';
+                    el.style.top = finiteNumber(dec.y, 0) + 'px';
+                    el.style.width = finiteNumber(dec.width, 0) + 'px';
+                    el.style.height = finiteNumber(dec.height, 0) + 'px';
                     if (dec.type === 'arrow') {
                         el.style.backgroundColor = 'transparent';
                         el.style.border = 'none';
                         el.style.borderRadius = '4px';
                     } else {
-                        el.style.backgroundColor = dec.bg || 'transparent';
-                        el.style.border = (dec.borderStyle && dec.borderStyle !== 'none')
-                            ? `${dec.borderWidth || 2}px ${dec.borderStyle} ${dec.borderColor || '#3b82f6'}`
+                        const borderStyle = sanitizeBorderStyle(dec.borderStyle);
+                        el.style.backgroundColor = sanitizeColor(dec.bg) || 'transparent';
+                        el.style.border = (borderStyle && borderStyle !== 'none')
+                            ? `${finiteNumber(dec.borderWidth, 2)}px ${borderStyle} ${sanitizeColor(dec.borderColor) || '#3b82f6'}`
                             : 'none';
-                        el.style.borderRadius = (dec.borderRadius !== undefined ? dec.borderRadius : 12) + 'px';
+                        el.style.borderRadius = finiteNumber(dec.borderRadius !== undefined ? dec.borderRadius : 12, 12) + 'px';
                     }
-                    el.style.opacity = dec.opacity ?? 1;
-                    el.style.zIndex = dec.zIndex || 1;
+                    el.style.opacity = finiteNumber(dec.opacity ?? 1, 1);
+                    el.style.zIndex = finiteNumber(dec.zIndex || 1, 1);
                     el.style.pointerEvents = isDesignSelectable ? 'auto' : 'none';
 
                     let contentHtml = '';
@@ -8460,7 +8693,7 @@
                                 <span contenteditable="true" 
                                       class="px-2.5 py-1 text-xs font-bold text-slate-700 bg-white/85 backdrop-blur-sm rounded-md shadow-sm border border-slate-200 cursor-text select-text outline-none inline-block hover:bg-white transition-colors"
                                       onmousedown="event.stopPropagation()"
-                                      onblur="updateDecorationTitle('${dec.id}', this.innerText)">${escapeHtml(dec.title || 'Zone Title')}</span>
+                                      data-omni-blur="decoration-title" data-omni-id="${safeDecId}">${escapeHtml(dec.title || 'Zone Title')}</span>
                             </div>`;
                         }
                     } else if (dec.type === 'textbox') {
@@ -8475,7 +8708,7 @@
                                 </div>
                                 <div class="flex items-center gap-1">
                                     <button type="button" 
-                                            onclick="event.stopPropagation(); startEditingDecoration('${dec.id}')"
+                                            data-omni-action="edit-decoration" data-omni-id="${safeDecId}" data-omni-stop="1"
                                             class="p-0.5 hover:bg-black/10 rounded text-[0.65rem] opacity-60 hover:opacity-100 transition-opacity"
                                             title="Edit text (or double-click note)">✏️</button>
                                     <span class="text-[0.7rem] opacity-50 cursor-grab" title="Drag handle">⠿</span>
@@ -8484,8 +8717,8 @@
                             <!-- Sticky Note Text Area -->
                             <div class="decoration-text-content flex-1 w-full p-3 text-sm text-slate-800 outline-none whitespace-pre-wrap leading-relaxed overflow-hidden transition-all ${isEditing ? 'cursor-text select-text ring-2 ring-blue-500/50 ring-inset bg-white/40' : 'cursor-move select-none'}"
                                  contenteditable="${isEditing ? 'true' : 'false'}"
-                                 style="font-size: ${dec.fontSize || 14}px; color: ${dec.color || '#1e293b'}"
-                                 onblur="updateDecorationText('${dec.id}', this.innerText); finishEditingDecoration();"
+                                 style="font-size: ${finiteNumber(dec.fontSize, 14)}px; color: ${sanitizeColor(dec.color) || '#1e293b'}"
+                                 data-omni-blur="decoration-text" data-omni-id="${safeDecId}"
                                  onkeydown="if(event.key==='Escape'){ this.blur(); event.preventDefault(); }">${escapeHtml(dec.text || '')}</div>`;
                         } else {
                             contentHtml += `
@@ -8497,16 +8730,17 @@
                                 </div>
                                 <div class="decoration-text-content w-full h-full p-2 font-bold text-slate-800 outline-none whitespace-pre-wrap leading-relaxed overflow-hidden transition-all ${isEditing ? 'cursor-text select-text ring-2 ring-blue-500/50 ring-inset bg-white/60 rounded' : 'cursor-move select-none'}"
                                      contenteditable="${isEditing ? 'true' : 'false'}"
-                                     style="font-size: ${dec.fontSize || 20}px; color: ${dec.color || '#1e293b'}"
-                                     onblur="updateDecorationText('${dec.id}', this.innerText); finishEditingDecoration();"
+                                     style="font-size: ${finiteNumber(dec.fontSize, 20)}px; color: ${sanitizeColor(dec.color) || '#1e293b'}"
+                                     data-omni-blur="decoration-text" data-omni-id="${safeDecId}"
                                      onkeydown="if(event.key==='Escape'){ this.blur(); event.preventDefault(); }">${escapeHtml(dec.text || '')}</div>
                             </div>`;
                         }
                     } else if (dec.type === 'image') {
-                        const resolvedImgSrc = (dec.src && !dec.src.startsWith('data:') && canvasImageAssets[dec.fileName]) 
-                            ? canvasImageAssets[dec.fileName] 
+                        const rawImgSrc = (dec.src && !String(dec.src).startsWith('data:') && canvasImageAssets[dec.fileName])
+                            ? canvasImageAssets[dec.fileName]
                             : (dec.src || '');
-                        contentHtml += `<img src="${escapeHtml(resolvedImgSrc)}" 
+                        const resolvedImgSrc = sanitizeImageUrl(rawImgSrc);
+                        contentHtml += `<img src="${escapeHtml(resolvedImgSrc)}"
                                              class="w-full h-full object-contain pointer-events-none select-none rounded-[inherit]" 
                                              alt="guide"
                                              onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
@@ -8514,7 +8748,7 @@
                                             <span class="text-2xl mb-1">🖼️</span>
                                             <span class="text-xs font-semibold text-slate-700 truncate max-w-[90%]">${escapeHtml(dec.fileName || dec.url || 'Image Guide')}</span>
                                             <span class="text-[0.65rem] text-slate-400 mt-0.5">Image not found on disk/cache</span>
-                                            <button type="button" onclick="event.stopPropagation(); promptImageGuideUrl('${dec.id}')" class="mt-2 px-2.5 py-1 text-[0.65rem] font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm pointer-events-auto">
+                                            <button type="button" data-omni-action="image-guide-url" data-omni-id="${safeDecId}" data-omni-stop="1" class="mt-2 px-2.5 py-1 text-[0.65rem] font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm pointer-events-auto">
                                                 🔗 Re-link or Upload
                                             </button>
                                         </div>`;
@@ -8523,103 +8757,105 @@
                     // Selected Mini-Toolbar & Resize Handle
                     if (isSelected && isDesignSelectable) {
                         const isFront = dec.layer === 'front';
+                        const safeZ = finiteNumber(dec.zIndex, 1);
 
                         if (dec.type === 'arrow') {
                             const bounds = computeArrowBounds(dec);
                             const styleIcon = getArrowStyleIcon(dec.arrowStyle);
                             const styleName = getArrowStyleName(dec.arrowStyle);
-                            const currentStroke = dec.strokeWidth || 3;
+                            const currentStroke = finiteNumber(dec.strokeWidth, 3);
+                            const safeRotation = finiteNumber(dec.rotation, 0);
                             const isSnapped = !!(dec.startNodeId || dec.endNodeId);
                             contentHtml += `
                             <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
                                 <!-- Style Cycle Button -->
-                                <button type="button" onclick="cycleArrowStyle('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Change arrow style (${styleName})">
+                                <button type="button" data-omni-action="cycle-arrow-style" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Change arrow style (${styleName})">
                                     <span>${styleIcon}</span> ${styleName}
                                 </button>
 
                                 <!-- Rotate 90 deg -->
-                                <button type="button" onclick="rotateArrow('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border flex items-center gap-1" title="Rotate 90° clockwise (${dec.rotation || 0}°)">
-                                    <span>↻</span> ${dec.rotation || 0}°
+                                <button type="button" data-omni-action="rotate-arrow" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border flex items-center gap-1" title="Rotate 90° clockwise (${safeRotation}°)">
+                                    <span>↻</span> ${safeRotation}°
                                 </button>
 
                                 <!-- Flip Horizontal -->
-                                <button type="button" onclick="flipArrow('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border" title="Flip horizontal">
+                                <button type="button" data-omni-action="flip-arrow" data-omni-id="${safeDecId}" class="px-1.5 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border" title="Flip horizontal">
                                     ⇄ Flip
                                 </button>
 
                                 <!-- Stroke thickness cycle -->
-                                <button type="button" onclick="cycleArrowStroke('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border" title="Cycle thickness (current: ${currentStroke}px)">
+                                <button type="button" data-omni-action="cycle-arrow-stroke" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border" title="Cycle thickness (current: ${currentStroke}px)">
                                     ━ ${currentStroke}px
                                 </button>
 
                                 <!-- Arrow Color -->
-                                <input type="color" value="${(dec.color && dec.color.startsWith('#')) ? dec.color : '#3b82f6'}" onchange="setDecorationArrowColor('${dec.id}', this.value)" class="w-5 h-5 rounded-full cursor-pointer" title="Arrow Color">
+                                <input type="color" value="${hex6Color(dec.color, '#3b82f6')}" data-omni-change="arrow-color" data-omni-id="${safeDecId}" class="w-5 h-5 rounded-full cursor-pointer" title="Arrow Color">
 
                                 <!-- Optional Label Badge -->
-                                <button type="button" onclick="promptArrowLabel('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] ${dec.title ? 'bg-amber-50 text-amber-700 border border-amber-200 font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border font-medium'}" title="Add or edit text label on arrow">
+                                <button type="button" data-omni-action="arrow-label" data-omni-id="${safeDecId}" class="px-1.5 py-0.5 rounded text-[0.65rem] ${dec.title ? 'bg-amber-50 text-amber-700 border border-amber-200 font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border font-medium'}" title="Add or edit text label on arrow">
                                     🏷️ ${dec.title ? 'Edit Label' : '+ Label'}
                                 </button>
 
                                 ${isSnapped ? `
                                 <!-- Snapped to Bubble Indicator & Detach Button -->
-                                <button type="button" onclick="detachArrowFromNodes('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.62rem] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 flex items-center gap-1 transition-colors" title="Arrow is snapped to bubble(s). Click to detach.">
+                                <button type="button" data-omni-action="detach-arrow" data-omni-id="${safeDecId}" class="px-1.5 py-0.5 rounded text-[0.62rem] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 flex items-center gap-1 transition-colors" title="Arrow is snapped to bubble(s). Click to detach.">
                                     <span>🔗</span> Detach
                                 </button>
                                 ` : ''}
 
                                 <!-- Per-Element Level Ordering Controls -->
                                 <div class="flex items-center gap-1 bg-slate-100/90 border border-slate-200 rounded-full px-1.5 py-0.5 shadow-sm" title="Layer Level Controls">
-                                    <button type="button" onclick="moveDecorationLevelBehind('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
-                                    <button type="button" onclick="toggleDecorationLayerNodeLevel('${dec.id}')" class="px-2 py-0.5 rounded-full text-[0.62rem] font-bold transition-colors ${isFront ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'}" title="Current level: ${isFront ? 'In Front of Nodes' : 'Behind Nodes'} (Click to switch directly)">
-                                        ${isFront ? '🥞 Front' : '🥞 Behind'} <span class="opacity-60 text-[0.58rem]">#${dec.zIndex || 1}</span>
+                                    <button type="button" data-omni-action="decoration-back" data-omni-id="${safeDecId}" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
+                                    <button type="button" data-omni-action="decoration-layer" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded-full text-[0.62rem] font-bold transition-colors ${isFront ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'}" title="Current level: ${isFront ? 'In Front of Nodes' : 'Behind Nodes'} (Click to switch directly)">
+                                        ${isFront ? '🥞 Front' : '🥞 Behind'} <span class="opacity-60 text-[0.58rem]">#${safeZ}</span>
                                     </button>
-                                    <button type="button" onclick="moveDecorationLevelInFront('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level in front (Bring forward)">🔼</button>
+                                    <button type="button" data-omni-action="decoration-front" data-omni-id="${safeDecId}" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level in front (Bring forward)">🔼</button>
                                 </div>
 
                                 <!-- Opacity -->
                                 <div class="flex items-center gap-1 text-[0.65rem] text-slate-500 ml-1">
                                     <span>👻</span>
-                                    <input type="range" min="0.1" max="1" step="0.05" value="${dec.opacity ?? 1}" oninput="setDecorationOpacity('${dec.id}', this.value)" class="w-14 h-1 cursor-pointer" title="Opacity">
+                                    <input type="range" min="0.1" max="1" step="0.05" value="${finiteNumber(dec.opacity ?? 1, 1)}" data-omni-input="decoration-opacity" data-omni-id="${safeDecId}" class="w-14 h-1 cursor-pointer" title="Opacity">
                                 </div>
-                                <button type="button" onclick="duplicateDecoration('${dec.id}')" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
-                                <button type="button" onclick="deleteDecoration('${dec.id}')" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
+                                <button type="button" data-omni-action="duplicate-decoration" data-omni-id="${safeDecId}" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
+                                <button type="button" data-omni-action="delete-decoration" data-omni-id="${safeDecId}" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
                             </div>
                             <!-- Tail and Tip Handles for interactive redirecting & snapping -->
-                            <div class="arrow-endpoint-handle arrow-tail-handle" data-id="${dec.id}" data-handle="tail" style="left: ${bounds.localStartX}px; top: ${bounds.localStartY}px;" title="Drag tail ⚪ to re-position or snap to bubble"></div>
-                            <div class="arrow-endpoint-handle arrow-tip-handle" data-id="${dec.id}" data-handle="tip" style="left: ${bounds.localEndX}px; top: ${bounds.localEndY}px;" title="Drag arrowhead 🔵 to re-position or snap to bubble"></div>
+                            <div class="arrow-endpoint-handle arrow-tail-handle" data-id="${safeDecId}" data-handle="tail" style="left: ${finiteNumber(bounds.localStartX, 0)}px; top: ${finiteNumber(bounds.localStartY, 0)}px;" title="Drag tail ⚪ to re-position or snap to bubble"></div>
+                            <div class="arrow-endpoint-handle arrow-tip-handle" data-id="${safeDecId}" data-handle="tip" style="left: ${finiteNumber(bounds.localEndX, 0)}px; top: ${finiteNumber(bounds.localEndY, 0)}px;" title="Drag arrowhead 🔵 to re-position or snap to bubble"></div>
                             `;
                         } else {
                             contentHtml += `
                             <div class="decoration-mini-toolbar" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
                                 ${dec.type === 'textbox' ? `
-                                <button type="button" onclick="startEditingDecoration('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Edit text (or double-click note)">
+                                <button type="button" data-omni-action="edit-decoration" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded text-[0.65rem] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 flex items-center gap-1 transition-colors" title="Edit text (or double-click note)">
                                     <span>✏️</span> Edit
                                 </button>
                                 ` : ''}
-                                <input type="color" value="${(dec.bg && dec.bg.startsWith('#')) ? dec.bg : '#ffffff'}" onchange="setDecorationBg('${dec.id}', this.value)" class="w-5 h-5 rounded-full cursor-pointer" title="Background Color">
-                                <button type="button" onclick="cycleDecorationBorder('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-600 border" title="Toggle border style">Border</button>
+                                <input type="color" value="${hex6Color(dec.bg, '#ffffff')}" data-omni-change="decoration-bg" data-omni-id="${safeDecId}" class="w-5 h-5 rounded-full cursor-pointer" title="Background Color">
+                                <button type="button" data-omni-action="cycle-decoration-border" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-600 border" title="Toggle border style">Border</button>
                                 
                                 <!-- Per-Element Level Ordering Controls -->
                                 <div class="flex items-center gap-1 bg-slate-100/90 border border-slate-200 rounded-full px-1.5 py-0.5 shadow-sm" title="Layer Level Controls">
-                                    <button type="button" onclick="moveDecorationLevelBehind('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
-                                    <button type="button" onclick="toggleDecorationLayerNodeLevel('${dec.id}')" class="px-2 py-0.5 rounded-full text-[0.62rem] font-bold transition-colors ${isFront ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'}" title="Current level: ${isFront ? 'In Front of Nodes' : 'Behind Nodes'} (Click to switch directly)">
-                                        ${isFront ? '🥞 Front' : '🥞 Behind'} <span class="opacity-60 text-[0.58rem]">#${dec.zIndex || 1}</span>
+                                    <button type="button" data-omni-action="decoration-back" data-omni-id="${safeDecId}" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level behind (Send backward)">🔽</button>
+                                    <button type="button" data-omni-action="decoration-layer" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded-full text-[0.62rem] font-bold transition-colors ${isFront ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'}" title="Current level: ${isFront ? 'In Front of Nodes' : 'Behind Nodes'} (Click to switch directly)">
+                                        ${isFront ? '🥞 Front' : '🥞 Behind'} <span class="opacity-60 text-[0.58rem]">#${safeZ}</span>
                                     </button>
-                                    <button type="button" onclick="moveDecorationLevelInFront('${dec.id}')" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level in front (Bring forward)">🔼</button>
+                                    <button type="button" data-omni-action="decoration-front" data-omni-id="${safeDecId}" class="px-1.5 py-0.5 rounded text-[0.65rem] hover:bg-white text-slate-700 font-bold transition-colors shadow-none hover:shadow-sm" title="Move 1 level in front (Bring forward)">🔼</button>
                                 </div>
 
                                 ${dec.type === 'image' ? `
-                                <button type="button" onclick="promptImageGuideUrl('${dec.id}')" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border flex items-center gap-1" title="Change Image URL or File Location">
+                                <button type="button" data-omni-action="image-guide-url" data-omni-id="${safeDecId}" class="px-2 py-0.5 rounded text-[0.65rem] bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 border flex items-center gap-1" title="Change Image URL or File Location">
                                     <span>🔗</span> Link
                                 </button>
                                 ` : ''}
 
                                 <div class="flex items-center gap-1 text-[0.65rem] text-slate-500 ml-1">
                                     <span>👻</span>
-                                    <input type="range" min="0.1" max="1" step="0.05" value="${dec.opacity ?? 1}" oninput="setDecorationOpacity('${dec.id}', this.value)" class="w-14 h-1 cursor-pointer" title="Opacity">
+                                    <input type="range" min="0.1" max="1" step="0.05" value="${finiteNumber(dec.opacity ?? 1, 1)}" data-omni-input="decoration-opacity" data-omni-id="${safeDecId}" class="w-14 h-1 cursor-pointer" title="Opacity">
                                 </div>
-                                <button type="button" onclick="duplicateDecoration('${dec.id}')" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
-                                <button type="button" onclick="deleteDecoration('${dec.id}')" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
+                                <button type="button" data-omni-action="duplicate-decoration" data-omni-id="${safeDecId}" class="p-1 rounded hover:bg-slate-100 text-slate-600 text-xs" title="Duplicate">📋</button>
+                                <button type="button" data-omni-action="delete-decoration" data-omni-id="${safeDecId}" class="p-1 rounded hover:bg-red-50 text-red-600 text-xs font-bold" title="Delete">🗑️</button>
                             </div>
                             <div class="decoration-resize-handle" title="Drag to resize"></div>`;
                         }
@@ -9828,15 +10064,16 @@
 
         function buildArrowSvgContent(dec) {
             const bounds = computeArrowBounds(dec);
-            const w = bounds.width;
-            const h = bounds.height;
-            const lx1 = bounds.localStartX;
-            const ly1 = bounds.localStartY;
-            const lx2 = bounds.localEndX;
-            const ly2 = bounds.localEndY;
+            const w = finiteNumber(bounds.width, 40);
+            const h = finiteNumber(bounds.height, 30);
+            const lx1 = finiteNumber(bounds.localStartX, 0);
+            const ly1 = finiteNumber(bounds.localStartY, 0);
+            const lx2 = finiteNumber(bounds.localEndX, 0);
+            const ly2 = finiteNumber(bounds.localEndY, 0);
 
-            const color = dec.color || '#3b82f6';
-            const strokeWidth = dec.strokeWidth || 3;
+            const color = sanitizeColor(dec.color) || '#3b82f6';
+            const strokeWidth = finiteNumber(dec.strokeWidth, 3);
+            const safeDecId = escapeHtml(dec.id);
             const style = dec.arrowStyle || 'straight';
             const hasLabel = !!dec.title;
 
@@ -9984,7 +10221,7 @@
                          style="left: ${midX}px; top: ${midY}px; transform: translate(-50%, -50%);"
                          contenteditable="true" 
                          onmousedown="event.stopPropagation()"
-                         onblur="updateDecorationTitle('${dec.id}', this.innerText)"
+                         data-omni-blur="decoration-title" data-omni-id="${safeDecId}"
                          title="Click to edit arrow label">${escapeHtml(dec.title)}</div>
                     ` : ''}
                 </div>
@@ -9992,6 +10229,12 @@
         }
 
         function renderGhostArrow(sx, sy, ex, ey, style = 'straight', color = '#3b82f6', strokeWidth = 3) {
+            sx = finiteNumber(sx, 0);
+            sy = finiteNumber(sy, 0);
+            ex = finiteNumber(ex, 0);
+            ey = finiteNumber(ey, 0);
+            color = sanitizeColor(color) || '#3b82f6';
+            strokeWidth = finiteNumber(strokeWidth, 3);
             const overlay = document.getElementById('arrow-drawing-overlay');
             const ghostGroup = document.getElementById('arrow-drawing-ghost');
             if (!overlay || !ghostGroup) return;
@@ -12729,11 +12972,13 @@
             previewContainer.classList.remove('hidden');
 
             let html = '';
-            if (isImageUrl(node.attachment)) {
+            const attachmentSrc = sanitizeImageUrl(node.attachment);
+            if (attachmentSrc && isImageUrl(node.attachment)) {
                 html += `<div class="flex flex-col items-center gap-1.5 w-full">
-                    <img src="${escapeHtml(node.attachment)}" class="attachment-preview-img" alt="preview" onerror="this.outerHTML='<span class=\\'text-xs text-red-400\\'>Photo failed to load (check link permissions)</span>'">`;
-                if (node.attachmentOriginalUrl) {
-                    html += `<a href="${escapeHtml(node.attachmentOriginalUrl)}" target="_blank" class="text-[0.65rem] text-blue-600 hover:underline flex items-center gap-1 font-medium">🔗 Open original Google Photos link ↗</a>`;
+                    <img src="${escapeHtml(attachmentSrc)}" class="attachment-preview-img" alt="preview" onerror="this.outerHTML='<span class=\\'text-xs text-red-400\\'>Photo failed to load (check link permissions)</span>'">`;
+                const originalLink = sanitizeLinkUrl(node.attachmentOriginalUrl);
+                if (originalLink) {
+                    html += `<a href="${escapeHtml(originalLink)}" target="_blank" rel="noopener noreferrer" class="text-[0.65rem] text-blue-600 hover:underline flex items-center gap-1 font-medium">🔗 Open original Google Photos link ↗</a>`;
                 }
                 html += `</div>`;
             } else {
