@@ -22,7 +22,7 @@ function walk(dir, acc = []) {
 test('shipped text has no lifetime, PayMongo, or Lemon Squeezy wording', () => {
     const hits = [];
     for (const file of walk(root)) {
-        const rel = path.relative(root, file);
+        const rel = path.relative(root, file).replace(/\\/g, '/');
         if (rel === 'tests/wording.test.js') continue;
         if (!/\.(html|js|md|json|rules)$/.test(rel)) continue;
         const text = fs.readFileSync(file, 'utf8');
