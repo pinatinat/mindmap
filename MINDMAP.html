@@ -941,6 +941,17 @@
         <button type="button" onclick="exitSharedMode()" class="text-slate-400 hover:text-slate-600 font-bold ml-1 text-xs" title="Return to your local maps">✕ Exit</button>
     </div>
 
+    <div id="private-map-gate" class="hidden fixed inset-0 z-50 bg-slate-50 items-center justify-center p-6">
+        <div class="max-w-md w-full bg-white border border-slate-200 rounded-3xl shadow-xl px-8 py-10 text-center">
+            <div class="text-4xl mb-3">🔒</div>
+            <p id="private-map-gate-message" class="text-base font-semibold text-slate-800 leading-relaxed">This map is private. Ask the owner to share it with you.</p>
+            <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2">
+                <button type="button" onclick="leavePrivateMapGate()" class="px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold">Go to my maps</button>
+                <button type="button" id="private-map-sign-in" onclick="signInFromPrivateMapGate()" class="hidden px-4 py-2 rounded-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-sm font-semibold">Sign in</button>
+            </div>
+        </div>
+    </div>
+
     <div class="flex flex-1 overflow-hidden relative">
         
         <!-- SIDEBAR -->
@@ -2181,8 +2192,8 @@
                                 </div>
                             </label>
 
-                            <label class="flex items-start gap-3 p-2.5 border rounded-xl cursor-pointer hover:bg-slate-50 transition-colors border-purple-300 bg-purple-50/50" id="lbl-access-view">
-                                <input type="radio" name="share-access-level" value="view" checked class="mt-0.5 text-purple-600 focus:ring-purple-500" onchange="handleShareSettingsChanged()">
+                            <label class="flex items-start gap-3 p-2.5 border rounded-xl cursor-pointer hover:bg-slate-50 transition-colors border-slate-200" id="lbl-access-view">
+                                <input type="radio" name="share-access-level" value="view" class="mt-0.5 text-purple-600 focus:ring-purple-500" onchange="handleShareSettingsChanged()">
                                 <div>
                                     <div class="font-bold text-slate-800 flex items-center gap-1.5">
                                         <span>👁️</span> Anyone with link can View
@@ -4669,6 +4680,7 @@
                 .then(result => {
                     setSaveStatus('saved', `✓ Signed in as ${result.user.displayName}`);
                     fetchCloudMaps();
+                    retryPendingPrivateShare();
                 })
                 .catch(err => {
                     alert('Google Sign-In notice: ' + err.message + '\n\nTip: In the Firebase console, make sure Google is enabled in Authentication -> Sign-in method.');
@@ -5658,6 +5670,38 @@
         }
 
         // --- OPEN / CLOSE SHARE MODAL ---
+        let shareModalHydrating = false;
+
+        function normalizedShareRoleEmails(members) {
+            const invitedEmails = [];
+            const editorEmails = [];
+            (Array.isArray(members) ? members : []).forEach(member => {
+                const email = String(member && member.email || '').trim().toLowerCase();
+                if (!email || email.indexOf('@') < 0) return;
+                if (invitedEmails.indexOf(email) < 0) invitedEmails.push(email);
+                if (member.role === 'edit' && editorEmails.indexOf(email) < 0) editorEmails.push(email);
+            });
+            return { invitedEmails, editorEmails };
+        }
+
+        function syncShareAccessLabelStyles(selected) {
+            const ids = {
+                restricted: 'lbl-access-restricted',
+                view: 'lbl-access-view',
+                edit: 'lbl-access-edit'
+            };
+            Object.keys(ids).forEach(key => {
+                const el = document.getElementById(ids[key]);
+                if (!el) return;
+                el.classList.remove('border-purple-300', 'bg-purple-50/50');
+                if (!el.classList.contains('border-slate-200')) el.classList.add('border-slate-200');
+                if (key === selected) {
+                    el.classList.remove('border-slate-200');
+                    el.classList.add('border-purple-300', 'bg-purple-50/50');
+                }
+            });
+        }
+
         async function openShareModal() {
             const modal = document.getElementById('share-team-modal');
             if (!modal) return;
@@ -5682,32 +5726,37 @@
                 const shareUrl = `${cleanOrigin}${cleanPath}?share=${currentCloudUser.uid}:${currentProjectId}`;
                 if (linkInput) linkInput.value = shareUrl;
 
-                // Load existing shareSettings if available in cloudMapsCache or firestore
-                const currentCloudMap = cloudMapsCache.find(m => m.id === currentProjectId);
-                let settings = { accessLevel: 'view', allowCopy: true, invitedMembers: [] };
-                if (currentCloudMap && currentCloudMap.shareSettings) {
-                    settings = Object.assign(settings, currentCloudMap.shareSettings);
+                // Show saved sharing only. Do not invent or persist a "view" default:
+                // a map stays owner-only until the owner chooses an access level.
+                shareModalHydrating = true;
+                try {
+                    const currentCloudMap = cloudMapsCache.find(m => m.id === currentProjectId);
+                    const stored = currentCloudMap && currentCloudMap.shareSettings;
+                    const selectedAccess = stored && ['restricted', 'view', 'edit'].indexOf(stored.accessLevel) >= 0
+                        ? stored.accessLevel
+                        : '';
+
+                    const radios = document.getElementsByName('share-access-level');
+                    radios.forEach(r => {
+                        r.checked = (r.value === selectedAccess);
+                    });
+                    syncShareAccessLabelStyles(selectedAccess);
+
+                    const copyToggle = document.getElementById('share-toggle-allow-copy');
+                    if (copyToggle) copyToggle.checked = !stored || stored.allowCopy !== false;
+
+                    renderShareMembersList((stored && stored.invitedMembers) || []);
+
+                    // Activate bidirectional live sync for the owner as well!
+                    activeCollabMode = 'owner';
+                    activeCollabOwnerId = currentCloudUser.uid;
+                    activeCollabMapId = currentProjectId;
+                    activeCollabAllowCopy = !stored || stored.allowCopy !== false;
+                    subscribeToSharedMapLive(currentCloudUser.uid, currentProjectId);
+                    setSaveStatus('saved', '⚡ Live Collaboration Active (Owner)');
+                } finally {
+                    shareModalHydrating = false;
                 }
-
-                // Set radio
-                const radios = document.getElementsByName('share-access-level');
-                radios.forEach(r => {
-                    r.checked = (r.value === settings.accessLevel);
-                });
-
-                // Set allow copy toggle
-                const copyToggle = document.getElementById('share-toggle-allow-copy');
-                if (copyToggle) copyToggle.checked = (settings.allowCopy !== false);
-
-                renderShareMembersList(settings.invitedMembers || []);
-
-                // Activate bidirectional live sync for the owner as well!
-                activeCollabMode = 'owner';
-                activeCollabOwnerId = currentCloudUser.uid;
-                activeCollabMapId = currentProjectId;
-                activeCollabAllowCopy = (settings.allowCopy !== false);
-                subscribeToSharedMapLive(currentCloudUser.uid, currentProjectId);
-                setSaveStatus('saved', '⚡ Live Collaboration Active (Owner)');
             }
 
             modal.classList.remove('hidden');
@@ -5724,24 +5773,34 @@
         }
 
         async function handleShareSettingsChanged() {
+            if (shareModalHydrating) return;
             if (!currentCloudUser || !fbDb || !currentProjectId) return;
 
             const radios = document.getElementsByName('share-access-level');
-            let selectedAccess = 'view';
+            let selectedAccess = '';
             radios.forEach(r => {
                 if (r.checked) selectedAccess = r.value;
             });
+            if (!selectedAccess || ['restricted', 'view', 'edit'].indexOf(selectedAccess) < 0) return;
+            syncShareAccessLabelStyles(selectedAccess);
 
             const copyToggle = document.getElementById('share-toggle-allow-copy');
             const allowCopy = copyToggle ? copyToggle.checked : true;
 
             const cloudMap = cloudMapsCache.find(m => m.id === currentProjectId);
             const existingMembers = (cloudMap && cloudMap.shareSettings && cloudMap.shareSettings.invitedMembers) ? cloudMap.shareSettings.invitedMembers : [];
+            const normalizedMembers = existingMembers.map(member => {
+                const email = String(member && member.email || '').trim().toLowerCase();
+                return Object.assign({}, member, { email });
+            }).filter(member => member.email && member.email.indexOf('@') >= 0);
+            const roleEmails = normalizedShareRoleEmails(normalizedMembers);
 
             const shareSettings = {
                 accessLevel: selectedAccess,
                 allowCopy: allowCopy,
-                invitedMembers: existingMembers,
+                invitedMembers: normalizedMembers,
+                invitedEmails: roleEmails.invitedEmails,
+                editorEmails: roleEmails.editorEmails,
                 updatedAt: Date.now()
             };
 
@@ -5801,7 +5860,11 @@
             const role = roleSelect.value;
 
             const cloudMap = cloudMapsCache.find(m => m.id === currentProjectId);
-            const shareSettings = (cloudMap && cloudMap.shareSettings) ? cloudMap.shareSettings : { accessLevel: 'view', allowCopy: true, invitedMembers: [] };
+            if (!cloudMap) return;
+            if (!cloudMap.shareSettings) {
+                cloudMap.shareSettings = { allowCopy: true, invitedMembers: [] };
+            }
+            const shareSettings = cloudMap.shareSettings;
             if (!shareSettings.invitedMembers) shareSettings.invitedMembers = [];
 
             // Prevent duplicate email
@@ -5814,6 +5877,18 @@
 
             renderShareMembersList(shareSettings.invitedMembers);
             emailInput.value = '';
+
+            const radios = document.getElementsByName('share-access-level');
+            let selectedAccess = '';
+            radios.forEach(r => {
+                if (r.checked) selectedAccess = r.value;
+            });
+            if (['restricted', 'view', 'edit'].indexOf(selectedAccess) < 0) {
+                radios.forEach(r => {
+                    r.checked = r.value === 'restricted';
+                });
+                syncShareAccessLabelStyles('restricted');
+            }
 
             await handleShareSettingsChanged();
         }
@@ -5857,6 +5932,58 @@
             container.innerHTML = html;
         }
 
+        let pendingPrivateShare = null;
+
+        function shareViewerIsSignedOut() {
+            const users = [];
+            if (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) users.push(fbAuth.currentUser);
+            if (typeof currentCloudUser !== 'undefined' && currentCloudUser) users.push(currentCloudUser);
+            if (!users.length) return true;
+            return users.every(user => !user || user.isAnonymous === true);
+        }
+
+        function isSharePermissionError(err) {
+            if (!err) return false;
+            if (err.code === 'permission-denied') return true;
+            const message = String(err.message || '').toLowerCase();
+            return message.includes('permission') || message.includes('insufficient');
+        }
+
+        function showPrivateMapGate() {
+            const gate = document.getElementById('private-map-gate');
+            if (!gate) return;
+            const signInBtn = document.getElementById('private-map-sign-in');
+            if (signInBtn) signInBtn.classList.toggle('hidden', !shareViewerIsSignedOut());
+            gate.classList.remove('hidden');
+            gate.classList.add('flex');
+            setSaveStatus('error', '🔒 This map is private');
+        }
+
+        function hidePrivateMapGate() {
+            const gate = document.getElementById('private-map-gate');
+            if (!gate) return;
+            gate.classList.add('hidden');
+            gate.classList.remove('flex');
+        }
+
+        function leavePrivateMapGate() {
+            pendingPrivateShare = null;
+            hidePrivateMapGate();
+            toggleHomepageView(true);
+        }
+
+        function signInFromPrivateMapGate() {
+            signInWithGoogle();
+        }
+
+        function retryPendingPrivateShare() {
+            if (!pendingPrivateShare) return;
+            const user = (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) || null;
+            if (!user || user.isAnonymous) return;
+            const pending = pendingPrivateShare;
+            loadSharedMap(pending.ownerUid, pending.mapId);
+        }
+
         // --- URL DETECTION & SHARED MAP LOADING ---
         function checkUrlForSharedMap() {
             const params = new URLSearchParams(window.location.search);
@@ -5883,6 +6010,7 @@
         }
 
         async function loadSharedMap(ownerUid, mapId) {
+            pendingPrivateShare = { ownerUid: ownerUid, mapId: mapId };
             toggleHomepageView(false);
             if (!fbDb) {
                 // If Firebase DB is not ready yet, initialize
@@ -5918,34 +6046,41 @@
                 const docSnap = await docRef.get();
 
                 if (!docSnap.exists) {
+                    pendingPrivateShare = null;
+                    hidePrivateMapGate();
                     alert('Shared mind map was not found or has been deleted by the owner.');
                     setSaveStatus('error', '⚠️ Shared map not found');
                     return;
                 }
 
                 const docData = docSnap.data();
-                const shareSettings = docData.shareSettings || { accessLevel: 'view', allowCopy: true, invitedMembers: [] };
-                const accessLevel = shareSettings.accessLevel || 'view';
-                const allowCopy = (shareSettings.allowCopy !== false);
-                const invitedMembers = shareSettings.invitedMembers || [];
+                const shareSettings = docData.shareSettings || null;
+                const accessLevel = shareSettings && shareSettings.accessLevel;
+                const allowCopy = !shareSettings || shareSettings.allowCopy !== false;
+                const invitedEmails = (shareSettings && Array.isArray(shareSettings.invitedEmails))
+                    ? shareSettings.invitedEmails.map(email => String(email || '').toLowerCase())
+                    : [];
+                const editorEmails = (shareSettings && Array.isArray(shareSettings.editorEmails))
+                    ? shareSettings.editorEmails.map(email => String(email || '').toLowerCase())
+                    : [];
 
-                // Check permissions
+                // Missing shareSettings means owner-only. Do not treat that as public view.
                 let mode = 'view';
                 if (currentCloudUser && currentCloudUser.uid === ownerUid) {
                     mode = 'owner';
+                } else if (accessLevel === 'view' || accessLevel === 'edit') {
+                    mode = accessLevel;
                 } else if (accessLevel === 'restricted') {
-                    const userEmail = currentCloudUser ? (currentCloudUser.email || '').toLowerCase() : '';
-                    const memberMatch = invitedMembers.find(m => m.email.toLowerCase() === userEmail);
-                    if (!memberMatch) {
-                        alert('Access Restricted: This mind map is private. Please sign in with the Google email account invited by the owner.');
-                        setSaveStatus('error', '🔒 Access restricted');
+                    const userEmail = currentCloudUser ? String(currentCloudUser.email || '').toLowerCase() : '';
+                    const verified = !!(currentCloudUser && currentCloudUser.emailVerified);
+                    if (!verified || invitedEmails.indexOf(userEmail) < 0) {
+                        showPrivateMapGate();
                         return;
                     }
-                    mode = memberMatch.role === 'edit' ? 'edit' : 'view';
-                } else if (accessLevel === 'edit') {
-                    mode = 'edit';
+                    mode = editorEmails.indexOf(userEmail) >= 0 ? 'edit' : 'view';
                 } else {
-                    mode = 'view';
+                    showPrivateMapGate();
+                    return;
                 }
 
                 // Set state
@@ -6007,9 +6142,16 @@
                 subscribeToSharedMapLive(ownerUid, mapId);
 
                 // Status message
+                pendingPrivateShare = null;
+                hidePrivateMapGate();
                 setSaveStatus('saved', mode === 'view' ? '👁️ Viewing shared map (Read-Only)' : '⚡ Live Collaboration Active');
             } catch (err) {
                 console.error('Error loading shared map:', err);
+                if (isSharePermissionError(err)) {
+                    showPrivateMapGate();
+                    return;
+                }
+                pendingPrivateShare = null;
                 alert('Could not load shared map: ' + err.message);
                 setSaveStatus('error', '⚠️ Shared map error');
             }
