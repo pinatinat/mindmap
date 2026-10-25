@@ -2,6 +2,7 @@ function sendJson(res, status, body) {
     res.statusCode = status;
     if (typeof res.setHeader === 'function') {
         res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'no-store');
     }
     const text = JSON.stringify(body);
     if (typeof res.end === 'function') res.end(text);

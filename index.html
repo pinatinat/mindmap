@@ -1584,7 +1584,7 @@
                         Think freely. Connect ideas.<br>Sync anywhere.
                     </h2>
                     <p class="text-sm text-slate-600 mt-2 max-w-xl">
-                        Create unlimited mind maps locally on this browser, auto-generate maps with AI, or sync your top 3 maps to the cloud for multi-device access.
+                        Create unlimited mind maps locally on this browser, auto-generate maps with AI, or sync your top 5 maps to the cloud for multi-device access.
                     </p>
 
                     <!-- Cloud Quota Indicator -->
@@ -1598,7 +1598,7 @@
                                     <span>⭐</span> Upgrade
                                 </button>
                                 <span id="home-quota-badge" class="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[0.7rem]">
-                                    0 / 3 Maps
+                                    0 / 5 Maps
                                 </span>
                             </div>
                         </div>
@@ -1606,7 +1606,7 @@
                             <div id="home-quota-progress" class="bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
                         </div>
                         <div class="flex items-center justify-between text-[0.7rem] text-slate-500 mt-2">
-                            <span id="home-quota-desc">0 of 3 cloud slots used</span>
+                            <span id="home-quota-desc">0 of 5 cloud slots used</span>
                             <span class="text-emerald-600 font-semibold">✓ Unlimited Local Maps</span>
                         </div>
                         <!-- Soft-Cap Over-Quota Notice for Homepage (hidden by default) -->
@@ -2057,7 +2057,7 @@
                         <div class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0">☁️</div>
                         <div>
                             <p class="font-bold text-slate-800 text-xs">50 Cloud Mind Map Slots</p>
-                            <p class="text-[0.72rem] text-slate-500">Expand from 3 free maps to 50 cloud save slots.</p>
+                            <p class="text-[0.72rem] text-slate-500">Expand from 5 free cloud maps to 50.</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
@@ -2134,11 +2134,11 @@
 
             <!-- Action Options -->
             <div class="flex flex-col gap-2">
-                <button type="button" onclick="closeQuotaExceededModal(); openOmniMindProModal('quota_limit');" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <span id="quota-upgrade-label">⭐ OmniMind Pro, coming soon</span>
+                <button type="button" id="quota-upgrade-btn" onclick="upgradeFromQuotaDialog()" class="hidden w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span id="quota-upgrade-label">⭐ Upgrade to OmniMind Pro (5 free cloud maps to 50)</span>
                 </button>
-                <button type="button" onclick="closeQuotaExceededModal(); toggleProjectManagerModal(true); switchLibraryTab('cloud');" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors">
-                    📁 Overwrite or Delete an Older Cloud Map
+                <button type="button" id="quota-remove-cloud-btn" onclick="closeQuotaExceededModal(); toggleProjectManagerModal(true); switchLibraryTab('cloud');" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors">
+                    Remove one from the cloud
                 </button>
                 <button type="button" onclick="closeQuotaExceededModal()" class="text-slate-400 hover:text-slate-600 text-xs py-1 transition-colors">
                     Keep Map in Local Browser Storage
@@ -3209,11 +3209,11 @@
             } else if (state === 'saved') {
                 const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 if (message && message.includes('Cloud limit reached')) {
-                    statusEl.className = "flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all duration-300 cursor-pointer shadow-xs active:scale-95 shrink-0";
-                    iconEl.className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse";
-                    textEl.innerHTML = `${escapeHtml(message)} <span class="underline ml-1 font-extrabold text-amber-900 bg-amber-200/80 px-1 py-0.2 rounded shadow-2xs">Upgrade ⭐</span>`;
-                    statusEl.onclick = () => openOmniMindProModal('save_status_limit');
-                    statusEl.title = "Cloud Storage Limit Reached! Click to Upgrade to OmniMind Pro";
+                    statusEl.className = "flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-amber-50 text-amber-800 border border-amber-300 transition-all duration-300 shrink-0";
+                    iconEl.className = "w-1.5 h-1.5 rounded-full bg-amber-500";
+                    textEl.textContent = message;
+                    statusEl.onclick = null;
+                    statusEl.title = "";
                     return;
                 }
                 statusEl.onclick = null;
@@ -4073,7 +4073,7 @@
             appId: "1:870599373633:web:bd555380fad96cc7a027c0"
         };
         const FIREBASE_CONFIG_KEY = 'omnimind_firebase_config_v1';
-        const DEFAULT_MAX_CLOUD_MAPS = 3;
+        const DEFAULT_MAX_CLOUD_MAPS = 5;
         const PRO_CLOUD_MAPS = 50;
         let currentCloudUserQuota = DEFAULT_MAX_CLOUD_MAPS;
         let isUserOmniMindPro = false;
@@ -4173,7 +4173,6 @@
             const checkout = document.getElementById('pro-checkout-panel');
             const activate = document.getElementById('pro-activate-panel');
             const footer = document.getElementById('home-footer-pro-line');
-            const quotaLabel = document.getElementById('quota-upgrade-label');
             if (!open) {
                 if (title) title.textContent = 'OmniMind Pro, coming soon';
                 if (tagline) {
@@ -4183,9 +4182,9 @@
                 if (priceRow) priceRow.classList.add('hidden');
                 if (amount) amount.textContent = '';
                 if (checkout) checkout.classList.add('hidden');
-                if (activate) activate.classList.add('hidden');
+                if (activate) activate.classList.remove('hidden');
                 if (footer) footer.textContent = 'OmniMind · OmniMind Pro, coming soon';
-                if (quotaLabel) quotaLabel.textContent = '⭐ OmniMind Pro, coming soon';
+                syncQuotaUpgradeOffer();
                 return;
             }
             if (title) title.textContent = 'OmniMind Pro';
@@ -4199,7 +4198,27 @@
             if (checkout) checkout.classList.remove('hidden');
             if (activate) activate.classList.remove('hidden');
             if (footer) footer.textContent = 'OmniMind · OmniMind Pro is a one-time ' + price + ' purchase. No subscription.';
-            if (quotaLabel) quotaLabel.textContent = '⭐ Upgrade to OmniMind Pro (' + price + ' · 50 Slots)';
+            syncQuotaUpgradeOffer();
+        }
+
+        function syncQuotaUpgradeOffer() {
+            const open = proCheckoutOpen();
+            const button = document.getElementById('quota-upgrade-btn');
+            const quotaLabel = document.getElementById('quota-upgrade-label');
+            if (button) button.classList.toggle('hidden', !open);
+            if (!quotaLabel) return;
+            if (!open) {
+                quotaLabel.textContent = '';
+                return;
+            }
+            const price = (typeof formatOmniMindProPrice === 'function') ? formatOmniMindProPrice(OMNIMIND_PRO) : '';
+            quotaLabel.textContent = '⭐ Upgrade to OmniMind Pro (' + price + ' · 5 free cloud maps to 50)';
+        }
+
+        function upgradeFromQuotaDialog() {
+            if (!proCheckoutOpen()) return;
+            closeQuotaExceededModal();
+            openOmniMindProModal('quota_limit');
         }
 
         function loadPayPalSdk() {
@@ -4278,6 +4297,33 @@
             });
         }
 
+        function openQuotaExceededModal(quota, count) {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (!modal) return;
+            const used = Number(count);
+            const limit = Number(quota);
+            const subtitle = document.getElementById('quota-modal-subtitle');
+            if (subtitle && Number.isFinite(used) && Number.isFinite(limit)) {
+                subtitle.textContent = used + ' of ' + limit + ' cloud maps';
+            }
+            syncQuotaUpgradeOffer();
+            modal.classList.remove('hidden');
+        }
+
+        function closeQuotaExceededModal() {
+            const modal = document.getElementById('quota-exceeded-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function showYoureProConfirmation() {
+            showAlert({
+                title: "You're Pro ✓",
+                icon: '✓',
+                message: "You're Pro ✓ This device is activated. Cloud storage is now " + PRO_CLOUD_MAPS + " maps. This code works on up to 3 devices.",
+                type: 'success'
+            });
+        }
+
         function openOmniMindProModal(source) {
             const modal = document.getElementById('omnimind-pro-modal');
             if (!modal) return;
@@ -4287,6 +4333,8 @@
                 emailInput.value = (stored && stored.email) || (currentCloudUser && currentCloudUser.email) || '';
             }
             applyProOfferCopy();
+            const statusEl = document.getElementById('pro-activate-status');
+            if (stored && statusEl && !statusEl.textContent) statusEl.textContent = "You're Pro ✓";
             modal.classList.remove('hidden');
             renderPayPalButton();
         }
@@ -4304,40 +4352,49 @@
             const email = emailEl ? emailEl.value.trim() : '';
             const code = codeEl ? codeEl.value.trim() : '';
             if (statusEl) statusEl.textContent = 'Checking code…';
+            let data = {};
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                const currentUser = (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) || null;
+                if (currentUser && typeof currentUser.getIdToken === 'function') {
+                    try {
+                        const idToken = await currentUser.getIdToken();
+                        if (idToken) headers.Authorization = 'Bearer ' + idToken;
+                    } catch (tokenErr) {}
+                }
                 const res = await fetch('/api/pro/activate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({ email: email, code: code, deviceId: getProDeviceId() })
                 });
-                const data = await res.json().catch(() => ({}));
+                data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.ok) {
-                    if (statusEl) statusEl.textContent = data.error || 'Activation failed';
+                    if (statusEl) {
+                        if (res.status === 403) statusEl.textContent = "That code and email don't match. Check both and try again.";
+                        else if (res.status === 429) statusEl.textContent = 'Too many tries. Wait a minute and try again.';
+                        else statusEl.textContent = data.error || 'Activation failed';
+                    }
                     return;
                 }
-                localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
-                    verified: true,
-                    email: data.email,
-                    code: data.code,
-                    deviceId: getProDeviceId()
-                }));
-                isUserOmniMindPro = true;
-                currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
-                if (statusEl) statusEl.textContent = 'OmniMind Pro is active on this device.';
-                closeOmniMindProModal();
-                closeQuotaExceededModal();
-                renderCloudMapsList();
-                renderHomepage();
-                updateCloudAuthUI();
-                showAlert({
-                    title: 'OmniMind Pro activated',
-                    icon: '🎉',
-                    message: 'Cloud storage is now ' + PRO_CLOUD_MAPS + ' maps. This code works on up to 3 devices.',
-                    type: 'success'
-                });
             } catch (e) {
                 if (statusEl) statusEl.textContent = 'Could not reach the activation server.';
+                return;
             }
+            localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
+                verified: true,
+                email: data.email,
+                code: data.code,
+                deviceId: getProDeviceId()
+            }));
+            isUserOmniMindPro = true;
+            currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
+            if (statusEl) statusEl.textContent = "You're Pro ✓";
+            try { closeOmniMindProModal(); } catch (e) { console.warn('Pro modal did not close:', e); }
+            try { closeQuotaExceededModal(); } catch (e) { console.warn('Quota modal did not close:', e); }
+            try { renderCloudMapsList(); } catch (e) { console.warn('Cloud list did not refresh:', e); }
+            try { renderHomepage(); } catch (e) { console.warn('Homepage did not refresh:', e); }
+            try { updateCloudAuthUI(); } catch (e) { console.warn('Account header did not refresh:', e); }
+            showYoureProConfirmation();
         }
 
         function initFirebaseCloud() {
@@ -4773,7 +4830,7 @@
                         <span>☁️</span> Cloud Quota: <b>${cloudMapsCache.length} / ${currentCloudUserQuota}</b> free maps
                     </span>
                     <button type="button" onclick="openOmniMindProModal('quota_banner')" class="text-[0.7rem] font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1">
-                        <span>⭐</span> Upgrade (50 slots)
+                        <span>⭐</span> Upgrade (5 free cloud maps to 50)
                     </button>
                 </div>`;
             }
@@ -4863,9 +4920,7 @@
                 const isExistingCloud = !forceNew && (targetMapId || cloudMapsCache.some(m => m.id === mapId));
                 if (!isExistingCloud && cloudMapsCache.length >= currentCloudUserQuota) {
                     openQuotaExceededModal(currentCloudUserQuota, cloudMapsCache.length);
-                    setSaveStatus('saved', `⚠️ Cloud limit reached (${cloudMapsCache.length}/${currentCloudUserQuota})`);
-                    alert(`☁️ Cloud Storage Limit Reached (${cloudMapsCache.length}/${currentCloudUserQuota} maps)\n\nYou have reached your free cloud storage limit.\n\nAll your existing maps remain 100% safe and editable!\n\nTo save this new map, upgrade to OmniMind Pro for 50 slots, or overwrite an existing cloud map.`);
-                    openOmniMindProModal('quota_limit_save');
+                    setSaveStatus('saved', '⚠️ Cloud limit reached (' + cloudMapsCache.length + ' of ' + currentCloudUserQuota + ' cloud maps)');
                     return;
                 }
 
