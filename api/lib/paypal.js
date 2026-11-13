@@ -1,17 +1,13 @@
-const { OMNIMIND_PRO, formatOmniMindProPrice } = require('../../pro-config');
+const { OMNIMIND_PRO, formatOmniMindProPrice, resolvePaypalMode, paypalApiBase } = require('../../pro-config');
 const PRO_PRICE = OMNIMIND_PRO.priceUsd;
 const PRO_CURRENCY = OMNIMIND_PRO.currency;
 const PRO_DESCRIPTION = 'OmniMind Pro (one-time)';
-
-function paypalApiBase(env) {
-    return env === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
-}
 
 function paypalConfig(env = process.env) {
     const clientId = env.PAYPAL_CLIENT_ID;
     const secret = env.PAYPAL_CLIENT_SECRET;
     const webhookId = env.PAYPAL_WEBHOOK_ID;
-    const mode = (env.PAYPAL_ENV || 'sandbox').toLowerCase() === 'live' ? 'live' : 'sandbox';
+    const mode = resolvePaypalMode(env);
     return { clientId, secret, webhookId, mode, base: paypalApiBase(mode) };
 }
 

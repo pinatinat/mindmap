@@ -1,4 +1,5 @@
 const { paypalConfig, createProOrder, OMNIMIND_PRO } = require('../lib/paypal');
+const { resolveCheckoutEnabled } = require('../../pro-config');
 const { sendJson, run } = require('../lib/http');
 
 async function handleCreateOrder(req, res, deps = {}) {
@@ -10,7 +11,9 @@ async function handleCreateOrder(req, res, deps = {}) {
         sendJson(res, 405, { ok: false, error: 'Method not allowed' });
         return;
     }
-    const pro = deps.pro || OMNIMIND_PRO;
+    const pro = deps.pro || Object.assign({}, OMNIMIND_PRO, {
+        checkoutEnabled: resolveCheckoutEnabled(deps.env || process.env)
+    });
     if (!pro.checkoutEnabled) {
         sendJson(res, 403, { ok: false, error: 'OmniMind Pro checkout is not open yet' });
         return;

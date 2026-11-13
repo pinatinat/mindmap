@@ -1,8 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
 const { generateProCode, issueProCode, activateProCode, MAX_DEVICES } = require('../api/lib/pro-store');
 const { fulfillPurchase } = require('../api/lib/fulfill');
-const { createProOrder, assertProPrice, readCompletedPurchase, purchaseFromCaptureEvent, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice } = require('../api/lib/paypal');
+const { createProOrder, assertProPrice, readCompletedPurchase, purchaseFromCaptureEvent, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice, paypalConfig } = require('../api/lib/paypal');
+const { resolveCheckoutEnabled, PAYPAL_SANDBOX_API, PAYPAL_LIVE_API } = require('../pro-config');
+const { handleProCheckoutScript } = require('../api/pro-checkout');
 const { handleCreateOrder } = require('../api/paypal/create-order');
 const { handleCaptureOrder } = require('../api/paypal/capture-order');
 const { handleWebhook } = require('../api/paypal/webhook');
@@ -321,6 +324,93 @@ test('webhook rejects a signature that PayPal does not mark SUCCESS', async () =
     }, res, { config, fetchImpl, db, resendKey: '' });
     assert.equal(res.statusCode, 401);
     assert.equal(db.docs.size, 0);
+});
+
+test('checkout turns on only for non-production sandbox', () => {
+    assert.equal(OMNIMIND_PRO.checkoutEnabled, false);
+    assert.equal(OMNIMIND_PRO.priceUsd, '9.00');
+    assert.equal(resolveCheckoutEnabled({}), false);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'production', PAYPAL_ENV: 'sandbox', OMNIMIND_CHECKOUT: 'true' }), false);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'preview' }), true);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'preview', PAYPAL_ENV: 'live' }), true);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'development' }), true);
+    assert.equal(resolveCheckoutEnabled({ OMNIMIND_CHECKOUT: 'true' }), true);
+    assert.equal(resolveCheckoutEnabled({ OMNIMIND_CHECKOUT: 'yes' }), true);
+    assert.equal(resolveCheckoutEnabled({ PAYPAL_ENV: 'live', OMNIMIND_CHECKOUT: 'true' }), false);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'production', PAYPAL_ENV: 'live' }), false);
+
+    const preview = paypalConfig({ VERCEL_ENV: 'preview', PAYPAL_ENV: 'live', PAYPAL_CLIENT_ID: 'c', PAYPAL_CLIENT_SECRET: 's' });
+    assert.equal(preview.mode, 'sandbox');
+    assert.equal(preview.base, PAYPAL_SANDBOX_API);
+    const production = paypalConfig({ VERCEL_ENV: 'production', PAYPAL_ENV: 'live' });
+    assert.equal(production.mode, 'live');
+    assert.equal(production.base, PAYPAL_LIVE_API);
+    const productionDefault = paypalConfig({ VERCEL_ENV: 'production' });
+    assert.equal(productionDefault.mode, 'sandbox');
+    assert.equal(productionDefault.base, PAYPAL_SANDBOX_API);
+});
+
+test('preview create and capture call the sandbox API and keep the $9 price', async () => {
+    const previewEnv = { VERCEL_ENV: 'preview', PAYPAL_ENV: 'live', PAYPAL_CLIENT_ID: 'c', PAYPAL_CLIENT_SECRET: 's' };
+    const urls = [];
+    const fetchImpl = async (url, options = {}) => {
+        urls.push(String(url));
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/v2/checkout/orders') && options.method === 'POST' && !String(url).includes('/capture')) {
+            const body = JSON.parse(options.body);
+            assert.equal(body.purchase_units[0].amount.value, '9.00');
+            assert.equal(body.purchase_units[0].amount.currency_code, 'USD');
+            assert.equal(body.purchase_units[0].custom_id, 'omnimind_pro');
+            return { ok: true, json: async () => ({ id: 'ORDER-PREVIEW' }) };
+        }
+        return {
+            ok: true,
+            json: async () => completedOrder({ id: 'ORDER-PREVIEW' })
+        };
+    };
+    const created = mockRes();
+    await handleCreateOrder({ method: 'POST' }, created, { env: previewEnv, fetchImpl, config: paypalConfig(previewEnv) });
+    assert.equal(created.statusCode, 200);
+    assert.equal(created.json.id, 'ORDER-PREVIEW');
+    assert.ok(urls.every((url) => url.startsWith(PAYPAL_SANDBOX_API)));
+
+    const captured = mockRes();
+    const db = createMemoryDb();
+    await handleCaptureOrder({ method: 'POST', body: { orderID: 'ORDER-PREVIEW' } }, captured, {
+        config: paypalConfig(previewEnv),
+        fetchImpl,
+        db,
+        resendKey: ''
+    });
+    assert.equal(captured.statusCode, 200);
+    assert.equal(captured.json.ok, true);
+    assert.ok(urls.some((url) => url === PAYPAL_SANDBOX_API + '/v2/checkout/orders/ORDER-PREVIEW/capture'));
+    assert.ok(urls.every((url) => url.startsWith(PAYPAL_SANDBOX_API)));
+});
+
+test('pro-checkout script follows the same gate and loads via a Windows-style path', () => {
+    function scriptRes() {
+        return {
+            statusCode: 0,
+            headers: {},
+            body: '',
+            setHeader(key, value) { this.headers[key] = value; },
+            end(text) { this.body = text || ''; }
+        };
+    }
+    const off = scriptRes();
+    handleProCheckoutScript({ method: 'GET' }, off, { env: { VERCEL_ENV: 'production', OMNIMIND_CHECKOUT: 'true' } });
+    assert.match(off.body, /checkoutEnabled=false/);
+    const on = scriptRes();
+    handleProCheckoutScript({ method: 'GET' }, on, { env: { VERCEL_ENV: 'preview', PAYPAL_ENV: 'live' } });
+    assert.match(on.body, /checkoutEnabled=true/);
+    assert.equal(on.headers['Cache-Control'], 'no-store');
+
+    const rel = path.win32.join('api', 'pro-checkout.js');
+    const abs = path.join.apply(path, [path.resolve(__dirname, '..')].concat(rel.split(path.win32.sep)));
+    assert.equal(typeof require(abs).handleProCheckoutScript, 'function');
 });
 
 test('activate endpoint returns the server decision', async () => {
