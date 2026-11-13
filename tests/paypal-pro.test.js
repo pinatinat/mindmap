@@ -189,6 +189,129 @@ test('a capture event without an order id still requires custom_id', async () =>
     assert.equal(rejected, null);
 });
 
+function approvedOrder(id = 'ORDER1') {
+    return {
+        id,
+        status: 'APPROVED',
+        purchase_units: [{
+            custom_id: 'omnimind_pro',
+            amount: { currency_code: 'USD', value: OMNIMIND_PRO.priceUsd }
+        }]
+    };
+}
+
+test('a capture response without custom_id still grants Pro after the amount was checked', async () => {
+    let captures = 0;
+    const fetchImpl = async (url, options = {}) => {
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/capture')) {
+            captures += 1;
+            return {
+                ok: true,
+                status: 201,
+                json: async () => ({
+                    id: '0BV877878D5139625',
+                    status: 'COMPLETED',
+                    payer: { email_address: 'Buyer@Example.com' },
+                    purchase_units: [{
+                        payments: {
+                            captures: [{
+                                id: 'CAP-SANDBOX',
+                                status: 'COMPLETED',
+                                amount: { currency_code: 'USD', value: '9.00' }
+                            }]
+                        }
+                    }]
+                })
+            };
+        }
+        return { ok: true, json: async () => approvedOrder('0BV877878D5139625') };
+    };
+    const db = createMemoryDb();
+    const res = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: '0BV877878D5139625' } },
+        res,
+        { config, fetchImpl, db, resendKey: '' }
+    );
+    assert.equal(captures, 1);
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(res.json.ok, true);
+    assert.match(res.json.code, /^OMNI-/);
+    const rows = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(rows, ['pro_captures/CAP-SANDBOX']);
+});
+
+test('ORDER_ALREADY_CAPTURED and an already completed order grant Pro once', async () => {
+    let captures = 0;
+    let reads = 0;
+    const completed = completedOrder({ id: '0BV877878D5139625' });
+    const fetchImpl = async (url) => {
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/capture')) {
+            captures += 1;
+            return {
+                ok: false,
+                status: 422,
+                json: async () => ({
+                    name: 'UNPROCESSABLE_ENTITY',
+                    message: 'The requested action could not be performed, semantically incorrect, or failed business validation.',
+                    details: [{ issue: 'ORDER_ALREADY_CAPTURED', description: 'Order already captured' }]
+                })
+            };
+        }
+        reads += 1;
+        if (reads === 1) return { ok: true, json: async () => approvedOrder('0BV877878D5139625') };
+        return { ok: true, json: async () => completed };
+    };
+    const db = createMemoryDb();
+    const first = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: '0BV877878D5139625' } },
+        first,
+        { config, fetchImpl, db, resendKey: '' }
+    );
+    assert.equal(first.statusCode, 200, first.body);
+    assert.equal(captures, 1);
+    const second = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: '0BV877878D5139625' } },
+        second,
+        { config, fetchImpl, db, resendKey: '' }
+    );
+    assert.equal(second.statusCode, 200, second.body);
+    assert.equal(second.json.alreadyIssued, true);
+    assert.equal(second.json.code, first.json.code);
+    assert.equal(captures, 1);
+    const rows = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(rows, ['pro_captures/CAP1']);
+});
+
+test('capture is not called when the order amount or custom id is wrong', async () => {
+    let captures = 0;
+    const fetchImpl = async (url) => {
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/capture')) captures += 1;
+        const order = approvedOrder();
+        order.purchase_units[0].amount.value = '1.00';
+        return { ok: true, json: async () => order };
+    };
+    const res = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: 'ORDER1' } },
+        res,
+        { config, fetchImpl, db: createMemoryDb(), resendKey: '' }
+    );
+    assert.equal(captures, 0);
+    assert.equal(res.statusCode, 400);
+});
+
 test('capture rejects a completed order that is not OmniMind Pro', async () => {
     const fetchImpl = async (url) => {
         if (String(url).includes('/v1/oauth2/token')) {
@@ -365,6 +488,12 @@ test('checkout copy distinguishes opening PayPal from a capture after approval',
     assert.match(html, /function showPayPalOpenFailure\(/);
     assert.match(html, /function showPayPalConfirming\(/);
     assert.match(html, /if \(buyerApproved\) showPayPalConfirming\(\);\s*else showPayPalOpenFailure\(\);/);
+    assert.match(html, /No charge made\. You can upgrade anytime/);
+    assert.match(html, /Loading PayPal…/);
+    assert.match(html, /Still confirming\. Don't pay again\. We'll email your Pro code,/);
+    assert.match(html, /id="paypal-pro-check"/);
+    assert.match(html, /paypalClickArmed/);
+    assert.match(html, /setTimeout\(showPayPalStillConfirming, 30000\)/);
     assert.match(html, /href="\/favicon\.ico"/);
     assert.equal(require('fs').existsSync(require('path').join(__dirname, '..', 'favicon.ico')), true);
 });
@@ -426,9 +555,19 @@ test('preview create and capture call the sandbox API and keep the $9 price', as
             assert.equal(body.purchase_units[0].custom_id, 'omnimind_pro');
             return { ok: true, json: async () => ({ id: 'ORDER-PREVIEW' }) };
         }
+        if (String(url).includes('/capture')) {
+            return { ok: true, json: async () => completedOrder({ id: 'ORDER-PREVIEW' }) };
+        }
         return {
             ok: true,
-            json: async () => completedOrder({ id: 'ORDER-PREVIEW' })
+            json: async () => ({
+                id: 'ORDER-PREVIEW',
+                status: 'APPROVED',
+                purchase_units: [{
+                    custom_id: 'omnimind_pro',
+                    amount: { currency_code: 'USD', value: '9.00' }
+                }]
+            })
         };
     };
     const created = mockRes();

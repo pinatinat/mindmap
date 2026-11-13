@@ -2086,9 +2086,11 @@
                 <div id="pro-checkout-panel" class="hidden">
                     <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
                         <span class="text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">Pay with PayPal</span>
-                        <div id="paypal-pro-button" class="min-h-[45px]"></div>
+                        <div id="paypal-pro-loading" class="rounded-xl bg-slate-200 text-slate-600 text-xs font-semibold h-[45px] flex items-center justify-center">Loading PayPal…</div>
+                        <div id="paypal-pro-button" class="min-h-[45px] hidden"></div>
                         <p id="paypal-pro-status" class="text-[0.7rem] text-slate-500"></p>
                         <button type="button" id="paypal-pro-retry" onclick="retryPayPalCheckout()" class="hidden w-full py-2 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs">Try again</button>
+                        <button type="button" id="paypal-pro-check" onclick="recheckPayPalCapture()" class="hidden w-full py-2 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs">Check again</button>
                     </div>
                 </div>
                 <div id="pro-activate-panel" class="hidden">
@@ -4245,40 +4247,124 @@
 
         const PAYPAL_OPEN_FAILED = "We couldn't open PayPal. You weren't charged. Please try again in a moment.";
         const PAYPAL_CONFIRMING = "We're confirming your payment. Don't pay again. Check your email for your Pro code, or enter the email and code below in a few minutes.";
+        const PAYPAL_STILL_CONFIRMING = "Still confirming. Don't pay again. We'll email your Pro code,";
+        const PAYPAL_CANCELLED = 'No charge made. You can upgrade anytime';
+        let paypalConfirmTimer = null;
+        let pendingPayPalOrderId = '';
+        let paypalClickArmed = false;
+        let suppressPayPalError = false;
+
+        function clearPayPalConfirmTimer() {
+            if (paypalConfirmTimer) {
+                clearTimeout(paypalConfirmTimer);
+                paypalConfirmTimer = null;
+            }
+        }
+
+        function showPayPalLoading(show) {
+            const loading = document.getElementById('paypal-pro-loading');
+            const container = document.getElementById('paypal-pro-button');
+            if (loading) loading.classList.toggle('hidden', !show);
+            if (container && show) container.classList.add('hidden');
+        }
 
         function showPayPalOpenFailure() {
+            clearPayPalConfirmTimer();
             const status = document.getElementById('paypal-pro-status');
             const retry = document.getElementById('paypal-pro-retry');
+            const check = document.getElementById('paypal-pro-check');
             const container = document.getElementById('paypal-pro-button');
+            showPayPalLoading(false);
             if (status) status.textContent = PAYPAL_OPEN_FAILED;
             if (retry) retry.classList.remove('hidden');
+            if (check) check.classList.add('hidden');
             if (container) {
                 container.classList.remove('hidden');
                 container.dataset.ready = '';
             }
         }
 
+        function showPayPalStillConfirming() {
+            clearPayPalConfirmTimer();
+            const status = document.getElementById('paypal-pro-status');
+            const retry = document.getElementById('paypal-pro-retry');
+            const check = document.getElementById('paypal-pro-check');
+            if (status) status.textContent = PAYPAL_STILL_CONFIRMING;
+            if (retry) retry.classList.add('hidden');
+            if (check) check.classList.remove('hidden');
+        }
+
         function showPayPalConfirming() {
             const status = document.getElementById('paypal-pro-status');
             const retry = document.getElementById('paypal-pro-retry');
+            const check = document.getElementById('paypal-pro-check');
             const container = document.getElementById('paypal-pro-button');
+            showPayPalLoading(false);
             if (status) status.textContent = PAYPAL_CONFIRMING;
             if (retry) retry.classList.add('hidden');
+            if (check) check.classList.add('hidden');
             if (container) container.classList.add('hidden');
+            clearPayPalConfirmTimer();
+            paypalConfirmTimer = setTimeout(showPayPalStillConfirming, 30000);
         }
 
         function retryPayPalCheckout() {
             const retry = document.getElementById('paypal-pro-retry');
             const status = document.getElementById('paypal-pro-status');
             const container = document.getElementById('paypal-pro-button');
+            clearPayPalConfirmTimer();
+            pendingPayPalOrderId = '';
             if (retry) retry.classList.add('hidden');
             if (status) status.textContent = '';
             if (container) {
-                container.classList.remove('hidden');
                 container.dataset.ready = '';
                 container.innerHTML = '';
+                container.classList.add('hidden');
             }
+            showPayPalLoading(true);
             renderPayPalButton();
+        }
+
+        async function confirmPayPalOrder(orderId) {
+            pendingPayPalOrderId = orderId || pendingPayPalOrderId;
+            if (!pendingPayPalOrderId) return;
+            const status = document.getElementById('paypal-pro-status');
+            showPayPalConfirming();
+            try {
+                const res = await fetch('/api/paypal/capture-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderID: pendingPayPalOrderId })
+                });
+                const result = await res.json().catch(() => ({}));
+                if (!res.ok || !result.ok) {
+                    showPayPalStillConfirming();
+                    return;
+                }
+                clearPayPalConfirmTimer();
+                const check = document.getElementById('paypal-pro-check');
+                if (check) check.classList.add('hidden');
+                const emailInput = document.getElementById('pro-activate-email');
+                const codeInput = document.getElementById('pro-activate-code');
+                if (emailInput && result.email) emailInput.value = result.email;
+                if (codeInput && result.code) codeInput.value = result.code;
+                const note = result.emailed
+                    ? 'We emailed ' + result.code + ' to ' + result.email + '.'
+                    : 'Your code is ' + result.code + '. Save it — email delivery is unavailable right now.';
+                if (status) status.textContent = note;
+                showAlert({
+                    title: 'OmniMind Pro purchased',
+                    icon: '🎉',
+                    message: note + '\n\nEnter the buyer email and code to activate this device.',
+                    type: 'success'
+                });
+            } catch (err) {
+                showPayPalStillConfirming();
+            }
+        }
+
+        function recheckPayPalCapture() {
+            confirmPayPalOrder(pendingPayPalOrderId);
         }
 
         function renderPayPalButton() {
@@ -4287,12 +4373,21 @@
             const status = document.getElementById('paypal-pro-status');
             if (!container || container.dataset.ready === '1') return;
             container.dataset.ready = '1';
+            showPayPalLoading(true);
             let buyerApproved = false;
             loadPayPalSdk().then((paypal) => {
                 if (!paypal || !paypal.Buttons) throw new Error('PayPal SDK missing');
                 paypal.Buttons({
                     style: { layout: 'vertical', shape: 'rect', label: 'paypal' },
+                    onClick: () => {
+                        paypalClickArmed = true;
+                    },
                     createOrder: async () => {
+                        if (!paypalClickArmed) {
+                            suppressPayPalError = true;
+                            throw new Error('PayPal createOrder ran before a click');
+                        }
+                        paypalClickArmed = false;
                         const res = await fetch('/api/paypal/create-order', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -4307,43 +4402,30 @@
                     },
                     onApprove: async (data) => {
                         buyerApproved = true;
+                        await confirmPayPalOrder(data.orderID);
+                    },
+                    onCancel: () => {
+                        buyerApproved = false;
+                        clearPayPalConfirmTimer();
+                        pendingPayPalOrderId = '';
                         const retry = document.getElementById('paypal-pro-retry');
+                        const check = document.getElementById('paypal-pro-check');
                         if (retry) retry.classList.add('hidden');
-                        if (status) status.textContent = 'Confirming payment…';
-                        try {
-                            const res = await fetch('/api/paypal/capture-order', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ orderID: data.orderID })
-                            });
-                            const result = await res.json().catch(() => ({}));
-                            if (!res.ok || !result.ok) {
-                                showPayPalConfirming();
-                                return;
-                            }
-                            const emailInput = document.getElementById('pro-activate-email');
-                            const codeInput = document.getElementById('pro-activate-code');
-                            if (emailInput && result.email) emailInput.value = result.email;
-                            if (codeInput && result.code) codeInput.value = result.code;
-                            const note = result.emailed
-                                ? 'We emailed ' + result.code + ' to ' + result.email + '.'
-                                : 'Your code is ' + result.code + '. Save it — email delivery is unavailable right now.';
-                            if (status) status.textContent = note;
-                            showAlert({
-                                title: 'OmniMind Pro purchased',
-                                icon: '🎉',
-                                message: note + '\n\nEnter the buyer email and code to activate this device.',
-                                type: 'success'
-                            });
-                        } catch (err) {
-                            showPayPalConfirming();
-                        }
+                        if (check) check.classList.add('hidden');
+                        if (status) status.textContent = PAYPAL_CANCELLED;
                     },
                     onError: () => {
+                        if (suppressPayPalError) {
+                            suppressPayPalError = false;
+                            return;
+                        }
                         if (buyerApproved) showPayPalConfirming();
                         else showPayPalOpenFailure();
                     }
-                }).render('#paypal-pro-button');
+                }).render('#paypal-pro-button').then(() => {
+                    showPayPalLoading(false);
+                    container.classList.remove('hidden');
+                });
             }).catch(() => {
                 showPayPalOpenFailure();
             });
