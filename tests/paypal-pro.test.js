@@ -308,6 +308,67 @@ test('capture fulfills once and capture plus webhook share the code', async () =
     assert.equal(emails.length, 1);
 });
 
+test('a webhook after the return-page capture keeps a single pro_captures row', async () => {
+    const emails = [];
+    const fetchImpl = async (url, options = {}) => {
+        const href = String(url);
+        if (href.includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (href.includes('/capture') || href.includes('/v2/checkout/orders/')) {
+            return { ok: true, json: async () => completedOrder() };
+        }
+        if (href.includes('/verify-webhook-signature')) {
+            return { ok: true, json: async () => ({ verification_status: 'SUCCESS' }) };
+        }
+        if (href.includes('api.resend.com')) {
+            emails.push(JSON.parse(options.body));
+            return { ok: true, text: async () => '' };
+        }
+        throw new Error('unexpected url ' + href);
+    };
+    const db = createMemoryDb();
+    const captureRes = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: 'ORDER1' } },
+        captureRes,
+        { config, fetchImpl, db, resendKey: 're_test' }
+    );
+    assert.equal(captureRes.json.alreadyIssued, false);
+    const hook = mockRes();
+    await handleWebhook({
+        method: 'POST',
+        headers: { 'paypal-transmission-id': 'tx-after-return' },
+        body: {
+            event_type: 'PAYMENT.CAPTURE.COMPLETED',
+            resource: {
+                id: 'CAP1',
+                status: 'COMPLETED',
+                supplementary_data: { related_ids: { order_id: 'ORDER1' } }
+            }
+        }
+    }, hook, { config, fetchImpl, db, resendKey: 're_test' });
+    assert.equal(hook.statusCode, 200);
+    assert.equal(hook.json.ok, true);
+    assert.equal(hook.json.alreadyIssued, true);
+    assert.equal(db.docs.get('pro_captures/CAP1').code, captureRes.json.code);
+    const captures = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(captures, ['pro_captures/CAP1']);
+    assert.equal(emails.length, 1);
+});
+
+test('checkout copy distinguishes opening PayPal from a capture after approval', () => {
+    const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+    assert.match(html, /We couldn't open PayPal\. You weren't charged\. Please try again in a moment\./);
+    assert.match(html, /id="paypal-pro-retry"[^>]*class="hidden/);
+    assert.match(html, /We're confirming your payment\. Don't pay again\. Check your email for your Pro code, or enter the email and code below in a few minutes\./);
+    assert.match(html, /function showPayPalOpenFailure\(/);
+    assert.match(html, /function showPayPalConfirming\(/);
+    assert.match(html, /if \(buyerApproved\) showPayPalConfirming\(\);\s*else showPayPalOpenFailure\(\);/);
+    assert.match(html, /href="\/favicon\.ico"/);
+    assert.equal(require('fs').existsSync(require('path').join(__dirname, '..', 'favicon.ico')), true);
+});
+
 test('webhook rejects a signature that PayPal does not mark SUCCESS', async () => {
     const db = createMemoryDb();
     const fetchImpl = async (url) => {
