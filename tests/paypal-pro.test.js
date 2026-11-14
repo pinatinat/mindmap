@@ -1,12 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
 const { generateProCode, issueProCode, activateProCode, MAX_DEVICES } = require('../api/lib/pro-store');
 const { fulfillPurchase } = require('../api/lib/fulfill');
-const { createProOrder, assertProPrice, readCompletedPurchase, purchaseFromCaptureEvent, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice } = require('../api/lib/paypal');
+const { createProOrder, assertProPrice, readCompletedPurchase, purchaseFromCaptureEvent, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice, paypalConfig } = require('../api/lib/paypal');
+const { resolveCheckoutEnabled, PAYPAL_SANDBOX_API, PAYPAL_LIVE_API } = require('../pro-config');
+const { handleProCheckoutScript } = require('../api/pro-checkout');
 const { handleCreateOrder } = require('../api/paypal/create-order');
 const { handleCaptureOrder } = require('../api/paypal/capture-order');
 const { handleWebhook } = require('../api/paypal/webhook');
 const { handleActivate } = require('../api/pro/activate');
+const { handleRecoverOrder, EMAIL_ONLY } = require('../api/paypal/recover-order');
 const { createMemoryDb } = require('./memory-db');
 
 const config = {
@@ -186,6 +190,129 @@ test('a capture event without an order id still requires custom_id', async () =>
     assert.equal(rejected, null);
 });
 
+function approvedOrder(id = 'ORDER1') {
+    return {
+        id,
+        status: 'APPROVED',
+        purchase_units: [{
+            custom_id: 'omnimind_pro',
+            amount: { currency_code: 'USD', value: OMNIMIND_PRO.priceUsd }
+        }]
+    };
+}
+
+test('a capture response without custom_id still grants Pro after the amount was checked', async () => {
+    let captures = 0;
+    const fetchImpl = async (url, options = {}) => {
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/capture')) {
+            captures += 1;
+            return {
+                ok: true,
+                status: 201,
+                json: async () => ({
+                    id: '0BV877878D5139625',
+                    status: 'COMPLETED',
+                    payer: { email_address: 'Buyer@Example.com' },
+                    purchase_units: [{
+                        payments: {
+                            captures: [{
+                                id: 'CAP-SANDBOX',
+                                status: 'COMPLETED',
+                                amount: { currency_code: 'USD', value: '9.00' }
+                            }]
+                        }
+                    }]
+                })
+            };
+        }
+        return { ok: true, json: async () => approvedOrder('0BV877878D5139625') };
+    };
+    const db = createMemoryDb();
+    const res = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: '0BV877878D5139625' } },
+        res,
+        { config, fetchImpl, db, resendKey: '' }
+    );
+    assert.equal(captures, 1);
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(res.json.ok, true);
+    assert.match(res.json.code, /^OMNI-/);
+    const rows = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(rows, ['pro_captures/CAP-SANDBOX']);
+});
+
+test('ORDER_ALREADY_CAPTURED and an already completed order grant Pro once', async () => {
+    let captures = 0;
+    let reads = 0;
+    const completed = completedOrder({ id: '0BV877878D5139625' });
+    const fetchImpl = async (url) => {
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/capture')) {
+            captures += 1;
+            return {
+                ok: false,
+                status: 422,
+                json: async () => ({
+                    name: 'UNPROCESSABLE_ENTITY',
+                    message: 'The requested action could not be performed, semantically incorrect, or failed business validation.',
+                    details: [{ issue: 'ORDER_ALREADY_CAPTURED', description: 'Order already captured' }]
+                })
+            };
+        }
+        reads += 1;
+        if (reads === 1) return { ok: true, json: async () => approvedOrder('0BV877878D5139625') };
+        return { ok: true, json: async () => completed };
+    };
+    const db = createMemoryDb();
+    const first = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: '0BV877878D5139625' } },
+        first,
+        { config, fetchImpl, db, resendKey: '' }
+    );
+    assert.equal(first.statusCode, 200, first.body);
+    assert.equal(captures, 1);
+    const second = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: '0BV877878D5139625' } },
+        second,
+        { config, fetchImpl, db, resendKey: '' }
+    );
+    assert.equal(second.statusCode, 200, second.body);
+    assert.equal(second.json.alreadyIssued, true);
+    assert.equal(second.json.code, first.json.code);
+    assert.equal(captures, 1);
+    const rows = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(rows, ['pro_captures/CAP1']);
+});
+
+test('capture is not called when the order amount or custom id is wrong', async () => {
+    let captures = 0;
+    const fetchImpl = async (url) => {
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/capture')) captures += 1;
+        const order = approvedOrder();
+        order.purchase_units[0].amount.value = '1.00';
+        return { ok: true, json: async () => order };
+    };
+    const res = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: 'ORDER1' } },
+        res,
+        { config, fetchImpl, db: createMemoryDb(), resendKey: '' }
+    );
+    assert.equal(captures, 0);
+    assert.equal(res.statusCode, 400);
+});
+
 test('capture rejects a completed order that is not OmniMind Pro', async () => {
     const fetchImpl = async (url) => {
         if (String(url).includes('/v1/oauth2/token')) {
@@ -305,6 +432,85 @@ test('capture fulfills once and capture plus webhook share the code', async () =
     assert.equal(emails.length, 1);
 });
 
+test('a webhook after the return-page capture keeps a single pro_captures row', async () => {
+    const emails = [];
+    const fetchImpl = async (url, options = {}) => {
+        const href = String(url);
+        if (href.includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (href.includes('/capture') || href.includes('/v2/checkout/orders/')) {
+            return { ok: true, json: async () => completedOrder() };
+        }
+        if (href.includes('/verify-webhook-signature')) {
+            return { ok: true, json: async () => ({ verification_status: 'SUCCESS' }) };
+        }
+        if (href.includes('api.resend.com')) {
+            emails.push(JSON.parse(options.body));
+            return { ok: true, text: async () => '' };
+        }
+        throw new Error('unexpected url ' + href);
+    };
+    const db = createMemoryDb();
+    const captureRes = mockRes();
+    await handleCaptureOrder(
+        { method: 'POST', body: { orderID: 'ORDER1' } },
+        captureRes,
+        { config, fetchImpl, db, resendKey: 're_test' }
+    );
+    assert.equal(captureRes.json.alreadyIssued, false);
+    const hook = mockRes();
+    await handleWebhook({
+        method: 'POST',
+        headers: { 'paypal-transmission-id': 'tx-after-return' },
+        body: {
+            event_type: 'PAYMENT.CAPTURE.COMPLETED',
+            resource: {
+                id: 'CAP1',
+                status: 'COMPLETED',
+                supplementary_data: { related_ids: { order_id: 'ORDER1' } }
+            }
+        }
+    }, hook, { config, fetchImpl, db, resendKey: 're_test' });
+    assert.equal(hook.statusCode, 200);
+    assert.equal(hook.json.ok, true);
+    assert.equal(hook.json.alreadyIssued, true);
+    assert.equal(db.docs.get('pro_captures/CAP1').code, captureRes.json.code);
+    const captures = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(captures, ['pro_captures/CAP1']);
+    assert.equal(emails.length, 1);
+});
+
+test('checkout copy distinguishes opening PayPal from a capture after approval', () => {
+    const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+    assert.match(html, /We couldn't open PayPal\. You weren't charged\. Please try again in a moment\./);
+    assert.match(html, /id="paypal-pro-retry"[^>]*class="hidden/);
+    assert.match(html, /We're confirming your payment\. Don't pay again\. Check your email for your Pro code, or enter the email and code below in a few minutes\./);
+    assert.match(html, /function showPayPalOpenFailure\(/);
+    assert.match(html, /function showPayPalConfirming\(/);
+    assert.match(html, /if \(buyerApproved\) showPayPalConfirming\(\);\s*else showPayPalOpenFailure\(\);/);
+    assert.match(html, /No charge made\. You can upgrade anytime/);
+    assert.match(html, /Loading PayPal…/);
+    assert.match(html, /Still confirming\. Don't pay again\. We'll email your Pro code\./);
+    assert.match(html, /setTimeout\(\(\) => finish\(new Error\('PayPal SDK timed out'\)\), 8000\)/);
+    assert.match(html, /return loadPayPalScriptOnce\(\)/);
+    assert.match(html, /Still loading PayPal… retrying/);
+    assert.match(html, /PayPal button timed out/);
+    assert.match(html, /Already paid but no code\?/);
+    assert.match(html, /Find it in your PayPal receipt email\./);
+    assert.match(html, /Email only finds purchases we already recorded\./);
+    assert.match(html, /function grantLocalPro\(/);
+    assert.match(html, /function syncProBadges\(/);
+    assert.match(html, /We couldn't reach the checkout server\. Don't pay again\. Reload this page, then use Check again\./);
+    assert.match(html, /z-50 shadow-sm relative/);
+    assert.match(html, /#app-homepage-view \{ top: var\(--omni-header-h, 48px\); \}/);
+    assert.match(html, /id="paypal-pro-check"/);
+    assert.match(html, /paypalClickArmed/);
+    assert.match(html, /setTimeout\(showPayPalStillConfirming, 30000\)/);
+    assert.match(html, /href="\/favicon\.ico"/);
+    assert.equal(require('fs').existsSync(require('path').join(__dirname, '..', 'favicon.ico')), true);
+});
+
 test('webhook rejects a signature that PayPal does not mark SUCCESS', async () => {
     const db = createMemoryDb();
     const fetchImpl = async (url) => {
@@ -321,6 +527,103 @@ test('webhook rejects a signature that PayPal does not mark SUCCESS', async () =
     }, res, { config, fetchImpl, db, resendKey: '' });
     assert.equal(res.statusCode, 401);
     assert.equal(db.docs.size, 0);
+});
+
+test('checkout turns on only for non-production sandbox', () => {
+    assert.equal(OMNIMIND_PRO.checkoutEnabled, false);
+    assert.equal(OMNIMIND_PRO.priceUsd, '9.00');
+    assert.equal(resolveCheckoutEnabled({}), false);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'production', PAYPAL_ENV: 'sandbox', OMNIMIND_CHECKOUT: 'true' }), false);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'preview' }), true);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'preview', PAYPAL_ENV: 'live' }), true);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'development' }), true);
+    assert.equal(resolveCheckoutEnabled({ OMNIMIND_CHECKOUT: 'true' }), true);
+    assert.equal(resolveCheckoutEnabled({ OMNIMIND_CHECKOUT: 'yes' }), true);
+    assert.equal(resolveCheckoutEnabled({ PAYPAL_ENV: 'live', OMNIMIND_CHECKOUT: 'true' }), false);
+    assert.equal(resolveCheckoutEnabled({ VERCEL_ENV: 'production', PAYPAL_ENV: 'live' }), false);
+
+    const preview = paypalConfig({ VERCEL_ENV: 'preview', PAYPAL_ENV: 'live', PAYPAL_CLIENT_ID: 'c', PAYPAL_CLIENT_SECRET: 's' });
+    assert.equal(preview.mode, 'sandbox');
+    assert.equal(preview.base, PAYPAL_SANDBOX_API);
+    const production = paypalConfig({ VERCEL_ENV: 'production', PAYPAL_ENV: 'live' });
+    assert.equal(production.mode, 'live');
+    assert.equal(production.base, PAYPAL_LIVE_API);
+    const productionDefault = paypalConfig({ VERCEL_ENV: 'production' });
+    assert.equal(productionDefault.mode, 'sandbox');
+    assert.equal(productionDefault.base, PAYPAL_SANDBOX_API);
+});
+
+test('preview create and capture call the sandbox API and keep the $9 price', async () => {
+    const previewEnv = { VERCEL_ENV: 'preview', PAYPAL_ENV: 'live', PAYPAL_CLIENT_ID: 'c', PAYPAL_CLIENT_SECRET: 's' };
+    const urls = [];
+    const fetchImpl = async (url, options = {}) => {
+        urls.push(String(url));
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/v2/checkout/orders') && options.method === 'POST' && !String(url).includes('/capture')) {
+            const body = JSON.parse(options.body);
+            assert.equal(body.purchase_units[0].amount.value, '9.00');
+            assert.equal(body.purchase_units[0].amount.currency_code, 'USD');
+            assert.equal(body.purchase_units[0].custom_id, 'omnimind_pro');
+            return { ok: true, json: async () => ({ id: 'ORDER-PREVIEW' }) };
+        }
+        if (String(url).includes('/capture')) {
+            return { ok: true, json: async () => completedOrder({ id: 'ORDER-PREVIEW' }) };
+        }
+        return {
+            ok: true,
+            json: async () => ({
+                id: 'ORDER-PREVIEW',
+                status: 'APPROVED',
+                purchase_units: [{
+                    custom_id: 'omnimind_pro',
+                    amount: { currency_code: 'USD', value: '9.00' }
+                }]
+            })
+        };
+    };
+    const created = mockRes();
+    await handleCreateOrder({ method: 'POST' }, created, { env: previewEnv, fetchImpl, config: paypalConfig(previewEnv) });
+    assert.equal(created.statusCode, 200);
+    assert.equal(created.json.id, 'ORDER-PREVIEW');
+    assert.ok(urls.every((url) => url.startsWith(PAYPAL_SANDBOX_API)));
+
+    const captured = mockRes();
+    const db = createMemoryDb();
+    await handleCaptureOrder({ method: 'POST', body: { orderID: 'ORDER-PREVIEW' } }, captured, {
+        config: paypalConfig(previewEnv),
+        fetchImpl,
+        db,
+        resendKey: ''
+    });
+    assert.equal(captured.statusCode, 200);
+    assert.equal(captured.json.ok, true);
+    assert.ok(urls.some((url) => url === PAYPAL_SANDBOX_API + '/v2/checkout/orders/ORDER-PREVIEW/capture'));
+    assert.ok(urls.every((url) => url.startsWith(PAYPAL_SANDBOX_API)));
+});
+
+test('pro-checkout script follows the same gate and loads via a Windows-style path', () => {
+    function scriptRes() {
+        return {
+            statusCode: 0,
+            headers: {},
+            body: '',
+            setHeader(key, value) { this.headers[key] = value; },
+            end(text) { this.body = text || ''; }
+        };
+    }
+    const off = scriptRes();
+    handleProCheckoutScript({ method: 'GET' }, off, { env: { VERCEL_ENV: 'production', OMNIMIND_CHECKOUT: 'true' } });
+    assert.match(off.body, /checkoutEnabled=false/);
+    const on = scriptRes();
+    handleProCheckoutScript({ method: 'GET' }, on, { env: { VERCEL_ENV: 'preview', PAYPAL_ENV: 'live' } });
+    assert.match(on.body, /checkoutEnabled=true/);
+    assert.equal(on.headers['Cache-Control'], 'no-store');
+
+    const rel = path.win32.join('api', 'pro-checkout.js');
+    const abs = path.join.apply(path, [path.resolve(__dirname, '..')].concat(rel.split(path.win32.sep)));
+    assert.equal(typeof require(abs).handleProCheckoutScript, 'function');
 });
 
 test('activate endpoint returns the server decision', async () => {
@@ -341,4 +644,93 @@ test('activate endpoint returns the server decision', async () => {
     const missing = mockRes();
     await handleActivate({ method: 'GET' }, missing, { db });
     assert.equal(missing.statusCode, 405);
+});
+
+test('recovery by PayPal capture id grants once and a second lookup does not duplicate', async () => {
+    const db = createMemoryDb();
+    const calls = [];
+    const fetchImpl = async (url) => {
+        calls.push(String(url));
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/v2/payments/captures/2GG279541U471931P')) {
+            return {
+                ok: true,
+                json: async () => ({
+                    id: '2GG279541U471931P',
+                    status: 'COMPLETED',
+                    amount: { currency_code: 'USD', value: '9.00' },
+                    supplementary_data: { related_ids: { order_id: 'ORDER-CAP' } },
+                    links: [{ href: 'https://api-m.sandbox.paypal.com/v2/checkout/orders/ORDER-CAP', rel: 'up' }]
+                })
+            };
+        }
+        if (String(url).includes('/v2/checkout/orders/2GG279541U471931P')) {
+            return { ok: false, status: 404, json: async () => ({ name: 'RESOURCE_NOT_FOUND' }) };
+        }
+        if (String(url).includes('/v2/checkout/orders/ORDER-CAP')) {
+            return {
+                ok: true,
+                json: async () => completedOrder({
+                    id: 'ORDER-CAP',
+                    purchase_units: [{
+                        custom_id: 'omnimind_pro',
+                        payments: {
+                            captures: [{
+                                id: '2GG279541U471931P',
+                                status: 'COMPLETED',
+                                amount: { currency_code: 'USD', value: '9.00' }
+                            }]
+                        }
+                    }]
+                })
+            };
+        }
+        throw new Error('unexpected ' + url);
+    };
+    const body = { reference: '2GG279541U471931P' };
+    const first = mockRes();
+    await handleRecoverOrder({ method: 'POST', body }, first, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(first.statusCode, 200);
+    assert.equal(first.json.ok, true);
+    assert.equal(first.json.alreadyIssued, false);
+    assert.equal(first.json.email, 'buyer@example.com');
+    const second = mockRes();
+    await handleRecoverOrder({ method: 'POST', body }, second, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(second.statusCode, 200);
+    assert.equal(second.json.alreadyIssued, true);
+    assert.equal(second.json.code, first.json.code);
+    const captures = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(captures, ['pro_captures/2GG279541U471931P']);
+    assert.ok(calls.some((url) => url.includes('/v2/payments/captures/2GG279541U471931P')));
+    assert.ok(!calls.some((url) => url.endsWith('/capture')));
+});
+
+test('email recovery only finds a purchase we already recorded', async () => {
+    const db = createMemoryDb();
+    let paypalCalls = 0;
+    const fetchImpl = async () => {
+        paypalCalls += 1;
+        throw new Error('PayPal should not be searched by email');
+    };
+    const missing = mockRes();
+    await handleRecoverOrder({ method: 'POST', body: { email: 'buyer@example.com' } }, missing, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(missing.statusCode, 404);
+    assert.equal(missing.json.error, EMAIL_ONLY);
+    assert.equal(paypalCalls, 0);
+    await issueProCode(db, {
+        captureId: 'CAP-MAIL',
+        orderId: 'ORDER-MAIL',
+        email: 'buyer@example.com',
+        value: '9.00',
+        currency: 'USD'
+    }, () => 'OMNI-MAIL-0001');
+    const found = mockRes();
+    await handleRecoverOrder({ method: 'POST', body: { email: 'Buyer@Example.com' } }, found, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(found.statusCode, 200);
+    assert.equal(found.json.alreadyIssued, true);
+    assert.equal(found.json.code, 'OMNI-MAIL-0001');
+    assert.equal(found.json.recordedOnly, true);
+    assert.equal(paypalCalls, 0);
 });
