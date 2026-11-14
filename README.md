@@ -1,6 +1,6 @@
 # OmniMind
 
-Browser mind map. OmniMind Pro is a one-time purchase through PayPal Checkout. There is no subscription. The price and the PayPal button stay hidden until `checkoutEnabled` is turned on in `pro-config.js`.
+Browser mind map. OmniMind Pro is a one-time purchase through PayPal Checkout. There is no subscription. The price and the PayPal button stay hidden on production. A Vercel preview (or `vercel dev`) turns `checkoutEnabled` on only when the server is using the PayPal sandbox API (`https://api-m.sandbox.paypal.com`). `VERCEL_ENV=production` keeps checkout off even if `OMNIMIND_CHECKOUT` is set. Outside Vercel, set `OMNIMIND_CHECKOUT=true` to opt in, and only while `PAYPAL_ENV` is not `live`.
 
 `index.html` and `MINDMAP.html` are the same app and must stay identical.
 

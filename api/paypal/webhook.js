@@ -1,7 +1,7 @@
-const { paypalConfig, verifyWebhookSignature, purchaseFromCaptureEvent } = require('../lib/paypal');
-const { fulfillPurchase } = require('../lib/fulfill');
-const { getFirestore } = require('../lib/firebase');
-const { sendJson, readBody, httpError, run } = require('../lib/http');
+const { paypalConfig, verifyWebhookSignature, purchaseFromCaptureEvent } = require('../../lib/paypal');
+const { fulfillPurchase } = require('../../lib/fulfill');
+const { getFirestore } = require('../../lib/firebase');
+const { sendJson, readBody, httpError, run } = require('../../lib/http');
 
 async function handleWebhook(req, res, deps = {}) {
     if (req.method !== 'POST') {
