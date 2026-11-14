@@ -490,7 +490,12 @@ test('checkout copy distinguishes opening PayPal from a capture after approval',
     assert.match(html, /if \(buyerApproved\) showPayPalConfirming\(\);\s*else showPayPalOpenFailure\(\);/);
     assert.match(html, /No charge made\. You can upgrade anytime/);
     assert.match(html, /Loading PayPal…/);
-    assert.match(html, /Still confirming\. Don't pay again\. We'll email your Pro code,/);
+    assert.match(html, /Still confirming\. Don't pay again\. We'll email your Pro code\./);
+    assert.match(html, /setTimeout\(\(\) => finish\(new Error\('PayPal SDK timed out'\)\), 8000\)/);
+    assert.match(html, /loadPayPalScriptOnce\(\)\.catch\(\(\) => loadPayPalScriptOnce\(\)\)/);
+    assert.match(html, /We couldn't reach the checkout server\. Don't pay again\. Reload this page, then use Check again\./);
+    assert.match(html, /z-50 shadow-sm relative/);
+    assert.match(html, /#app-homepage-view \{ top: var\(--omni-header-h, 48px\); \}/);
     assert.match(html, /id="paypal-pro-check"/);
     assert.match(html, /paypalClickArmed/);
     assert.match(html, /setTimeout\(showPayPalStillConfirming, 30000\)/);

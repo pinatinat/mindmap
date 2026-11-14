@@ -764,13 +764,15 @@
         }
         #move-domain-status.is-open { display: block; }
         html.move-banner-open > body > header { margin-top: var(--move-banner-h, 56px); }
-        html.move-banner-open #app-homepage-view { top: var(--move-banner-h, 56px); }
+        /* Homepage is fixed. Keep it below the canvas header so Upgrade Pro stays clickable. */
+        #app-homepage-view { top: var(--omni-header-h, 48px); }
+        html.move-banner-open #app-homepage-view { top: calc(var(--move-banner-h, 56px) + var(--omni-header-h, 48px)); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
 
     <!-- TOP NAVIGATION (Horizontally Scrollable on Mobile/Tablet with Momentum Scrolling) -->
-    <header class="bg-white border-b border-slate-200 px-2 sm:px-3 py-1.5 z-30 shadow-sm relative flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap select-none min-w-0 w-full max-w-full" style="touch-action: pan-x; -webkit-overflow-scrolling: touch;">
+    <header class="bg-white border-b border-slate-200 px-2 sm:px-3 py-1.5 z-50 shadow-sm relative flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap select-none min-w-0 w-full max-w-full" style="touch-action: pan-x; -webkit-overflow-scrolling: touch;">
         <!-- Mobile Sidebar Drawer Toggle Button -->
         <button type="button" id="btn-mobile-sidebar-toggle" onclick="toggleMobileSidebar()" class="md:hidden flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-base leading-none transition-colors border border-slate-200 shrink-0" title="Toggle Sidebar (Style, Code, Adv)">
             ☰
@@ -4226,28 +4228,51 @@
             openOmniMindProModal('quota_limit');
         }
 
-        function loadPayPalSdk() {
-            if (!proCheckoutOpen()) return Promise.reject(new Error('Checkout is not open'));
-            if (window.paypal) return Promise.resolve(window.paypal);
-            if (paypalSdkPromise) return paypalSdkPromise;
+        function loadPayPalScriptOnce() {
             const currency = (typeof OMNIMIND_PRO !== 'undefined' && OMNIMIND_PRO.currency) ? OMNIMIND_PRO.currency : 'USD';
-            paypalSdkPromise = new Promise((resolve, reject) => {
+            return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
+                let settled = false;
+                const timer = setTimeout(() => finish(new Error('PayPal SDK timed out')), 8000);
+                function finish(err) {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    if (err) {
+                        script.onload = null;
+                        script.onerror = null;
+                        if (script.parentNode) script.parentNode.removeChild(script);
+                        reject(err);
+                        return;
+                    }
+                    resolve(window.paypal);
+                }
                 script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(PAYPAL_CLIENT_ID) + '&currency=' + encodeURIComponent(currency) + '&intent=capture';
                 script.async = true;
-                script.onload = () => resolve(window.paypal);
-                script.onerror = () => {
-                    paypalSdkPromise = null;
-                    reject(new Error('PayPal could not load'));
+                script.onload = () => {
+                    if (window.paypal && window.paypal.Buttons) finish(null);
+                    else finish(new Error('PayPal SDK missing'));
                 };
+                script.onerror = () => finish(new Error('PayPal could not load'));
                 document.head.appendChild(script);
+            });
+        }
+
+        function loadPayPalSdk() {
+            if (!proCheckoutOpen()) return Promise.reject(new Error('Checkout is not open'));
+            if (window.paypal && window.paypal.Buttons) return Promise.resolve(window.paypal);
+            if (paypalSdkPromise) return paypalSdkPromise;
+            paypalSdkPromise = loadPayPalScriptOnce().catch(() => loadPayPalScriptOnce()).catch((err) => {
+                paypalSdkPromise = null;
+                throw err;
             });
             return paypalSdkPromise;
         }
 
         const PAYPAL_OPEN_FAILED = "We couldn't open PayPal. You weren't charged. Please try again in a moment.";
         const PAYPAL_CONFIRMING = "We're confirming your payment. Don't pay again. Check your email for your Pro code, or enter the email and code below in a few minutes.";
-        const PAYPAL_STILL_CONFIRMING = "Still confirming. Don't pay again. We'll email your Pro code,";
+        const PAYPAL_STILL_CONFIRMING = "Still confirming. Don't pay again. We'll email your Pro code.";
+        const PAYPAL_SERVER_UNREACHABLE = "We couldn't reach the checkout server. Don't pay again. Reload this page, then use Check again.";
         const PAYPAL_CANCELLED = 'No charge made. You can upgrade anytime';
         let paypalConfirmTimer = null;
         let pendingPayPalOrderId = '';
@@ -4268,15 +4293,18 @@
             if (container && show) container.classList.add('hidden');
         }
 
-        function showPayPalOpenFailure() {
+        function showPayPalOpenFailure(message, retryLabel) {
             clearPayPalConfirmTimer();
             const status = document.getElementById('paypal-pro-status');
             const retry = document.getElementById('paypal-pro-retry');
             const check = document.getElementById('paypal-pro-check');
             const container = document.getElementById('paypal-pro-button');
             showPayPalLoading(false);
-            if (status) status.textContent = PAYPAL_OPEN_FAILED;
-            if (retry) retry.classList.remove('hidden');
+            if (status) status.textContent = message || PAYPAL_OPEN_FAILED;
+            if (retry) {
+                retry.textContent = retryLabel || 'Try again';
+                retry.classList.remove('hidden');
+            }
             if (check) check.classList.add('hidden');
             if (container) {
                 container.classList.remove('hidden');
@@ -4314,7 +4342,10 @@
             const container = document.getElementById('paypal-pro-button');
             clearPayPalConfirmTimer();
             pendingPayPalOrderId = '';
-            if (retry) retry.classList.add('hidden');
+            if (retry) {
+                retry.textContent = 'Try again';
+                retry.classList.add('hidden');
+            }
             if (status) status.textContent = '';
             if (container) {
                 container.dataset.ready = '';
@@ -4323,6 +4354,22 @@
             }
             showPayPalLoading(true);
             renderPayPalButton();
+        }
+
+        async function readPayPalJson(res) {
+            const text = await res.text();
+            if (!text) return { parsed: true, data: {} };
+            try {
+                return { parsed: true, data: JSON.parse(text) };
+            } catch (err) {
+                return { parsed: false, data: null };
+            }
+        }
+
+        function syncHeaderOffset() {
+            const header = document.querySelector('body > header');
+            if (!header) return;
+            document.documentElement.style.setProperty('--omni-header-h', header.offsetHeight + 'px');
         }
 
         async function confirmPayPalOrder(orderId) {
@@ -4336,7 +4383,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ orderID: pendingPayPalOrderId })
                 });
-                const result = await res.json().catch(() => ({}));
+                const parsedBody = await readPayPalJson(res);
+                if (res.status === 401 || !parsedBody.parsed) {
+                    clearPayPalConfirmTimer();
+                    if (status) status.textContent = PAYPAL_SERVER_UNREACHABLE;
+                    const check = document.getElementById('paypal-pro-check');
+                    const retry = document.getElementById('paypal-pro-retry');
+                    if (retry) retry.classList.add('hidden');
+                    if (check) check.classList.remove('hidden');
+                    return;
+                }
+                const result = parsedBody.data || {};
                 if (!res.ok || !result.ok) {
                     showPayPalStillConfirming();
                     return;
@@ -4393,7 +4450,12 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: '{}'
                         });
-                        const data = await res.json().catch(() => ({}));
+                        const parsedBody = await readPayPalJson(res);
+                        if (res.status === 401 || !parsedBody.parsed) {
+                            showPayPalOpenFailure();
+                            throw new Error('Checkout server did not return JSON');
+                        }
+                        const data = parsedBody.data || {};
                         if (!res.ok || !data.id) {
                             showPayPalOpenFailure();
                             throw new Error(data.error || 'Could not start checkout');
@@ -4427,7 +4489,7 @@
                     container.classList.remove('hidden');
                 });
             }).catch(() => {
-                showPayPalOpenFailure();
+                showPayPalOpenFailure("PayPal didn't load. You weren't charged. Please try again in a moment.", 'Retry');
             });
         }
 
@@ -5331,6 +5393,7 @@
             const shouldShow = (typeof show === 'boolean') ? show : isHidden;
 
             if (shouldShow) {
+                syncHeaderOffset();
                 homeView.classList.remove('hidden');
                 homeView.classList.add('flex');
                 renderHomepage();
