@@ -1,10 +1,12 @@
 const { paypalConfig, purchaseFromPayPalReference } = require('../lib/paypal');
 const { fulfillPurchase } = require('../lib/fulfill');
-const { findRecordedPurchase, normalizeEmail } = require('../lib/pro-store');
+const { normalizeEmail } = require('../lib/pro-store');
 const { getFirestore } = require('../lib/firebase');
 const { sendJson, readBody, httpError, run } = require('../lib/http');
+const { enforceActivationRateLimit, clientIp } = require('../lib/rate-limit');
 
-const EMAIL_ONLY = 'Email only finds purchases we already recorded. Paste the transaction ID from your PayPal receipt email.';
+const RECOVER_NEED_BOTH = 'Enter the PayPal transaction ID and the email you paid with.';
+const RECOVER_MISMATCH = "That transaction ID and email don't match.";
 
 async function handleRecoverOrder(req, res, deps = {}) {
     if (req.method === 'OPTIONS') {
@@ -19,24 +21,18 @@ async function handleRecoverOrder(req, res, deps = {}) {
         const body = readBody(req);
         if (body === null) throw httpError(400, 'Invalid JSON');
         const reference = String(body.reference || body.orderID || body.orderId || body.captureId || '').trim();
-        const typedEmail = normalizeEmail(body.email);
-        const emailOnly = !reference || reference.includes('@');
-        const email = typedEmail || (reference.includes('@') ? normalizeEmail(reference) : '');
-        if (!reference && !email) throw httpError(400, 'Enter a PayPal transaction ID, order ID, or email');
+        const email = normalizeEmail(body.email);
+        const idOk = reference && !reference.includes('@');
+        if (!idOk || !email) throw httpError(400, RECOVER_NEED_BOTH);
+        const db = deps.db || getFirestore();
+        const ip = (deps.clientIp || clientIp)(req);
+        const limit = await enforceActivationRateLimit(db, { ip, code: reference });
+        if (!limit.allowed) throw httpError(429, 'Too many attempts. Try again in a minute.');
         const config = deps.config || paypalConfig();
         const fetchImpl = deps.fetchImpl || fetch;
-        const db = deps.db || getFirestore();
-        let purchase = null;
-        if (!emailOnly) {
-            purchase = await purchaseFromPayPalReference(config, fetchImpl, reference);
-        }
-        if (!purchase && email) {
-            purchase = await findRecordedPurchase(db, email);
-            if (!purchase) throw httpError(404, EMAIL_ONLY);
-        }
-        if (!purchase) throw httpError(404, 'That PayPal payment is not a completed OmniMind Pro purchase');
-        if (email && purchase.email && email !== purchase.email) {
-            throw httpError(403, "That email does not match this PayPal payment");
+        const purchase = await purchaseFromPayPalReference(config, fetchImpl, reference);
+        if (!purchase || !purchase.email || normalizeEmail(purchase.email) !== email) {
+            throw httpError(403, RECOVER_MISMATCH);
         }
         const result = await fulfillPurchase({
             db,
@@ -44,10 +40,11 @@ async function handleRecoverOrder(req, res, deps = {}) {
             fetchImpl,
             resendKey: deps.resendKey !== undefined ? deps.resendKey : process.env.RESEND_API_KEY
         });
-        sendJson(res, 200, Object.assign({ recordedOnly: emailOnly }, result));
+        sendJson(res, 200, result);
     });
 }
 
 module.exports = (req, res) => handleRecoverOrder(req, res);
 module.exports.handleRecoverOrder = handleRecoverOrder;
-module.exports.EMAIL_ONLY = EMAIL_ONLY;
+module.exports.RECOVER_NEED_BOTH = RECOVER_NEED_BOTH;
+module.exports.RECOVER_MISMATCH = RECOVER_MISMATCH;

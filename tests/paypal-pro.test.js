@@ -10,7 +10,7 @@ const { handleCreateOrder } = require('../api/paypal/create-order');
 const { handleCaptureOrder } = require('../api/paypal/capture-order');
 const { handleWebhook } = require('../api/paypal/webhook');
 const { handleActivate } = require('../api/pro/activate');
-const { handleRecoverOrder, EMAIL_ONLY } = require('../api/paypal/recover-order');
+const { handleRecoverOrder, RECOVER_NEED_BOTH, RECOVER_MISMATCH } = require('../api/paypal/recover-order');
 const { createMemoryDb } = require('./memory-db');
 
 const config = {
@@ -497,8 +497,9 @@ test('checkout copy distinguishes opening PayPal from a capture after approval',
     assert.match(html, /Still loading PayPal… retrying/);
     assert.match(html, /PayPal button timed out/);
     assert.match(html, /Already paid but no code\?/);
-    assert.match(html, /Find it in your PayPal receipt email\./);
-    assert.match(html, /Email only finds purchases we already recorded\./);
+    assert.match(html, /Find your Transaction ID in your PayPal receipt email\./);
+    assert.match(html, /id="pro-recover-ref"[^>]*required/);
+    assert.match(html, /id="pro-recover-email"[^>]*required/);
     assert.match(html, /function grantLocalPro\(/);
     assert.match(html, /function syncProBadges\(/);
     assert.match(html, /We couldn't reach the checkout server\. Don't pay again\. Reload this page, then use Check again\./);
@@ -646,7 +647,7 @@ test('activate endpoint returns the server decision', async () => {
     assert.equal(missing.statusCode, 405);
 });
 
-test('recovery by PayPal capture id grants once and a second lookup does not duplicate', async () => {
+test('recovery requires a PayPal id and the matching payer email, and repeats the same code', async () => {
     const db = createMemoryDb();
     const calls = [];
     const fetchImpl = async (url) => {
@@ -687,17 +688,36 @@ test('recovery by PayPal capture id grants once and a second lookup does not dup
                 })
             };
         }
-        throw new Error('unexpected ' + url);
+        return { ok: false, status: 404, json: async () => ({ name: 'RESOURCE_NOT_FOUND' }) };
     };
-    const body = { reference: '2GG279541U471931P' };
+    const req = (body) => ({ method: 'POST', body, headers: { 'x-real-ip': '203.0.113.9' }, socket: {} });
+    const idOnly = mockRes();
+    await handleRecoverOrder(req({ reference: '2GG279541U471931P' }), idOnly, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(idOnly.statusCode, 400);
+    assert.equal(idOnly.json.error, RECOVER_NEED_BOTH);
+    const emailOnly = mockRes();
+    await handleRecoverOrder(req({ email: 'buyer@example.com' }), emailOnly, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(emailOnly.statusCode, 400);
+    assert.equal(emailOnly.json.error, RECOVER_NEED_BOTH);
+    assert.equal(calls.length, 0);
+    const wrong = mockRes();
+    await handleRecoverOrder(req({ reference: '2GG279541U471931P', email: 'other@example.com' }), wrong, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(wrong.statusCode, 403);
+    assert.equal(wrong.json.error, RECOVER_MISMATCH);
+    assert.equal([...db.docs.keys()].filter((key) => key.startsWith('pro_captures/')).length, 0);
+    const unknown = mockRes();
+    await handleRecoverOrder(req({ reference: 'DOES-NOT-EXIST', email: 'buyer@example.com' }), unknown, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(unknown.statusCode, 403);
+    assert.equal(unknown.json.error, RECOVER_MISMATCH);
+    const pair = { reference: '2GG279541U471931P', email: ' Buyer@Example.com ' };
     const first = mockRes();
-    await handleRecoverOrder({ method: 'POST', body }, first, { config, fetchImpl, db, resendKey: '' });
+    await handleRecoverOrder(req(pair), first, { config, fetchImpl, db, resendKey: '' });
     assert.equal(first.statusCode, 200);
     assert.equal(first.json.ok, true);
     assert.equal(first.json.alreadyIssued, false);
     assert.equal(first.json.email, 'buyer@example.com');
     const second = mockRes();
-    await handleRecoverOrder({ method: 'POST', body }, second, { config, fetchImpl, db, resendKey: '' });
+    await handleRecoverOrder(req(pair), second, { config, fetchImpl, db, resendKey: '' });
     assert.equal(second.statusCode, 200);
     assert.equal(second.json.alreadyIssued, true);
     assert.equal(second.json.code, first.json.code);
@@ -705,32 +725,4 @@ test('recovery by PayPal capture id grants once and a second lookup does not dup
     assert.deepEqual(captures, ['pro_captures/2GG279541U471931P']);
     assert.ok(calls.some((url) => url.includes('/v2/payments/captures/2GG279541U471931P')));
     assert.ok(!calls.some((url) => url.endsWith('/capture')));
-});
-
-test('email recovery only finds a purchase we already recorded', async () => {
-    const db = createMemoryDb();
-    let paypalCalls = 0;
-    const fetchImpl = async () => {
-        paypalCalls += 1;
-        throw new Error('PayPal should not be searched by email');
-    };
-    const missing = mockRes();
-    await handleRecoverOrder({ method: 'POST', body: { email: 'buyer@example.com' } }, missing, { config, fetchImpl, db, resendKey: '' });
-    assert.equal(missing.statusCode, 404);
-    assert.equal(missing.json.error, EMAIL_ONLY);
-    assert.equal(paypalCalls, 0);
-    await issueProCode(db, {
-        captureId: 'CAP-MAIL',
-        orderId: 'ORDER-MAIL',
-        email: 'buyer@example.com',
-        value: '9.00',
-        currency: 'USD'
-    }, () => 'OMNI-MAIL-0001');
-    const found = mockRes();
-    await handleRecoverOrder({ method: 'POST', body: { email: 'Buyer@Example.com' } }, found, { config, fetchImpl, db, resendKey: '' });
-    assert.equal(found.statusCode, 200);
-    assert.equal(found.json.alreadyIssued, true);
-    assert.equal(found.json.code, 'OMNI-MAIL-0001');
-    assert.equal(found.json.recordedOnly, true);
-    assert.equal(paypalCalls, 0);
 });

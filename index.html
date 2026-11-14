@@ -2107,10 +2107,9 @@
                 <div id="pro-recover-panel">
                     <form id="pro-recover-form" onsubmit="recoverPayPalPurchase(event)" class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
                         <p class="font-bold text-slate-800">Already paid but no code?</p>
-                        <input id="pro-recover-ref" type="text" autocomplete="off" placeholder="PayPal transaction ID or order ID" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono">
-                        <p class="text-[0.68rem] text-slate-500">Find it in your PayPal receipt email.</p>
-                        <input id="pro-recover-email" type="email" autocomplete="email" placeholder="PayPal email (optional)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
-                        <p class="text-[0.68rem] text-slate-500">Email only finds purchases we already recorded.</p>
+                        <input id="pro-recover-ref" type="text" required autocomplete="off" placeholder="PayPal transaction ID or order ID" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono">
+                        <p class="text-[0.68rem] text-slate-500">Find your Transaction ID in your PayPal receipt email.</p>
+                        <input id="pro-recover-email" type="email" required autocomplete="email" placeholder="Email you paid with" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
                         <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-bold text-xs">Find my Pro code</button>
                         <p id="pro-recover-status" class="text-[0.7rem] text-slate-600 min-h-[1rem]"></p>
                     </form>
@@ -4477,8 +4476,8 @@
             const status = document.getElementById('pro-recover-status');
             const reference = (document.getElementById('pro-recover-ref').value || '').trim();
             const email = (document.getElementById('pro-recover-email').value || '').trim();
-            if (!reference && !email) {
-                if (status) status.textContent = 'Enter a PayPal transaction ID, order ID, or the email you paid with.';
+            if (!reference || !email) {
+                if (status) status.textContent = 'Enter the PayPal transaction ID and the email you paid with.';
                 return;
             }
             if (status) status.textContent = 'Looking up that payment…';
