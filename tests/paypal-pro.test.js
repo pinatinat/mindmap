@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { generateProCode, issueProCode, activateProCode, MAX_DEVICES } = require('../api/lib/pro-store');
-const { fulfillPurchase } = require('../api/lib/fulfill');
-const { createProOrder, assertProPrice, readCompletedPurchase, purchaseFromCaptureEvent, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice, paypalConfig } = require('../api/lib/paypal');
+const { generateProCode, issueProCode, activateProCode, MAX_DEVICES } = require('../lib/pro-store');
+const { fulfillPurchase } = require('../lib/fulfill');
+const { createProOrder, assertProPrice, readCompletedPurchase, purchaseFromCaptureEvent, PRO_PRICE, OMNIMIND_PRO, formatOmniMindProPrice, paypalConfig } = require('../lib/paypal');
 const { resolveCheckoutEnabled, PAYPAL_SANDBOX_API, PAYPAL_LIVE_API } = require('../pro-config');
 const { handleProCheckoutScript } = require('../api/pro-checkout');
 const { handleCreateOrder } = require('../api/paypal/create-order');

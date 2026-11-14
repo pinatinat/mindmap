@@ -1,11 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { issueProCode, activateProCode } = require('../api/lib/pro-store');
+const { issueProCode, activateProCode } = require('../lib/pro-store');
 const { handleActivate } = require('../api/pro/activate');
-const { sendJson } = require('../api/lib/http');
-const { verifyIdToken } = require('../api/lib/firebase');
-const { enforceActivationRateLimit, clientIp, MAX_ATTEMPTS } = require('../api/lib/rate-limit');
-const { OMNIMIND_PRO } = require('../api/lib/paypal');
+const { sendJson } = require('../lib/http');
+const { verifyIdToken } = require('../lib/firebase');
+const { enforceActivationRateLimit, clientIp, MAX_ATTEMPTS } = require('../lib/rate-limit');
+const { OMNIMIND_PRO } = require('../lib/paypal');
 const { createMemoryDb } = require('./memory-db');
 
 const CODE = 'OMNI-ZZZZ-9999';

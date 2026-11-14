@@ -1,7 +1,7 @@
-const { activateProCode, normalizeEmail } = require('../lib/pro-store');
-const { getFirestore, verifyIdToken } = require('../lib/firebase');
-const { enforceActivationRateLimit, clientIp } = require('../lib/rate-limit');
-const { sendJson, readBody, httpError, run } = require('../lib/http');
+const { activateProCode, normalizeEmail } = require('../../lib/pro-store');
+const { getFirestore, verifyIdToken } = require('../../lib/firebase');
+const { enforceActivationRateLimit, clientIp } = require('../../lib/rate-limit');
+const { sendJson, readBody, httpError, run } = require('../../lib/http');
 
 function authorizationHeader(req) {
     const headers = (req && req.headers) || {};

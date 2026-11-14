@@ -1,9 +1,9 @@
-const { paypalConfig, purchaseFromPayPalReference } = require('../lib/paypal');
-const { fulfillPurchase } = require('../lib/fulfill');
-const { normalizeEmail } = require('../lib/pro-store');
-const { getFirestore } = require('../lib/firebase');
-const { sendJson, readBody, httpError, run } = require('../lib/http');
-const { enforceActivationRateLimit, clientIp } = require('../lib/rate-limit');
+const { paypalConfig, purchaseFromPayPalReference } = require('../../lib/paypal');
+const { fulfillPurchase } = require('../../lib/fulfill');
+const { normalizeEmail } = require('../../lib/pro-store');
+const { getFirestore } = require('../../lib/firebase');
+const { sendJson, readBody, httpError, run } = require('../../lib/http');
+const { enforceActivationRateLimit, clientIp } = require('../../lib/rate-limit');
 
 const RECOVER_NEED_BOTH = 'Enter the PayPal transaction ID and the email you paid with.';
 const RECOVER_MISMATCH = "That transaction ID and email don't match.";

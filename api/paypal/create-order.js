@@ -1,6 +1,6 @@
-const { paypalConfig, createProOrder, OMNIMIND_PRO } = require('../lib/paypal');
+const { paypalConfig, createProOrder, OMNIMIND_PRO } = require('../../lib/paypal');
 const { resolveCheckoutEnabled } = require('../../pro-config');
-const { sendJson, run } = require('../lib/http');
+const { sendJson, run } = require('../../lib/http');
 
 async function handleCreateOrder(req, res, deps = {}) {
     if (req.method === 'OPTIONS') {

@@ -231,7 +231,7 @@ test('a free account at 5 cloud maps sees only the quota dialog', async () => {
     assert.doesNotMatch(html, /top 3 maps/);
     assert.doesNotMatch(html, /from 3 free maps/);
     assert.doesNotMatch(html, /0 of 3 cloud/);
-    assert.match(fs.readFileSync(path.join(root, 'api/lib/pro-store.js'), 'utf8'), /maxMaps: 50/);
+    assert.match(fs.readFileSync(path.join(root, 'lib/pro-store.js'), 'utf8'), /maxMaps: 50/);
     const rules = fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8');
     assert.doesNotMatch(rules, /maxMaps\s*(==|<=|>=|<|>)\s*[0-9]/);
     const saveSource = extractFunction(html, 'saveActiveMapToCloud');

@@ -1,7 +1,7 @@
-const { paypalConfig, captureProOrder, readCompletedPurchase } = require('../lib/paypal');
-const { fulfillPurchase } = require('../lib/fulfill');
-const { getFirestore } = require('../lib/firebase');
-const { sendJson, readBody, httpError, run } = require('../lib/http');
+const { paypalConfig, captureProOrder, readCompletedPurchase } = require('../../lib/paypal');
+const { fulfillPurchase } = require('../../lib/fulfill');
+const { getFirestore } = require('../../lib/firebase');
+const { sendJson, readBody, httpError, run } = require('../../lib/http');
 
 async function handleCaptureOrder(req, res, deps = {}) {
     if (req.method === 'OPTIONS') {
