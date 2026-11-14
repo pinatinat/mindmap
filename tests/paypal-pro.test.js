@@ -497,7 +497,12 @@ test('checkout copy distinguishes opening PayPal from a capture after approval',
     assert.match(html, /Still loading PayPal… retrying/);
     assert.match(html, /PayPal button timed out/);
     assert.match(html, /Already paid but no code\?/);
-    assert.match(html, /Find your Transaction ID in your PayPal receipt email\./);
+    assert.match(html, /PayPal Transaction ID/);
+    assert.match(html, /Email you paid with/);
+    assert.match(html, /Find both in your PayPal receipt email\./);
+    assert.match(html, /You're Pro ✓ · 50 maps/);
+    assert.match(html, /Use Pro on another device/);
+    assert.match(html, /function onHeaderProClick\(\)/);
     assert.match(html, /id="pro-recover-ref"[^>]*required/);
     assert.match(html, /id="pro-recover-email"[^>]*required/);
     assert.match(html, /function grantLocalPro\(/);
@@ -725,4 +730,43 @@ test('recovery requires a PayPal id and the matching payer email, and repeats th
     assert.deepEqual(captures, ['pro_captures/2GG279541U471931P']);
     assert.ok(calls.some((url) => url.includes('/v2/payments/captures/2GG279541U471931P')));
     assert.ok(!calls.some((url) => url.endsWith('/capture')));
+});
+
+test('a Pro header click shows status and does not open checkout', () => {
+    const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+    function extract(name) {
+        const marker = 'function ' + name + '(';
+        const start = html.indexOf(marker);
+        assert.notEqual(start, -1);
+        const open = html.indexOf('{', start);
+        let depth = 0;
+        for (let i = open; i < html.length; i++) {
+            if (html[i] === '{') depth++;
+            else if (html[i] === '}') {
+                depth--;
+                if (depth === 0) return html.slice(start, i + 1);
+            }
+        }
+        throw new Error('unterminated ' + name);
+    }
+    const capture = extract('confirmPayPalOrder');
+    assert.match(capture, /You're Pro ✓ Your backup code is /);
+    assert.doesNotMatch(capture, /showAlert/);
+    const paypalLoads = [];
+    const modal = { hidden: true, classList: { remove() { modal.hidden = false; }, add() { modal.hidden = true; } } };
+    global.isPro = () => true;
+    global.renderPayPalButton = () => { paypalLoads.push('paypal'); };
+    global.openProStatusPanel = () => { global.proPanel = 'open'; };
+    global.document = { getElementById(id) { return id === 'omnimind-pro-modal' ? modal : null; } };
+    const click = new Function(extract('onHeaderProClick') + '\nreturn onHeaderProClick;')();
+    click();
+    assert.equal(global.proPanel, 'open');
+    assert.equal(paypalLoads.length, 0);
+    assert.equal(modal.hidden, true);
+    const openModal = new Function(
+        extract('onHeaderProClick') + '\n' + extract('openOmniMindProModal') + '\nreturn openOmniMindProModal;'
+    )();
+    openModal('canvas_header');
+    assert.equal(paypalLoads.length, 0);
+    assert.equal(modal.hidden, true);
 });

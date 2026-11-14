@@ -813,10 +813,18 @@
         </button>
 
         <!-- OMNIMIND PRO BUTTON -->
-        <button type="button" onclick="openOmniMindProModal('canvas_header')" id="btn-header-pro" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0" title="OmniMind Pro & Storage Quota">
-            <span class="text-[0.65rem]">⭐</span>
-            <span id="btn-header-pro-text">Upgrade Pro</span>
-        </button>
+        <div class="relative shrink-0">
+            <button type="button" onclick="onHeaderProClick()" id="btn-header-pro" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white transition-all shadow-xs active:scale-95 cursor-pointer shrink-0" title="OmniMind Pro & Storage Quota">
+                <span class="text-[0.65rem]">⭐</span>
+                <span id="btn-header-pro-text">Upgrade Pro</span>
+            </button>
+            <div id="pro-status-panel" class="hidden absolute right-0 top-full mt-2 z-[80] w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl text-left">
+                <p class="text-xs font-bold text-slate-900">You're Pro ✓ · 50 maps</p>
+                <p id="pro-status-code" class="mt-2 font-mono text-xs text-slate-700"></p>
+                <button type="button" id="pro-status-copy" onclick="copyProBackupCode()" class="mt-2 w-full py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800">Copy</button>
+                <button type="button" onclick="openProOnAnotherDevice()" class="mt-2 w-full text-left text-xs font-semibold text-indigo-700 underline">Use Pro on another device</button>
+            </div>
+        </div>
 
         <!-- DIVIDER -->
         <div class="h-5 w-px bg-slate-200 mx-0.5 shrink-0"></div>
@@ -2055,7 +2063,7 @@
                 </div>
             </div>
             <div class="p-6 text-xs flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
-                <div class="space-y-3">
+                <div id="pro-feature-list" class="space-y-3">
                     <div class="flex items-start gap-3">
                         <div class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0">☁️</div>
                         <div>
@@ -2107,9 +2115,11 @@
                 <div id="pro-recover-panel">
                     <form id="pro-recover-form" onsubmit="recoverPayPalPurchase(event)" class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
                         <p class="font-bold text-slate-800">Already paid but no code?</p>
-                        <input id="pro-recover-ref" type="text" required autocomplete="off" placeholder="PayPal transaction ID or order ID" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono">
-                        <p class="text-[0.68rem] text-slate-500">Find your Transaction ID in your PayPal receipt email.</p>
+                        <label for="pro-recover-ref" class="font-bold text-slate-800">PayPal Transaction ID</label>
+                        <input id="pro-recover-ref" type="text" required autocomplete="off" placeholder="PayPal Transaction ID" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono">
+                        <label for="pro-recover-email" class="font-bold text-slate-800">Email you paid with</label>
                         <input id="pro-recover-email" type="email" required autocomplete="email" placeholder="Email you paid with" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
+                        <p class="text-[0.68rem] text-slate-500">Find both in your PayPal receipt email.</p>
                         <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-bold text-xs">Find my Pro code</button>
                         <p id="pro-recover-status" class="text-[0.7rem] text-slate-600 min-h-[1rem]"></p>
                     </form>
@@ -4456,12 +4466,6 @@
                     ? "You're Pro ✓ We also emailed " + result.code + ' to ' + result.email + '.'
                     : "You're Pro ✓ Your backup code is " + result.code + '. Email delivery is unavailable right now, so save this code.';
                 if (status) status.textContent = note;
-                showAlert({
-                    title: "You're Pro ✓",
-                    icon: '✓',
-                    message: note,
-                    type: 'success'
-                });
             } catch (err) {
                 showPayPalStillConfirming();
             }
@@ -4616,19 +4620,88 @@
             });
         }
 
+        function onHeaderProClick() {
+            if (typeof isPro === 'function' && isPro()) {
+                openProStatusPanel();
+                return;
+            }
+            openOmniMindProModal('canvas_header');
+        }
+
+        function openProStatusPanel() {
+            const panel = document.getElementById('pro-status-panel');
+            if (!panel) return;
+            const stored = readLocalProActivation();
+            const codeEl = document.getElementById('pro-status-code');
+            const copyBtn = document.getElementById('pro-status-copy');
+            const code = stored && stored.code ? stored.code : '';
+            if (codeEl) codeEl.textContent = code;
+            if (copyBtn) {
+                copyBtn.textContent = 'Copy';
+                copyBtn.classList.toggle('hidden', !code);
+            }
+            panel.classList.remove('hidden');
+        }
+
+        function closeProStatusPanel() {
+            const panel = document.getElementById('pro-status-panel');
+            if (panel) panel.classList.add('hidden');
+        }
+
+        function copyProBackupCode() {
+            const stored = readLocalProActivation();
+            const code = stored && stored.code ? stored.code : '';
+            if (!code) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).catch(function () {});
+            }
+            const copyBtn = document.getElementById('pro-status-copy');
+            if (copyBtn) copyBtn.textContent = 'Copied';
+        }
+
+        function openProOnAnotherDevice() {
+            closeProStatusPanel();
+            openOmniMindProModal('another_device');
+        }
+
         function openOmniMindProModal(source) {
             const modal = document.getElementById('omnimind-pro-modal');
             if (!modal) return;
+            const restoreOnly = source === 'another_device';
+            if (!restoreOnly && typeof isPro === 'function' && isPro()) {
+                openProStatusPanel();
+                return;
+            }
             const emailInput = document.getElementById('pro-activate-email');
             const stored = readLocalProActivation();
             if (emailInput && !emailInput.value) {
                 emailInput.value = (stored && stored.email) || (currentCloudUser && currentCloudUser.email) || '';
             }
             applyProOfferCopy();
+            const features = document.getElementById('pro-feature-list');
+            const recover = document.getElementById('pro-recover-panel');
+            if (!restoreOnly) {
+                if (features) features.classList.remove('hidden');
+                if (recover) recover.classList.remove('hidden');
+            }
+            const checkout = document.getElementById('pro-checkout-panel');
+            const activate = document.getElementById('pro-activate-panel');
+            const priceRow = document.getElementById('pro-modal-price');
+            const title = document.getElementById('pro-modal-title');
+            const tagline = document.getElementById('pro-modal-tagline');
+            if (restoreOnly) {
+                if (checkout) checkout.classList.add('hidden');
+                if (recover) recover.classList.add('hidden');
+                if (features) features.classList.add('hidden');
+                if (priceRow) priceRow.classList.add('hidden');
+                if (tagline) tagline.classList.add('hidden');
+                if (activate) activate.classList.remove('hidden');
+                if (title) title.textContent = 'Use Pro on another device';
+            }
             const statusEl = document.getElementById('pro-activate-status');
-            if (stored && statusEl && !statusEl.textContent) statusEl.textContent = "You're Pro ✓";
+            if (!restoreOnly && stored && statusEl && !statusEl.textContent) statusEl.textContent = "You're Pro ✓";
             modal.classList.remove('hidden');
-            renderPayPalButton();
+            if (!restoreOnly) renderPayPalButton();
         }
 
         function closeOmniMindProModal() {
