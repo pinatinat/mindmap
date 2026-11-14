@@ -2104,6 +2104,17 @@
                         <p id="pro-activate-status" class="text-[0.7rem] text-slate-600 min-h-[1rem]"></p>
                     </form>
                 </div>
+                <div id="pro-recover-panel">
+                    <form id="pro-recover-form" onsubmit="recoverPayPalPurchase(event)" class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
+                        <p class="font-bold text-slate-800">Already paid but no code?</p>
+                        <input id="pro-recover-ref" type="text" autocomplete="off" placeholder="PayPal transaction ID or order ID" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono">
+                        <p class="text-[0.68rem] text-slate-500">Find it in your PayPal receipt email.</p>
+                        <input id="pro-recover-email" type="email" autocomplete="email" placeholder="PayPal email (optional)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs">
+                        <p class="text-[0.68rem] text-slate-500">Email only finds purchases we already recorded.</p>
+                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-bold text-xs">Find my Pro code</button>
+                        <p id="pro-recover-status" class="text-[0.7rem] text-slate-600 min-h-[1rem]"></p>
+                    </form>
+                </div>
                 <p class="text-center text-[0.7rem] text-slate-400">
                     <a href="/legal/terms.html" class="underline hover:text-slate-700">Terms</a>
                     · <a href="/legal/privacy.html" class="underline hover:text-slate-700">Privacy</a>
@@ -4258,11 +4269,14 @@
             });
         }
 
-        function loadPayPalSdk() {
+        function loadPayPalSdk(onRetry) {
             if (!proCheckoutOpen()) return Promise.reject(new Error('Checkout is not open'));
             if (window.paypal && window.paypal.Buttons) return Promise.resolve(window.paypal);
             if (paypalSdkPromise) return paypalSdkPromise;
-            paypalSdkPromise = loadPayPalScriptOnce().catch(() => loadPayPalScriptOnce()).catch((err) => {
+            paypalSdkPromise = loadPayPalScriptOnce().catch(() => {
+                if (typeof onRetry === 'function') onRetry();
+                return loadPayPalScriptOnce();
+            }).catch((err) => {
                 paypalSdkPromise = null;
                 throw err;
             });
@@ -4274,6 +4288,7 @@
         const PAYPAL_STILL_CONFIRMING = "Still confirming. Don't pay again. We'll email your Pro code.";
         const PAYPAL_SERVER_UNREACHABLE = "We couldn't reach the checkout server. Don't pay again. Reload this page, then use Check again.";
         const PAYPAL_CANCELLED = 'No charge made. You can upgrade anytime';
+        const PENDING_PAYPAL_ORDER_KEY = 'omnimind_pending_paypal_order';
         let paypalConfirmTimer = null;
         let pendingPayPalOrderId = '';
         let paypalClickArmed = false;
@@ -4372,8 +4387,39 @@
             document.documentElement.style.setProperty('--omni-header-h', header.offsetHeight + 'px');
         }
 
+        function rememberPendingPayPalOrder(orderId) {
+            pendingPayPalOrderId = orderId || '';
+            try {
+                if (pendingPayPalOrderId) localStorage.setItem(PENDING_PAYPAL_ORDER_KEY, pendingPayPalOrderId);
+                else localStorage.removeItem(PENDING_PAYPAL_ORDER_KEY);
+            } catch (e) {}
+        }
+
+        function readPendingPayPalOrder() {
+            if (pendingPayPalOrderId) return pendingPayPalOrderId;
+            try {
+                pendingPayPalOrderId = localStorage.getItem(PENDING_PAYPAL_ORDER_KEY) || '';
+            } catch (e) {
+                pendingPayPalOrderId = '';
+            }
+            return pendingPayPalOrderId;
+        }
+
+        function grantLocalPro(email, code) {
+            localStorage.setItem(PRO_ACTIVATION_STORAGE_KEY, JSON.stringify({
+                verified: true,
+                email: email,
+                code: code,
+                deviceId: getProDeviceId()
+            }));
+            isUserOmniMindPro = true;
+            currentCloudUserQuota = Math.max(currentCloudUserQuota, PRO_CLOUD_MAPS);
+            try { syncProBadges(); } catch (e) {}
+            try { updateCloudAuthUI(); } catch (e) {}
+        }
+
         async function confirmPayPalOrder(orderId) {
-            pendingPayPalOrderId = orderId || pendingPayPalOrderId;
+            rememberPendingPayPalOrder(orderId || readPendingPayPalOrder());
             if (!pendingPayPalOrderId) return;
             const status = document.getElementById('paypal-pro-status');
             showPayPalConfirming();
@@ -4405,14 +4451,16 @@
                 const codeInput = document.getElementById('pro-activate-code');
                 if (emailInput && result.email) emailInput.value = result.email;
                 if (codeInput && result.code) codeInput.value = result.code;
+                rememberPendingPayPalOrder('');
+                grantLocalPro(result.email, result.code);
                 const note = result.emailed
-                    ? 'We emailed ' + result.code + ' to ' + result.email + '.'
-                    : 'Your code is ' + result.code + '. Save it — email delivery is unavailable right now.';
+                    ? "You're Pro ✓ We also emailed " + result.code + ' to ' + result.email + '.'
+                    : "You're Pro ✓ Your backup code is " + result.code + '. Email delivery is unavailable right now, so save this code.';
                 if (status) status.textContent = note;
                 showAlert({
-                    title: 'OmniMind Pro purchased',
-                    icon: '🎉',
-                    message: note + '\n\nEnter the buyer email and code to activate this device.',
+                    title: "You're Pro ✓",
+                    icon: '✓',
+                    message: note,
                     type: 'success'
                 });
             } catch (err) {
@@ -4421,7 +4469,44 @@
         }
 
         function recheckPayPalCapture() {
-            confirmPayPalOrder(pendingPayPalOrderId);
+            confirmPayPalOrder(readPendingPayPalOrder());
+        }
+
+        async function recoverPayPalPurchase(event) {
+            if (event && event.preventDefault) event.preventDefault();
+            const status = document.getElementById('pro-recover-status');
+            const reference = (document.getElementById('pro-recover-ref').value || '').trim();
+            const email = (document.getElementById('pro-recover-email').value || '').trim();
+            if (!reference && !email) {
+                if (status) status.textContent = 'Enter a PayPal transaction ID, order ID, or the email you paid with.';
+                return;
+            }
+            if (status) status.textContent = 'Looking up that payment…';
+            try {
+                const res = await fetch('/api/paypal/recover-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reference: reference, email: email })
+                });
+                const parsedBody = await readPayPalJson(res);
+                if (res.status === 401 || !parsedBody.parsed) {
+                    if (status) status.textContent = PAYPAL_SERVER_UNREACHABLE;
+                    return;
+                }
+                const result = parsedBody.data || {};
+                if (!res.ok || !result.ok) {
+                    if (status) status.textContent = result.error || 'That payment is not a completed OmniMind Pro purchase.';
+                    return;
+                }
+                grantLocalPro(result.email, result.code);
+                const note = result.emailed
+                    ? "You're Pro ✓ We also emailed " + result.code + ' to ' + result.email + '.'
+                    : "You're Pro ✓ Your backup code is " + result.code + '. Email delivery is unavailable right now, so save this code.';
+                if (status) status.textContent = note;
+                showAlert({ title: "You're Pro ✓", icon: '✓', message: note, type: 'success' });
+            } catch (err) {
+                if (status) status.textContent = 'We could not look up that payment. Try the transaction ID from your PayPal receipt.';
+            }
         }
 
         function renderPayPalButton() {
@@ -4431,10 +4516,15 @@
             if (!container || container.dataset.ready === '1') return;
             container.dataset.ready = '1';
             showPayPalLoading(true);
+            const loading = document.getElementById('paypal-pro-loading');
+            if (loading) loading.textContent = 'Loading PayPal…';
             let buyerApproved = false;
-            loadPayPalSdk().then((paypal) => {
+            loadPayPalSdk(() => {
+                const again = document.getElementById('paypal-pro-loading');
+                if (again) again.textContent = 'Still loading PayPal… retrying';
+            }).then((paypal) => {
                 if (!paypal || !paypal.Buttons) throw new Error('PayPal SDK missing');
-                paypal.Buttons({
+                const buttons = paypal.Buttons({
                     style: { layout: 'vertical', shape: 'rect', label: 'paypal' },
                     onClick: () => {
                         paypalClickArmed = true;
@@ -4484,7 +4574,14 @@
                         if (buyerApproved) showPayPalConfirming();
                         else showPayPalOpenFailure();
                     }
-                }).render('#paypal-pro-button').then(() => {
+                });
+                const rendered = Promise.race([
+                    buttons.render('#paypal-pro-button'),
+                    new Promise((resolve, reject) => {
+                        setTimeout(() => reject(new Error('PayPal button timed out')), 8000);
+                    })
+                ]);
+                return rendered.then(() => {
                     showPayPalLoading(false);
                     container.classList.remove('hidden');
                 });
@@ -4730,6 +4827,16 @@
                 }
             }
             renderHomepage();
+            try { syncProBadges(); } catch (e) {}
+        }
+
+        function syncProBadges() {
+            const hide = typeof isPro === 'function' && isPro();
+            document.querySelectorAll('.pro-badge').forEach((el) => {
+                el.classList.toggle('hidden', hide);
+            });
+            const recover = document.getElementById('pro-recover-panel');
+            if (recover) recover.classList.toggle('hidden', hide);
         }
 
         function switchLibraryTab(tab) {

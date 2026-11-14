@@ -99,11 +99,43 @@ async function activateProCode(db, { email, code, deviceId, uid }) {
     });
 }
 
+async function findRecordedPurchase(db, email) {
+    const clean = normalizeEmail(email);
+    if (!clean) return null;
+    if (db && db.docs && typeof db.docs.forEach === 'function') {
+        let found = null;
+        db.docs.forEach((data, key) => {
+            if (!String(key).startsWith('pro_captures/')) return;
+            if (!data || normalizeEmail(data.email) !== clean) return;
+            found = {
+                captureId: String(key).slice('pro_captures/'.length),
+                orderId: data.orderId || null,
+                email: clean,
+                value: data.amount,
+                currency: data.currency
+            };
+        });
+        return found;
+    }
+    const snap = await db.collection('pro_captures').where('email', '==', clean).limit(5).get();
+    if (!snap || snap.empty) return null;
+    const doc = snap.docs[0];
+    const data = doc.data() || {};
+    return {
+        captureId: doc.id,
+        orderId: data.orderId || null,
+        email: clean,
+        value: data.amount,
+        currency: data.currency
+    };
+}
+
 module.exports = {
     MAX_DEVICES,
     generateProCode,
     normalizeEmail,
     normalizeCode,
     issueProCode,
-    activateProCode
+    activateProCode,
+    findRecordedPurchase
 };

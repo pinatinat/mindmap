@@ -133,6 +133,64 @@ async function captureProOrder(config, fetchImpl, orderId) {
     return applyVerifiedCustomId(data.status === 'COMPLETED' ? data : again, unit);
 }
 
+async function getCapture(config, fetchImpl, captureId, token) {
+    const access = token || await getAccessToken(config, fetchImpl);
+    const res = await fetchImpl(`${config.base}/v2/payments/captures/${encodeURIComponent(captureId)}`, {
+        headers: { Authorization: `Bearer ${access}` }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        const err = new Error(data.message || 'Could not load PayPal capture');
+        err.status = res.status === 404 ? 404 : 502;
+        throw err;
+    }
+    return data;
+}
+
+function orderIdFromCapture(capture) {
+    const related = capture && capture.supplementary_data && capture.supplementary_data.related_ids;
+    if (related && related.order_id) return related.order_id;
+    const links = capture && Array.isArray(capture.links) ? capture.links : [];
+    for (let i = 0; i < links.length; i++) {
+        const href = String(links[i] && links[i].href || '');
+        const match = href.match(/\/v2\/checkout\/orders\/([^/?]+)/);
+        if (match) return decodeURIComponent(match[1]);
+    }
+    return '';
+}
+
+async function purchaseFromPayPalReference(config, fetchImpl, reference) {
+    const ref = String(reference || '').trim();
+    if (!ref || ref.includes('@')) return null;
+    const token = await getAccessToken(config, fetchImpl);
+    let order = null;
+    try {
+        order = await getOrder(config, fetchImpl, ref, token);
+    } catch (err) {
+        if (!err || err.status === 404) order = null;
+        else if (err.status && err.status !== 404) {
+            /* fall through to the capture lookup */
+            order = null;
+        }
+    }
+    if (order && order.status === 'COMPLETED') {
+        const purchase = readCompletedPurchase(order);
+        if (purchase) return purchase;
+    }
+    let capture;
+    try {
+        capture = await getCapture(config, fetchImpl, ref, token);
+    } catch (err) {
+        if (err && err.status === 404) return null;
+        throw err;
+    }
+    if (!capture || capture.status !== 'COMPLETED') return null;
+    const orderId = orderIdFromCapture(capture);
+    if (!orderId) return null;
+    const linked = await getOrder(config, fetchImpl, orderId, token);
+    return readCompletedPurchase(linked);
+}
+
 async function getOrder(config, fetchImpl, orderId, token) {
     const access = token || await getAccessToken(config, fetchImpl);
     const res = await fetchImpl(`${config.base}/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
@@ -253,6 +311,8 @@ module.exports = {
     createProOrder,
     captureProOrder,
     getOrder,
+    getCapture,
+    purchaseFromPayPalReference,
     readCompletedPurchase,
     assertProPrice,
     purchaseFromCaptureEvent,

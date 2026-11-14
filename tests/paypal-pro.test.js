@@ -10,6 +10,7 @@ const { handleCreateOrder } = require('../api/paypal/create-order');
 const { handleCaptureOrder } = require('../api/paypal/capture-order');
 const { handleWebhook } = require('../api/paypal/webhook');
 const { handleActivate } = require('../api/pro/activate');
+const { handleRecoverOrder, EMAIL_ONLY } = require('../api/paypal/recover-order');
 const { createMemoryDb } = require('./memory-db');
 
 const config = {
@@ -492,7 +493,14 @@ test('checkout copy distinguishes opening PayPal from a capture after approval',
     assert.match(html, /Loading PayPal…/);
     assert.match(html, /Still confirming\. Don't pay again\. We'll email your Pro code\./);
     assert.match(html, /setTimeout\(\(\) => finish\(new Error\('PayPal SDK timed out'\)\), 8000\)/);
-    assert.match(html, /loadPayPalScriptOnce\(\)\.catch\(\(\) => loadPayPalScriptOnce\(\)\)/);
+    assert.match(html, /return loadPayPalScriptOnce\(\)/);
+    assert.match(html, /Still loading PayPal… retrying/);
+    assert.match(html, /PayPal button timed out/);
+    assert.match(html, /Already paid but no code\?/);
+    assert.match(html, /Find it in your PayPal receipt email\./);
+    assert.match(html, /Email only finds purchases we already recorded\./);
+    assert.match(html, /function grantLocalPro\(/);
+    assert.match(html, /function syncProBadges\(/);
     assert.match(html, /We couldn't reach the checkout server\. Don't pay again\. Reload this page, then use Check again\./);
     assert.match(html, /z-50 shadow-sm relative/);
     assert.match(html, /#app-homepage-view \{ top: var\(--omni-header-h, 48px\); \}/);
@@ -636,4 +644,93 @@ test('activate endpoint returns the server decision', async () => {
     const missing = mockRes();
     await handleActivate({ method: 'GET' }, missing, { db });
     assert.equal(missing.statusCode, 405);
+});
+
+test('recovery by PayPal capture id grants once and a second lookup does not duplicate', async () => {
+    const db = createMemoryDb();
+    const calls = [];
+    const fetchImpl = async (url) => {
+        calls.push(String(url));
+        if (String(url).includes('/v1/oauth2/token')) {
+            return { ok: true, json: async () => ({ access_token: 'tok' }) };
+        }
+        if (String(url).includes('/v2/payments/captures/2GG279541U471931P')) {
+            return {
+                ok: true,
+                json: async () => ({
+                    id: '2GG279541U471931P',
+                    status: 'COMPLETED',
+                    amount: { currency_code: 'USD', value: '9.00' },
+                    supplementary_data: { related_ids: { order_id: 'ORDER-CAP' } },
+                    links: [{ href: 'https://api-m.sandbox.paypal.com/v2/checkout/orders/ORDER-CAP', rel: 'up' }]
+                })
+            };
+        }
+        if (String(url).includes('/v2/checkout/orders/2GG279541U471931P')) {
+            return { ok: false, status: 404, json: async () => ({ name: 'RESOURCE_NOT_FOUND' }) };
+        }
+        if (String(url).includes('/v2/checkout/orders/ORDER-CAP')) {
+            return {
+                ok: true,
+                json: async () => completedOrder({
+                    id: 'ORDER-CAP',
+                    purchase_units: [{
+                        custom_id: 'omnimind_pro',
+                        payments: {
+                            captures: [{
+                                id: '2GG279541U471931P',
+                                status: 'COMPLETED',
+                                amount: { currency_code: 'USD', value: '9.00' }
+                            }]
+                        }
+                    }]
+                })
+            };
+        }
+        throw new Error('unexpected ' + url);
+    };
+    const body = { reference: '2GG279541U471931P' };
+    const first = mockRes();
+    await handleRecoverOrder({ method: 'POST', body }, first, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(first.statusCode, 200);
+    assert.equal(first.json.ok, true);
+    assert.equal(first.json.alreadyIssued, false);
+    assert.equal(first.json.email, 'buyer@example.com');
+    const second = mockRes();
+    await handleRecoverOrder({ method: 'POST', body }, second, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(second.statusCode, 200);
+    assert.equal(second.json.alreadyIssued, true);
+    assert.equal(second.json.code, first.json.code);
+    const captures = [...db.docs.keys()].filter((key) => key.startsWith('pro_captures/'));
+    assert.deepEqual(captures, ['pro_captures/2GG279541U471931P']);
+    assert.ok(calls.some((url) => url.includes('/v2/payments/captures/2GG279541U471931P')));
+    assert.ok(!calls.some((url) => url.endsWith('/capture')));
+});
+
+test('email recovery only finds a purchase we already recorded', async () => {
+    const db = createMemoryDb();
+    let paypalCalls = 0;
+    const fetchImpl = async () => {
+        paypalCalls += 1;
+        throw new Error('PayPal should not be searched by email');
+    };
+    const missing = mockRes();
+    await handleRecoverOrder({ method: 'POST', body: { email: 'buyer@example.com' } }, missing, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(missing.statusCode, 404);
+    assert.equal(missing.json.error, EMAIL_ONLY);
+    assert.equal(paypalCalls, 0);
+    await issueProCode(db, {
+        captureId: 'CAP-MAIL',
+        orderId: 'ORDER-MAIL',
+        email: 'buyer@example.com',
+        value: '9.00',
+        currency: 'USD'
+    }, () => 'OMNI-MAIL-0001');
+    const found = mockRes();
+    await handleRecoverOrder({ method: 'POST', body: { email: 'Buyer@Example.com' } }, found, { config, fetchImpl, db, resendKey: '' });
+    assert.equal(found.statusCode, 200);
+    assert.equal(found.json.alreadyIssued, true);
+    assert.equal(found.json.code, 'OMNI-MAIL-0001');
+    assert.equal(found.json.recordedOnly, true);
+    assert.equal(paypalCalls, 0);
 });
