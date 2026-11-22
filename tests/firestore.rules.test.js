@@ -245,3 +245,13 @@ test('clients cannot read pro codes or rate limit counters', async () => {
     await assertFails(getDoc(doc(owner, 'rate_limits/ip_abc')));
     await assertFails(setDoc(doc(owner, 'rate_limits/ip_abc'), { count: 0 }));
 });
+
+test('clients cannot read or write AI usage counters', async () => {
+    const owner = asUser('owner', { email: 'owner@example.com', email_verified: true });
+    const signedOut = testEnv.unauthenticatedContext().firestore();
+    const usageId = 'owner_2026-11-22';
+    await assertFails(getDoc(doc(owner, 'ai_usage/' + usageId)));
+    await assertFails(setDoc(doc(owner, 'ai_usage/' + usageId), { count: 99, uid: 'owner' }));
+    await assertFails(getDoc(doc(signedOut, 'ai_usage/' + usageId)));
+    await assertFails(setDoc(doc(signedOut, 'ai_usage/' + usageId), { count: 0 }));
+});

@@ -10,6 +10,25 @@ var OMNIMIND_PRO = {
     checkoutEnabled: false
 };
 
+// Daily AI map caps. Asia/Manila (UTC+8, no daylight saving) is the calendar day.
+// Pro matches the client: a positive maxMaps, and plan omnimind_pro or maxMaps >= 50.
+var AI_MAP_LIMITS = {
+    freePerDay: 3,
+    proPerDay: 30,
+    dayTimeZone: 'Asia/Manila',
+    proPlan: 'omnimind_pro',
+    proMaxMaps: 50
+};
+
+function profileIsOmniMindPro(data) {
+    if (!data || typeof data.maxMaps !== 'number' || !(data.maxMaps > 0)) return false;
+    return data.plan === AI_MAP_LIMITS.proPlan || data.maxMaps >= AI_MAP_LIMITS.proMaxMaps;
+}
+
+function aiDailyLimit(isPro) {
+    return isPro ? AI_MAP_LIMITS.proPerDay : AI_MAP_LIMITS.freePerDay;
+}
+
 function resolvePaypalMode(env) {
     var source = env || {};
     var vercel = String(source.VERCEL_ENV || '');
@@ -47,6 +66,9 @@ if (typeof module !== 'undefined' && module.exports) {
         PAYPAL_LIVE_API: PAYPAL_LIVE_API,
         resolvePaypalMode: resolvePaypalMode,
         paypalApiBase: paypalApiBase,
-        resolveCheckoutEnabled: resolveCheckoutEnabled
+        resolveCheckoutEnabled: resolveCheckoutEnabled,
+        AI_MAP_LIMITS: AI_MAP_LIMITS,
+        profileIsOmniMindPro: profileIsOmniMindPro,
+        aiDailyLimit: aiDailyLimit
     };
 }

@@ -972,7 +972,7 @@
                     <button onclick="switchTab('manual')" id="tab-manual" class="flex-1 py-3 font-semibold border-b-2 border-blue-600 text-blue-600 text-center transition-colors truncate" title="Style & Properties">🎨 Style</button>
                     <button onclick="switchTab('code')" id="tab-code" class="flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate" title="List Mode Code">📝 Code</button>
                     <button onclick="switchTab('advcode')" id="tab-advcode" class="flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate" title="Advanced Code (with Coordinates)">⚡ Adv</button>
-                    <button onclick="switchTab('ai')" id="tab-ai" class="hidden flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate" title="AI Generator" style="display: none;">✨ AI</button>
+                    <button onclick="switchTab('ai')" id="tab-ai" class="flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate" title="AI Generator">✨ AI</button>
                 </div>
                 <!-- Mobile Close Drawer Button -->
                 <button type="button" onclick="toggleMobileSidebar(false)" class="md:hidden flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold ml-1 text-xs shrink-0" title="Close Sidebar & View Canvas">✕ Done</button>
@@ -1262,9 +1262,10 @@
 
             <!-- TAB 3: AI Generator -->
             <div id="panel-ai" class="p-4 flex flex-col h-full hidden">
-                <p class="text-xs text-slate-500 mb-3">AI generates the structure, then physically spaces the nodes for you.</p>
+                <p class="text-xs text-slate-500 mb-2">Describe a topic. OmniMind drafts a mind map and lays it out for you.</p>
+                <p id="ai_quota" class="text-xs font-semibold text-purple-700 mb-3" aria-live="polite">Sign in to see how many AI maps you have left today.</p>
                 <textarea id="ai_prompt" class="w-full border rounded-xl p-3 text-sm focus:outline-purple-500 resize-none h-28 mb-3" placeholder="e.g. Explain Quantum Computing or Plan a Product Launch..."></textarea>
-                
+
                 <div class="mb-2">
                     <label class="block text-[0.65rem] font-bold text-slate-600 uppercase mb-1">Gemini Model</label>
                     <select id="ai_model" class="w-full border rounded-lg px-2.5 py-1.5 text-xs text-slate-700 bg-white focus:outline-purple-500">
@@ -1277,9 +1278,9 @@
                     </select>
                 </div>
 
-                <div class="mb-2">
-                    <label class="block text-[0.65rem] font-bold text-slate-600 uppercase mb-1">API Key (Optional)</label>
-                    <input type="password" id="ai_key" class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-purple-500" placeholder="Paste Gemini API Key (leave empty for demo)">
+                <div id="ai_error" class="hidden mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800" role="alert">
+                    <p id="ai_error_text"></p>
+                    <button type="button" id="ai_error_upgrade" onclick="openOmniMindProModal('ai_limit')" class="hidden mt-2 w-full py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold">See OmniMind Pro</button>
                 </div>
 
                 <button onclick="generateAI()" id="btn_ai" class="bg-purple-600 hover:bg-purple-700 text-white w-full py-2.5 rounded-full font-bold text-sm shadow-sm mt-auto">✨ Generate Mind Map</button>
@@ -1595,7 +1596,7 @@
                         Think freely. Connect ideas.<br>Sync anywhere.
                     </h2>
                     <p class="text-sm text-slate-600 mt-2 max-w-xl">
-                        Create unlimited mind maps locally on this browser, auto-generate maps with AI, or sync your top 5 maps to the cloud for multi-device access.
+                        Create unlimited mind maps locally on this browser, sign in to generate AI maps (3 a day on the free plan), or sync your top 5 maps to the cloud for multi-device access.
                     </p>
 
                     <!-- Cloud Quota Indicator -->
@@ -1658,7 +1659,7 @@
                     </div>
 
                     <!-- Action: AI Brainstorm -->
-                    <div onclick="homeGenerateWithAI()" class="hidden bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-2xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group" style="display: none;">
+                    <div onclick="homeGenerateWithAI()" class="bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-2xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group">
                         <div class="flex items-start justify-between">
                             <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
                                 🧠
@@ -1666,8 +1667,8 @@
                             <span class="text-[0.65rem] font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Gemini AI</span>
                         </div>
                         <div class="mt-4">
-                            <h4 class="font-bold text-slate-800 text-sm">AI Generator</h4>
-                            <p class="text-xs text-slate-500 mt-0.5">Auto-generate a map from any prompt</p>
+                            <h4 class="font-bold text-slate-800 text-sm">AI Brainstorm</h4>
+                            <p id="home-ai-quota" class="text-xs text-slate-500 mt-0.5">Sign in for 3 AI maps a day</p>
                         </div>
                     </div>
 
@@ -2090,6 +2091,13 @@
                         <div>
                             <p class="font-bold text-slate-800 text-xs">Real-time collaboration</p>
                             <p class="text-[0.72rem] text-slate-500">Host shared maps without a monthly plan.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">✨</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">30 AI maps a day</p>
+                            <p class="text-[0.72rem] text-slate-500">Free accounts get 3 AI maps a day. Pro gets 30.</p>
                         </div>
                     </div>
                 </div>
@@ -4795,6 +4803,7 @@
                         }
                         updateCloudAuthUI();
                         renderHomepage();
+                        if (typeof refreshAiQuota === 'function') refreshAiQuota();
                     });
                     updateCloudAuthUI();
                     return true;
@@ -5902,20 +5911,23 @@
         }
 
         async function homeGenerateWithAI() {
+            const user = await ensureSignedInForAi();
+            if (!user) return;
+            const limits = aiLimitNumbers();
             const topic = await showPrompt({
-                title: 'Generate Mind Map with AI',
+                title: 'AI Brainstorm',
                 icon: '✨',
-                message: 'What topic or concept would you like Gemini AI to build a mind map for?',
-                placeholder: 'e.g., Renewable Energy Grid, Product Launch Strategy, Deep Learning 101...',
+                message: 'What topic should OmniMind turn into a mind map? Free accounts get ' + limits.free + ' a day.',
+                placeholder: 'e.g., Renewable energy grid, product launch, deep learning 101',
                 confirmText: 'Generate with AI'
             });
             if (!topic || !topic.trim()) return;
 
             toggleHomepageView(false);
-            const promptInput = document.getElementById('ai-prompt-input');
+            const promptInput = document.getElementById('ai_prompt');
             if (promptInput) promptInput.value = topic.trim();
-            if (typeof switchEditorTab === 'function') switchEditorTab('ai');
-            if (typeof toggleEditorModal === 'function') toggleEditorModal(true);
+            if (typeof openSidebarTab === 'function') openSidebarTab('ai');
+            await generateAI();
         }
 
         function createFromTemplate(templateType) {
@@ -8464,6 +8476,7 @@
             updateProjectHeaderUI();
             // Initialize Firebase Cloud if configured
             initFirebaseCloud();
+            if (typeof refreshAiQuota === 'function') refreshAiQuota();
             applyStoredProStatus();
             applyProOfferCopy();
             renderHomepage();
@@ -14268,126 +14281,215 @@
             }
         });
 
-        // --- 6. AI ENGINE (Multi-Root with Multi-Model Fallback) ---
-        async function generateAI() {
-            const prompt = document.getElementById('ai_prompt').value.trim();
-            const key = document.getElementById('ai_key').value.trim();
-            if(!prompt) return alert('Please enter a prompt to generate a mind map.');
-            
-            document.getElementById('btn_ai').classList.add('opacity-50');
-            document.getElementById('ai_loading').classList.remove('hidden');
+        // --- 6. AI ENGINE (hosted Gemini, server-side daily cap) ---
+        function aiLimitNumbers() {
+            const limits = (typeof AI_MAP_LIMITS !== 'undefined' && AI_MAP_LIMITS) ? AI_MAP_LIMITS : { freePerDay: 3, proPerDay: 30 };
+            return { free: limits.freePerDay, pro: limits.proPerDay };
+        }
 
-            try {
-                let jsonResponse;
-                if(key) {
-                    const chosenModel = document.getElementById('ai_model')?.value || 'gemini-2.5-flash';
-                    const modelsToTry = [
-                        chosenModel,
-                        'gemini-2.5-flash',
-                        'gemini-2.0-flash',
-                        'gemini-1.5-flash-latest',
-                        'gemini-1.5-flash',
-                        'gemini-2.5-pro',
-                        'gemini-1.5-pro'
-                    ].filter((v, i, a) => a.indexOf(v) === i);
+        function currentAiUser() {
+            const user = (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) || null;
+            if (!user || user.isAnonymous || typeof user.getIdToken !== 'function') return null;
+            return user;
+        }
 
-                    const payload = {
-                        contents: [{
-                            parts: [{
-                                text: `Generate a structured hierarchical mind map for: "${prompt}". Return valid JSON as an array of root objects. Each root object should match this schema: {"id":"unique_id","topic":"Title","children":[{"id":"c1","topic":"Branch","children":[]}]}. Always return a JSON array of root objects.`
-                            }]
-                        }],
-                        generationConfig: {
-                            responseMimeType: "application/json"
-                        }
-                    };
-
-                    let data = null;
-                    let lastErrMsg = '';
-
-                    for (const model of modelsToTry) {
-                        try {
-                            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-                            const res = await fetch(url, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-                            const resData = await res.json();
-                            if (resData.error) {
-                                lastErrMsg = resData.error.message || `Error on ${model}`;
-                                // If model is not found, try next model in the list
-                                if (resData.error.code === 404 || /not found/i.test(lastErrMsg)) {
-                                    console.warn(`Model ${model} not available, attempting next model...`);
-                                    continue;
-                                } else {
-                                    throw new Error(lastErrMsg);
-                                }
-                            }
-                            if (resData.candidates && resData.candidates[0]?.content?.parts?.[0]?.text) {
-                                data = resData;
-                                break;
-                            }
-                        } catch (err) {
-                            lastErrMsg = err.message;
-                            if (!/not found/i.test(err.message)) {
-                                throw err;
-                            }
-                        }
-                    }
-
-                    if (!data) {
-                        throw new Error(lastErrMsg || "Could not generate content with available Gemini models. Please check your API key.");
-                    }
-
-                    let raw = data.candidates[0].content.parts[0].text;
-                    let parsed = JSON.parse(raw.replace(/```json/g, '').replace(/```/g, '').trim());
-                    // Normalize: accept single object or array
-                    jsonResponse = Array.isArray(parsed) ? parsed : [parsed];
-                } else {
-                    // Fast offline mockup — two independent root trees
-                    await new Promise(r => setTimeout(r, 600));
-                    jsonResponse = [
-                        { id: 'root1', topic: '💡 ' + prompt, children: [
-                            { id:'1', topic:'Phase 1: Planning', children:[{id:'1a', topic:'Research'}, {id:'1b', topic:'Resources'}] },
-                            { id:'2', topic:'Phase 2: Execution', children:[{id:'2a', topic:'Development'}, {id:'2b', topic:'Testing'}] }
-                        ]},
-                        { id: 'root2', topic: '📋 Related Concepts', children: [
-                            { id:'3', topic:'Dependencies', children:[{id:'3a', topic:'External'}, {id:'3b', topic:'Internal'}] },
-                            { id:'4', topic:'Timeline', children:[{id:'4a', topic:'Milestones'}, {id:'4b', topic:'Deadlines'}] }
-                        ]}
-                    ];
-                }
-
-                nodes = {};
-                const rootIds = [];
-                function parseAI(obj, parentId) {
-                    nodes[obj.id] = { id: obj.id, parentId, text: obj.topic };
-                    if (!parentId) rootIds.push(obj.id);
-                    if(obj.children) obj.children.forEach(c => parseAI(c, obj.id));
-                }
-                jsonResponse.forEach(root => parseAI(root, null));
-                
-                // Layout each root tree with staggered positions
-                let currentY = 200;
-                rootIds.forEach(rootId => {
-                    currentY = autoLayoutTree(rootId, 200, currentY);
-                    currentY += 80;
-                });
-                
-                selectedNodeId = rootIds[0] || null;
-                if (selectedNodeId) selectNode(selectedNodeId);
-                renderTree();
-                syncFromMap();
-                updatePropertiesPanel();
-                triggerAutoSave();
-            } catch (e) {
-                alert("Generation failed: " + (e.message || "Check console."));
-                console.error(e);
+        function paintAiQuota(data) {
+            const line = document.getElementById('ai_quota');
+            const home = document.getElementById('home-ai-quota');
+            const limits = aiLimitNumbers();
+            let text;
+            if (!currentAiUser()) {
+                text = 'Sign in for ' + limits.free + ' AI maps a day';
+            } else if (data && typeof data.remaining === 'number' && typeof data.limit === 'number') {
+                text = data.remaining + ' of ' + data.limit + ' AI maps left today';
+            } else {
+                text = 'Checking today\'s AI maps...';
             }
-            
-            document.getElementById('btn_ai').classList.remove('opacity-50');
-            document.getElementById('ai_loading').classList.add('hidden');
+            if (line) line.textContent = text;
+            if (home) home.textContent = text;
+        }
+
+        function clearAiNotice() {
+            const box = document.getElementById('ai_error');
+            const upgrade = document.getElementById('ai_error_upgrade');
+            if (box) box.classList.add('hidden');
+            if (upgrade) upgrade.classList.add('hidden');
+        }
+
+        function showAiNotice(kind, data, quiet) {
+            const box = document.getElementById('ai_error');
+            const text = document.getElementById('ai_error_text');
+            const upgrade = document.getElementById('ai_error_upgrade');
+            const limits = aiLimitNumbers();
+            let message = 'The AI service could not generate a map.';
+            let offerUpgrade = false;
+            let warn = false;
+            if (kind === 'not_configured') {
+                message = 'AI not configured. Map generation is not turned on for this server yet.';
+                warn = true;
+            } else if (kind === 'network') {
+                message = 'Could not reach OmniMind. Check your connection and try again.';
+            } else if (kind === 'signin') {
+                message = 'Sign in to generate an AI map.';
+                warn = true;
+            } else if (kind === 'limit') {
+                const limit = data && typeof data.limit === 'number' ? data.limit : limits.free;
+                warn = true;
+                if (data && data.plan === 'pro') {
+                    message = 'You have used today\'s ' + limit + ' AI maps. They reset at midnight Philippine time.';
+                } else {
+                    message = 'You have used today\'s ' + limit + ' free AI maps. Pro includes ' + limits.pro + ' a day.';
+                    offerUpgrade = true;
+                }
+            } else if (data && typeof data.error === 'string' && data.error && data.error.length < 240) {
+                message = data.error;
+            }
+            if (box && text) {
+                text.textContent = message;
+                box.className = warn
+                    ? 'mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950'
+                    : 'mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800';
+                if (upgrade) upgrade.classList.toggle('hidden', !offerUpgrade);
+            }
+            if (!quiet && typeof showUiToast === 'function') {
+                showUiToast(message, warn ? 'warning' : 'error', 4600, offerUpgrade ? {
+                    label: 'See Pro',
+                    onClick: function () { openOmniMindProModal('ai_limit'); }
+                } : null);
+            }
+        }
+
+        async function ensureSignedInForAi() {
+            const user = currentAiUser();
+            if (user) return user;
+            const limits = aiLimitNumbers();
+            const yes = await showUiConfirm({
+                title: 'Sign in to brainstorm',
+                message: 'AI maps are counted on your account. Sign in with Google to use them. Free accounts get ' + limits.free + ' a day, and Pro gets ' + limits.pro + '.',
+                confirmText: 'Sign in with Google',
+                cancelText: 'Not now'
+            });
+            if (yes && typeof signInWithGoogle === 'function') signInWithGoogle();
+            return null;
+        }
+
+        async function refreshAiQuota() {
+            const user = currentAiUser();
+            if (!user) {
+                paintAiQuota(null);
+                return null;
+            }
+            try {
+                const token = await user.getIdToken();
+                const res = await fetch('/api/ai-generate', {
+                    headers: { Authorization: 'Bearer ' + token }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.ok) {
+                    paintAiQuota(data);
+                    if (data.configured === false) showAiNotice('not_configured', data, true);
+                    else {
+                        const text = document.getElementById('ai_error_text');
+                        if (text && text.textContent.indexOf('AI not configured') === 0) clearAiNotice();
+                    }
+                    return data;
+                }
+                if (res.status === 401) paintAiQuota(null);
+                return data;
+            } catch (e) {
+                const line = document.getElementById('ai_quota');
+                if (line && currentAiUser()) line.textContent = 'Could not check today\'s AI maps. You can still try generating.';
+                return null;
+            }
+        }
+
+        function applyAiTree(jsonResponse) {
+            if (!Array.isArray(jsonResponse) || !jsonResponse.length) {
+                showAiNotice('upstream', { error: 'The AI service did not return a map.' });
+                return false;
+            }
+            nodes = {};
+            const rootIds = [];
+            function parseAI(obj, parentId) {
+                if (!obj || !obj.id) return;
+                nodes[obj.id] = { id: obj.id, parentId: parentId, text: obj.topic || 'Idea' };
+                if (!parentId) rootIds.push(obj.id);
+                if (obj.children) obj.children.forEach(c => parseAI(c, obj.id));
+            }
+            jsonResponse.forEach(root => parseAI(root, null));
+            if (!rootIds.length) {
+                showAiNotice('upstream', { error: 'The AI service did not return a map.' });
+                return false;
+            }
+            let currentY = 200;
+            rootIds.forEach(rootId => {
+                currentY = autoLayoutTree(rootId, 200, currentY);
+                currentY += 80;
+            });
+            selectedNodeId = rootIds[0] || null;
+            if (selectedNodeId) selectNode(selectedNodeId);
+            renderTree();
+            syncFromMap();
+            updatePropertiesPanel();
+            triggerAutoSave();
+            return true;
+        }
+
+        async function generateAI() {
+            const promptEl = document.getElementById('ai_prompt');
+            const prompt = promptEl ? promptEl.value.trim() : '';
+            if (!prompt) {
+                showUiAlert({ title: 'Add a topic', message: 'Enter a prompt to generate a mind map.' });
+                return;
+            }
+            const btn = document.getElementById('btn_ai');
+            if (btn && btn.dataset.busy === '1') return;
+            const user = await ensureSignedInForAi();
+            if (!user) return;
+            if (btn) {
+                btn.dataset.busy = '1';
+                btn.disabled = true;
+                btn.classList.add('opacity-50');
+            }
+            const loading = document.getElementById('ai_loading');
+            if (loading) loading.classList.remove('hidden');
+            clearAiNotice();
+            try {
+                const token = await user.getIdToken();
+                const modelEl = document.getElementById('ai_model');
+                const res = await fetch('/api/ai-generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ prompt: prompt, model: modelEl ? modelEl.value : '' })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.ok) {
+                    if (res.status === 401 || data.code === 'auth') showAiNotice('signin', data);
+                    else if (res.status === 429 || data.code === 'limit') {
+                        showAiNotice('limit', data);
+                        paintAiQuota(Object.assign({ remaining: 0 }, data));
+                    } else if (data.code === 'not_configured' || data.error === 'AI not configured') {
+                        showAiNotice('not_configured', data);
+                    } else {
+                        showAiNotice('upstream', data);
+                    }
+                    return;
+                }
+                applyAiTree(data.tree);
+                paintAiQuota(data);
+            } catch (e) {
+                showAiNotice('network');
+            } finally {
+                if (btn) {
+                    btn.dataset.busy = '0';
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                }
+                if (loading) loading.classList.add('hidden');
+            }
         }
 
         // Sidebar tabs
@@ -14397,19 +14499,19 @@
                 const tabBtn = document.getElementById(`tab-${t}`);
                 if (panel) panel.classList[t === tab ? 'remove' : 'add']('hidden');
                 if (tabBtn) {
-                    if (t === 'ai') {
-                        tabBtn.style.display = 'none';
-                        tabBtn.classList.add('hidden');
-                    } else {
-                        tabBtn.className = t === tab 
-                            ? "flex-1 py-3 font-semibold border-b-2 border-blue-600 text-blue-600 text-center transition-colors truncate" 
-                            : "flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate";
-                    }
+                    tabBtn.style.display = '';
+                    tabBtn.classList.remove('hidden');
+                    const active = t === tab;
+                    const accent = t === 'ai' ? 'border-purple-600 text-purple-600' : 'border-blue-600 text-blue-600';
+                    tabBtn.className = active
+                        ? 'flex-1 py-3 font-semibold border-b-2 ' + accent + ' text-center transition-colors truncate'
+                        : 'flex-1 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 text-center transition-colors truncate';
                 }
             });
             if (tab === 'advcode' || tab === 'code') {
                 syncFromMap();
             }
+            if (tab === 'ai') refreshAiQuota();
         }
 
         // --- MOVE MAPS: old domain → www.omnimindmap.app ---
