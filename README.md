@@ -16,6 +16,7 @@ Set these on Vercel (Production and Preview). Do not commit secrets.
 | `PAYPAL_ENV` | `sandbox` or `live`. Defaults to `sandbox`. |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase service account JSON, as a single string. |
 | `RESEND_API_KEY` | Resend API key used to email the Pro code. |
+| `GEMINI_API_KEY` | Google Gemini API key. Server only. Powers AI Brainstorm. Never put this in the page, a `NEXT_PUBLIC_` / `VITE_` variable, or logs. |
 
 The page embeds the public sandbox client id so the PayPal button can load. That id is not a secret:
 
@@ -35,9 +36,17 @@ The page embeds the public sandbox client id so the PayPal button can load. That
 
 1. Firebase project `omnimindmap` (or the project in the page config).
 2. Download a service account JSON and set `FIREBASE_SERVICE_ACCOUNT` to the raw JSON string.
-3. Deploy `firestore.rules` (`firebase deploy --only firestore:rules`). Clients cannot read or write `pro_codes`, `pro_captures`, or `rate_limits`. The Admin SDK bypasses those rules.
+3. Deploy `firestore.rules` (`firebase deploy --only firestore:rules`). Clients cannot read or write `pro_codes`, `pro_captures`, `rate_limits`, or `ai_usage`. The Admin SDK bypasses those rules. Publish the rules after this change or AI counters are only protected by the default deny.
 4. `users/{uid}` can be read only by that user (`get`, never `list`). The owner may create and update the profile, but cannot set or change `plan`, `maxMaps`, `codeUsed`, or `proActivatedAt`. Those fields are written by the server.
 5. `users/{uid}/maps/{mapId}` is fully readable and writable by the owner, with basic type and size checks. A map with no `shareSettings` is owner-only. Signed-in users (including anonymous guests) can `get` a map, but never `list` someone else's maps, when `shareSettings.accessLevel` is `view` or `edit`. `restricted` also requires `email_verified` and a lower-cased address in `shareSettings.invitedEmails`. Collaborators can update only `data`, `nodeCount`, and `updatedAt`, and only when access is `edit` or their verified email is in `shareSettings.editorEmails`. They cannot create, delete, or change `shareSettings`, `name`, or `userId`.
+
+## AI Brainstorm
+
+`GET /api/ai-generate` and `POST /api/ai-generate` are one Vercel function. The browser sends the signed-in user's Firebase ID token. The Gemini key stays in `GEMINI_API_KEY` and is sent only from the server, as the `x-goog-api-key` header. The default model is `gemini-2.5-flash`. If that model is missing, the server tries `gemini-2.0-flash`, `gemini-1.5-flash-latest`, `gemini-1.5-flash`, `gemini-2.5-pro`, then `gemini-1.5-pro`.
+
+Signed-out visitors and anonymous guests have to sign in with Google. Each successful reservation counts toward a calendar day in `Asia/Manila` (UTC+8, no daylight saving). Free accounts get 3 maps a day. Pro accounts get 30. Pro is the same check the app already uses on a user profile: `maxMaps` is a positive number, and `plan` is `omnimind_pro` or `maxMaps` is at least 50. The caps live in `pro-config.js` (`AI_MAP_LIMITS`). A request body cannot raise the cap.
+
+Counters are `ai_usage/{uid}_{YYYY-MM-DD}` and are written only by the Admin SDK. A failed Gemini call returns the reserved count. If `GEMINI_API_KEY` is missing, the function responds with `503` and `{ "error": "AI not configured" }` and does not count the try. The prompt is sent to Google and is not stored in Firestore.
 
 ## Email
 

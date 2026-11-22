@@ -109,7 +109,8 @@ service cloud.firestore {
         && request.resource.data.nodeCount <= 100000;
     }
 
-    // Pro codes, capture records, and rate-limit counters are server-only (Admin SDK).
+    // Pro codes, capture records, rate-limit counters, and AI usage counters
+    // are server-only (Admin SDK). Clients cannot read or change ai_usage.
     match /pro_codes/{code} {
       allow read, write: if false;
     }
@@ -117,6 +118,9 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /rate_limits/{bucketId} {
+      allow read, write: if false;
+    }
+    match /ai_usage/{usageId} {
       allow read, write: if false;
     }
 
